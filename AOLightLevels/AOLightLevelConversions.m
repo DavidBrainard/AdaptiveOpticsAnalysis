@@ -15,10 +15,20 @@ if (S(2) ~= 1)
 end
 
 %% Get inputs and put into common format
-theWavelength = GetWithDefault('Enter wavelength in nanometers',680);
-pupilDiamMm = GetWithDefault('Enter pupil diameter in mm',7);
+theWavelength = GetWithDefault('Enter wavelength in nanometers',670);
+pupilDiamMm = GetWithDefault('Enter pupil diameter in mm',7);2.54*(3.6*10-2)
 eyeLengthMm = GetWithDefault('Enter assumed eye length in mm',17);
-stimulusAreaDegrees2 = GetWithDefault('Enter stimulus area in square degrees',0.5);
+LENGTHORAREA = GetWithDefault('Enter stimulus side (1), stimulus diameter (2), or stimulus area (3)?',2);
+switch (LENGTHORAREA)
+    case 1
+        rawStimulusSideDegIn = GetWithDefault('Enter square stimulus side in deg',1);
+        stimulusAreaDegrees2 = rawStimulusSideDegIn^2;
+    case 2
+        rawStimulusSideDegIn = GetWithDefault('Enter circular stimulus diameter in deg',1.8);
+        stimulusAreaDegrees2 = pi*(rawStimulusSideDegIn/2)^2;
+    case 3
+        stimulusAreaDegrees2 = GetWithDefault('Enter stimulus area in square degrees',1);
+end
 
 % Utility calculations
 pupilAreaMm2 = pi*((pupilDiamMm/2)^2);
@@ -27,15 +37,29 @@ eyeLengthCm = eyeLengthMm*(10^-1);
 degPerMm = RetinalMMToDegrees(1,eyeLengthMm);
 
 % Accept either corneal or retinal illuminance
-RETORCORN = GetWithDefault('Enter retinal (1) or corneal (2) irradiance?',2);
+RETORCORN = GetWithDefault('Enter retinal irradiance (1), corneal irradiance (2), or power entering eye (3)?',3);
 switch (RETORCORN)
     case 1
         rawRetIrradianceMicrowattsPerCm2In = GetWithDefault('Enter retinal illuminance in microwatts/cm2',25.5);
+        rawCornIrradianceMicrowattsPerCm2In = rawRetIrradianceMicrowattsPerCm2In*stimulusAreaDegrees2/pupilAreaCm2;
     case 2
         rawCornIrradianceMicrowattsPerCm2In = GetWithDefault('Enter corneal illuminance in microwatts/cm2',25.5);
         rawRadianceMicrowattsPerCm2Sr = CornIrradianceAndDegrees2ToRadiance(rawCornIrradianceMicrowattsPerCm2In,stimulusAreaDegrees2);
         rawRetIrradianceMicrowattsPerCm2In = RadianceAndPupilAreaEyeLengthToRetIrradiance(rawRadianceMicrowattsPerCm2Sr,S,pupilAreaCm2,eyeLengthCm);
- end
+    case 3
+        rawPowerIntoEyeIn = GetWithDefault('Enter power entering eye in microwatts',6000);
+        rawCornIrradianceMicrowattsPerCm2In = rawPowerIntoEyeIn/pupilAreaCm2;
+        rawRadianceMicrowattsPerCm2Sr = CornIrradianceAndDegrees2ToRadiance(rawCornIrradianceMicrowattsPerCm2In,stimulusAreaDegrees2);
+        rawRetIrradianceMicrowattsPerCm2In = RadianceAndPupilAreaEyeLengthToRetIrradiance(rawRadianceMicrowattsPerCm2Sr,S,pupilAreaCm2,eyeLengthCm);  
+end
+ 
+%% Given that we have retinal irradiance, corneal irradiance, the pupil area, and the stimulus area ...
+% it is easy to check the retinal irradiance.
+retIrradianceMicrowattsPerDeg2Check = rawCornIrradianceMicrowattsPerCm2In*pupilAreaCm2/stimulusAreaDegrees2;
+retIrradianceMicrowattsPerCm2Check = retIrradianceMicrowattsPerDeg2Check/(0.01*DegreesToRetinalMM(1,eyeLengthCm*10)^2);
+if (abs(rawRetIrradianceMicrowattsPerCm2In-retIrradianceMicrowattsPerCm2Check)/retIrradianceMicrowattsPerCm2Check > 0.05)
+    error('Do not get same retinal irradiance two different ways');
+end
 
 %% Turn it into a spectral function
 wls = SToWls(S);
