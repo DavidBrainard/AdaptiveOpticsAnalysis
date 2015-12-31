@@ -1,4 +1,8 @@
 
+% Robert F Cooper
+% 12-31-2015
+% This script calculates pooled variance across a set of given signals.
+
 clear;
 close all force;
 
@@ -154,18 +158,21 @@ end
 % If its in the normalization, subtract the control value from the stimulus
 % value
 % if ~isempty( strfind(norm_type, 'sub') )
-        
-        pooled_std_stim    = sqrt(pooled_variance_stim)-sqrt(pooled_variance_control);
-        pooled_std_control = sqrt(pooled_variance_control)-sqrt(pooled_variance_control);
+hz=16.6;
+timeBase = (1:allmax)/hz;
+pooled_std_stim    = sqrt(pooled_variance_stim)-sqrt(pooled_variance_control);
+pooled_std_control = sqrt(pooled_variance_control)-sqrt(pooled_variance_control);
     
 % end
-hz=16.6;
-figure(10); hold off;
 
-plot( (1:allmax)/hz,pooled_std_stim,'r'); hold on;
-plot( (1:allmax)/hz,pooled_std_control,'b'); hold on;
+figure(10); hold off;
+plot( timeBase,pooled_std_stim,'r'); hold on;
+plot( timeBase,pooled_std_control,'b'); hold on;
 legend('Stimulus cones','Control cones');
 
 % plot(stim_locs, max([ref_variance_stim; ref_variance_control])*ones(size(stim_locs)),'r*'); hold off;
 ylabel('Pooled Standard deviation'); xlabel('Time (s)'); title( ['Pooled variance of ' num2str(length(profileDataNames)) ' signals.'] );
 saveas(gcf, fullfile(pwd,['pooled_var_aggregate_' num2str(length(profileDataNames)) '_signals.png' ] ) );
+
+
+brainardbasedModelFit(timeBase, pooled_std_stim)
