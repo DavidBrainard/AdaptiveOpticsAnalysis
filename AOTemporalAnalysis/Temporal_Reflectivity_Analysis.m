@@ -8,7 +8,7 @@ close all force;
 
 
 profile_method = 'segmentation';
-norm_type = 'prestim_sub';
+norm_type = 'prestimminus_sub';
 cutoff = 0.8; % The percentage of time a cone must be stimulated relative to all stimulus in order to be included for analysis
 
 % mov_path=pwd;
@@ -19,6 +19,7 @@ stack_fnames = read_folder_contents( mov_path,'avi' );
 for i=1:length(stack_fnames)
     if ~isempty( strfind( stack_fnames{i}, ref_image_fname(1:end - length('_AVG.tif') ) ) )
         temporal_stack_fname = stack_fnames{i};
+        acceptable_frames_fname = [stack_fnames{i}(1:end-4) '_acceptable_frames.csv'];
         visible_stack_fname = strrep(temporal_stack_fname,'confocal','visible');
         break;
     end
@@ -26,8 +27,14 @@ end
 
 %% Load the dataset(s)
 
+
+
 ref_image  = double(imread(  fullfile(mov_path, ref_image_fname) ));
+accept_images = dlmread( fullfile(mov_path,acceptable_frames_fname) );
+accept_images = sort(accept_images)' +1; % For some dumb reason it doesn't store them in the order they're put in the avi.
+
 ref_coords = dlmread( fullfile(mov_path, ref_coords_fname));
+
 temporal_stack_reader = VideoReader( fullfile(mov_path,temporal_stack_fname) );
 if exist(fullfile(mov_path,visible_stack_fname),'file')
     visible_stack_reader = VideoReader( fullfile(mov_path,visible_stack_fname) );
@@ -54,13 +61,15 @@ for v=1:size(visible_stack,3)
     visible_signal(v) = mean(vis_frm(:));
 end
 
-stim_locs = find( visible_signal > 10 );
+stim_times = find( visible_signal > 10 );
+% Make them relative to their actual temporal locations.
+stim_locs = accept_images(stim_times);
 
 % Make the masks where visible light fell (and was detected)
 vis_masks = zeros(size(visible_stack,1), size(visible_stack,2), size(stim_locs,1)+1);
 
 % The first frame recieves no stimulus
-for i=1:size(stim_locs,1)
+for i=1:length(stim_locs)
     
     vis_frm = visible_stack(:,:,stim_locs(i));        
 %     figure(1); imagesc(vis_frm); colormap gray; axis image;       
@@ -69,7 +78,7 @@ for i=1:size(stim_locs,1)
     vis_frm( vis_frm<=2*noise_floor ) = 0;
     vis_frm( vis_frm>2*noise_floor )  = 1;
     vis_masks(:,:,i+1) = imclose(vis_frm, strel('disk',9) );
-%     figure(2); imagesc(vis_masks(:,:,i)); colormap gray; axis image; pause(0.01)
+%     figure(2); imagesc(vis_masks(:,:,i)); colormap gray; axis image; pause(0.1)
 end
 
 if ~isempty(stim_locs) % If there were stimulus frames, find them and set up the masks to use, as well as the normalization frames
@@ -84,8 +93,6 @@ if ~isempty(stim_locs) % If there were stimulus frames, find them and set up the
     vis_masks( vis_masks < cutoff*max(vis_masks(:)) ) = 0;
     
     stim_mask( vis_masks < cutoff*max(vis_masks(:)) ) = 0;
-
-    
     
     
 else % If there were no detected stimuli frames.
@@ -233,8 +240,8 @@ end
 for i=1:length(cellseg_inds)
     waitbar(i/length(cellseg_inds),wbh, ['Creating reflectance profile for cell: ' num2str(i)]);
 
-    stim_cell_times{i} = 1:size(temporal_stack,3);
-    control_cell_times{i} = 1:size(temporal_stack,3);
+    stim_cell_times{i} = accept_images;
+    control_cell_times{i} = accept_images;
     
     stim_cell_reflectance{i}    = zeros(1, size(temporal_stack,3));
     control_cell_reflectance{i} = zeros(1, size(temporal_stack,3));
@@ -301,7 +308,24 @@ for i=1:length( control_cell_reflectance )
 end
 
 
-if ~isempty( strfind(norm_type, 'prestim'))
+if ~isempty( strfind(norm_type, 'prestimminus'))
+    % Then normalize to the average intensity of each cone BEFORE stimulus.
+    for i=1:length( norm_stim_cell_reflectance ) % STIM
+
+        prestim_mean = mean( norm_stim_cell_reflectance{i}(stim_cell_times{i}<stim_locs(1) & ~isnan( norm_stim_cell_reflectance{i} )) );
+        prestim_std = std( norm_stim_cell_reflectance{i}(stim_cell_times{i}<stim_locs(1) & ~isnan( norm_stim_cell_reflectance{i} )) );
+
+        norm_stim_cell_reflectance{i} = (norm_stim_cell_reflectance{i}-prestim_mean)/prestim_std;
+    end
+    for i=1:length( norm_control_cell_reflectance ) % CONTROL
+
+        prestim_mean = mean( norm_control_cell_reflectance{i}( control_cell_times{i}<stim_locs(1) & ~isnan( norm_control_cell_reflectance{i} ) ) );
+        prestim_std = std( norm_control_cell_reflectance{i}( control_cell_times{i}<stim_locs(1) & ~isnan( norm_control_cell_reflectance{i} ) ) );
+
+        norm_control_cell_reflectance{i} = (norm_control_cell_reflectance{i}-prestim_mean)/prestim_std;
+
+    end
+elseif ~isempty( strfind(norm_type, 'prestim'))
     % Then normalize to the average intensity of each cone BEFORE stimulus.
     for i=1:length( norm_stim_cell_reflectance ) % STIM
 
@@ -315,8 +339,7 @@ if ~isempty( strfind(norm_type, 'prestim'))
 
         norm_control_cell_reflectance{i} = norm_control_cell_reflectance{i}./prestim_mean;
 
-    end
-    
+    end    
 elseif ~isempty( strfind(norm_type, 'poststim'))
     % Then normalize to the average intensity of each cone AFTER stimulus.
     for i=1:length( norm_stim_cell_reflectance ) % STIM
@@ -361,26 +384,62 @@ end
 %     end    
 % end
 
-%% Pooled variance of all cells before first stimulus
-[ ref_stddev_stim ]    = reflectance_pooled_variance( stim_cell_times,    norm_stim_cell_reflectance,    size(temporal_stack,3) );
-[ ref_stddev_control ] = reflectance_pooled_variance( control_cell_times, norm_control_cell_reflectance, size(temporal_stack,3) );
+%% Standard deviation of all cells before first stimulus
+
+% Remove the empty cells
+norm_stim_cell_reflectance = norm_stim_cell_reflectance( ~cellfun(@isempty,norm_stim_cell_reflectance) );
+stim_cell_times = stim_cell_times( ~cellfun(@isempty,stim_cell_times) );
+norm_control_cell_reflectance = norm_control_cell_reflectance( ~cellfun(@isempty,norm_control_cell_reflectance) );
+control_cell_times = control_cell_times( ~cellfun(@isempty,control_cell_times) );
+% Find their max sizes    
+thatstimmax = max( cellfun(@max,stim_cell_times) );
+thatcontrolmax = max( cellfun(@max,control_cell_times) );   
+
+[ ref_stddev_stim, ref_stim_times ]    = reflectance_std_dev( stim_cell_times, norm_stim_cell_reflectance, thatstimmax );
+[ ref_stddev_control,ref_control_times ] = reflectance_std_dev( control_cell_times(1:length(norm_stim_cell_reflectance)), norm_control_cell_reflectance(1:length(norm_stim_cell_reflectance)), thatcontrolmax );
+
+ref_times = [];
+
+i=1;
+while i<= length( ref_control_times )
+        
+    % Remove times from both stim and control that are NaN
+    if isnan(ref_stim_times(i)) || isnan(ref_control_times(i))
+        
+        ref_stim_times(i) = [];
+        ref_control_times(i) = [];
+        
+        ref_stddev_stim(i) = [];
+        ref_stddev_control(i) = [];        
+    else
+        ref_times = [ref_times; ref_stim_times(i)];
+        i = i+1;
+    end
+    
+end
+
 
 % If its in the normalization, subtract the control value from the stimulus
 % value
 if ~isempty( strfind(norm_type, 'sub') )
-    ref_stddev_stim    = ref_stddev_stim-ref_stddev_control;
-    ref_stddev_control = ref_stddev_control-ref_stddev_control;
+        
+        ref_stddev_stim    = ref_stddev_stim-ref_stddev_control;
+        ref_stddev_control = ref_stddev_control-ref_stddev_control;
+    
 end
 hz=16.6;
 figure(10); hold off;
 
-plot( (1:length(ref_stddev_stim))/hz,ref_stddev_stim,'r'); hold on;
-plot( (1:length(ref_stddev_control))/hz,ref_stddev_control,'b'); hold on;
+plot( ref_times,ref_stddev_stim,'r'); hold on;
+plot( ref_times,ref_stddev_control,'b'); hold on;
 legend('Stimulus cones','Control cones');
-plot(stim_locs/hz, max([ref_stddev_stim; ref_stddev_control])*ones(size(stim_locs)),'r*'); hold off;
+plot(stim_locs, max([ref_stddev_stim; ref_stddev_control])*ones(size(stim_locs)),'r*'); hold off;
 ylabel('Standard deviation'); xlabel('Time (s)'); title( strrep( [ref_image_fname(1:end - length('_AVG.tif') ) '_' profile_method '_stddev_ref_plot' ], '_',' ' ) );
 saveas(gcf, fullfile(mov_path, [ref_image_fname(1:end - length('_AVG.tif') ) '_' profile_method '_cutoff_' norm_type '_' num2str(cutoff*100) '_stddev_ref_plot.png' ] ) );
 % pause;
+
+save([ref_image_fname(1:end - length('_AVG.tif') ) '_' profile_method '_cutoff_' norm_type '_' num2str(cutoff*100) '_profiledata.mat'], 'stim_cell_times', 'norm_stim_cell_reflectance', ...
+      'control_cell_times', 'norm_control_cell_reflectance' );
 
 %%
 figure(11);

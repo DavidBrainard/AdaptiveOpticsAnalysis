@@ -1,44 +1,48 @@
-function [ ref_stddev ] = reflectance_pooled_variance( cell_times, cell_reflectance, series_length )
+function [ ref_variance, ref_times, ref_count ] = reflectance_pooled_variance( cell_times, cell_reflectance, series_length )
 %UNTITLED Summary of this function goes here
 %   Detailed explanation goes here
 
-pvar = 0;
-pvar_n = 0;
-for i=1:length(cell_reflectance)
+    ref_avg = zeros( series_length,1);
+
+    has_content = false;
+
+    ref_variance = zeros(series_length,1);
+    ref_count = zeros(series_length,1);
+    ref_times=[];
     
-    pvar = pvar + (length(cell_reflectance{i})-1)*var( cell_reflectance{i} );
-    pvar_n = pvar_n + (length(cell_reflectance{i})-1);
-end
-
-pvar = pvar/pvar_n;
-pstddev = sqrt(pvar);
-
-% figure(10);
-% hold on;
-% hz=16;
-
-ref_avg = zeros( series_length,1);
-ref_stddev = zeros( series_length,1);
-
-for k=1:series_length % Plot average
-    n=0;
     
-    for i=1:length(cell_reflectance)
-        if any(cell_times{i} == k) 
-            ref_avg(k) = ref_avg(k) + cell_reflectance{i}(cell_times{i} == k);
-            n = n+1;
+    
+    for k=1:series_length % Plot average
+        n=0;
+
+        for i=1:length(cell_reflectance)
+            if any(cell_times{i} == k) 
+                ref_avg(k) = ref_avg(k) + cell_reflectance{i}(cell_times{i} == k);
+                n = n+1;
+            end
         end
-    end
-    ref_avg(k) = ref_avg(k)/n;
-    
-    for i=1:length(cell_reflectance)
-        if any(cell_times{i} == k)
-            ref_stddev(k) = ref_stddev(k) + (cell_reflectance{i}(cell_times{i} == k)-ref_avg(k)).^2;
-        end
-    end
-    ref_stddev(k) = sqrt(ref_stddev(k)/n);
-end
 
+        ref_count(k) = n;
+
+        ref_avg(k) = ref_avg(k)/n;
+
+        for i=1:length(cell_reflectance)
+            if any(cell_times{i} == k)
+                ref_variance(k) = ref_variance(k) + ( cell_reflectance{i}(cell_times{i} == k)-ref_avg(k) ).^2;
+                has_content = true;
+            end
+        end
+        
+%         ref_variance(k) = ref_variance(k)/(ref_count(k)-1); % -1 For pooled variance calculation
+
+        if has_content
+            ref_times = [ref_times; k];
+        else
+            ref_times = [ref_times; NaN];
+        end
+
+        has_content = false;
+    end
 
 end
 
