@@ -14,20 +14,23 @@ trueParams.preStimValue = 0;
 trueParams.stimOnsetTime = 2;
 trueParams.responseDelay = 0.4;
 trueParams.scale = 3;
-trueParams.gammaA = 5;
+trueParams.gammaA = 4;
 trueParams.gammaB = 0.24;
-trueParams.noiseSd = 0.1;
 
 startTime = 0;
 endTime = 10;
 nTrueData = 200;
 timeBase = linspace(startTime,endTime,nTrueData);
+trueParams.noiseSd = 0;
 theResponse = ComputeModelPreds(trueParams,timeBase);
+trueParams.noiseSd = 0.3;
+theResponseNoise = ComputeModelPreds(trueParams,timeBase);
 
 %% Start plot
 thePlot = figure; clf; hold on
 set(gca,'FontName','Helvetica','FontSize',14);
-plot(timeBase,theResponse,'ro','MarkerFaceColor','r','MarkerSize',6);
+plot(timeBase,theResponseNoise,'ro','MarkerFaceColor','r','MarkerSize',6);
+figure(thePlot); plot(timeBase,theResponse,'r','LineWidth',4);
 xlim([startTime endTime]);
 ylim([-1 3]);
 xlabel('Time (secs)','FontSize',18);
@@ -48,7 +51,7 @@ fitParams0.gammaA = 2;
 
 % Then rate parameter so that mode of distribution happens at
 % the time of maximum response;
-[maxResp,maxRespIndex] = max(theResponse);
+[maxResp,maxRespIndex] = max(theResponseNoise);
 maxTime = timeBase(maxRespIndex(1));
 fitParams0.gammaB = (fitParams0.gammaA-1)/(maxTime - fitParams0.stimOnsetTime);
 if (fitParams0.gammaB <= 0)
@@ -77,22 +80,22 @@ x0 = ParamsToX(fitParams0);
 % First seach on gammaA and scale only, and add to plot
 vlb = [x0(1) 0.01 x0(3) 0.01];
 vub = [x0(1) 100 x0(3) 100];
-x1 = fmincon(@(x)FitModelErrorFunction(x,timeBase,theResponse,fitParams0),x0,[],[],[],[],vlb,vub,[],options);
+x1 = fmincon(@(x)FitModelErrorFunction(x,timeBase,theResponseNoise,fitParams0),x0,[],[],[],[],vlb,vub,[],options);
 predictions1 = ComputeModelPreds(XToParams(x1,fitParams0),timeBase);
 figure(thePlot); plot(timeBase,predictions1,'c:','LineWidth',2);
 
 % Then full search
 vlb = [0 0.01 0.01 0.1];
 vub = [2 100 100 1000];
-x = fmincon(@(x)FitModelErrorFunction(x,timeBase,theResponse,fitParams0),x1,[],[],[],[],vlb,vub,[],options);
+x = fmincon(@(x)FitModelErrorFunction(x,timeBase,theResponseNoise,fitParams0),x1,[],[],[],[],vlb,vub,[],options);
 
 % Extract fit parameters
 fitParams = XToParams(x,fitParams0);
 
 % Add final fit to plot
 predictions = ComputeModelPreds(fitParams,timeBase);
-figure(thePlot); plot(timeBase,predictions,'g','LineWidth',4);
-legend({' Data', ' Initial Guess', ' Intermediate Fit' ' Final Fit'},'FontSize',14,'Location','NorthEast');
+figure(thePlot); plot(timeBase,predictions,'g','LineWidth',2);
+legend({' Data', 'Underlying Fcn' ' Initial Guess', ' Intermediate Fit' ' Final Fit'},'FontSize',14,'Location','NorthEast');
 
 end
 
