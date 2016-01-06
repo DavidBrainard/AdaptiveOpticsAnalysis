@@ -7,7 +7,7 @@ clear;
 close all force;
 
 
-profile_method = 'segmentation';
+profile_method = 'box';
 norm_type = 'prestimminus_sub';
 cutoff = 0.8; % The percentage of time a cone must be stimulated relative to all stimulus in order to be included for analysis
 
@@ -396,7 +396,7 @@ thatstimmax = max( cellfun(@max,stim_cell_times) );
 thatcontrolmax = max( cellfun(@max,control_cell_times) );   
 
 [ ref_stddev_stim, ref_stim_times ]    = reflectance_std_dev( stim_cell_times, norm_stim_cell_reflectance, thatstimmax );
-[ ref_stddev_control,ref_control_times ] = reflectance_std_dev( control_cell_times(1:length(norm_stim_cell_reflectance)), norm_control_cell_reflectance(1:length(norm_stim_cell_reflectance)), thatcontrolmax );
+[ ref_stddev_control,ref_control_times ] = reflectance_std_dev( control_cell_times, norm_control_cell_reflectance, thatcontrolmax );
 
 ref_times = [];
 

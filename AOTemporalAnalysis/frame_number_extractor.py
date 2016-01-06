@@ -20,15 +20,15 @@ for file in os.listdir(folder_path):
      if file.endswith(".dmp"):
 	print file
 	#Fix the fact that it was done originally in Windows...
-	text = open(file, 'rb').read().replace('\r\n', '\n')
-	open(file, 'wb').write(text)
+	text = open(os.path.join(folder_path,file), 'rb').read().replace('\r\n', '\n')
+	open(os.path.join(folder_path,file), 'wb').write(text)
 	
-	fhandle = open(file)
+	fhandle = open(os.path.join(folder_path,file))
 	pick = pickle.load(fhandle)
         fhandle.close()	
 
 	# Get the frames we used, and save them to a file.
-	np.savetxt(file[0:-4]+ "_acceptable_frames.csv",pick['acceptable_frames'],delimiter=',',fmt='%f')
+	np.savetxt(os.path.join(folder_path,file[0:-4]+ "_acceptable_frames.csv"),pick['acceptable_frames'],delimiter=',',fmt='%f')
 
      
 

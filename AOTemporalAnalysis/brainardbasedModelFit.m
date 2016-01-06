@@ -7,7 +7,7 @@ function brainardbasedModelFit(timeBase, pooled_std_stim)
 % 12/31/15 rfc      Added temporal analysis specific parameters.
 
 %% Initialize
-close all;
+% close all;
 
 %% Generate some simulated data for fitting
 trueParams.type = 'gammapdf';
@@ -44,7 +44,7 @@ drawnow;
 % These are known
 fitParams0.type = 'gammapdf';
 fitParams0.preStimValue = -0.1;
-fitParams0.stimOnsetTime = 5;
+fitParams0.stimOnsetTime = 2;
 
 % These we make up based on our excellent judgement
 fitParams0.responseDelay = 0;
