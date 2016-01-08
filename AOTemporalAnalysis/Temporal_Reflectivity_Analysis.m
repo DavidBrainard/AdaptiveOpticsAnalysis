@@ -51,6 +51,7 @@ while(hasFrame(temporal_stack_reader))
     i = i+1;
 end
 
+
 %% Find the frames where the stimulus was on, and create the stimulus
 % "masks"
 visible_signal = zeros(size(visible_stack,3),1);
@@ -104,7 +105,16 @@ else % If there were no detected stimuli frames.
     
 end
 
+%% Create the capillary mask- only use the data before the stimulus fires to do so.
 
+capillary_mask = double(~tam_etal_capillary_func( temporal_stack(:,:,1:stim_times(1)-1) ));
+
+% Mask the images to exclude zones with capillaries on top of them.
+capillary_masks = repmat(capillary_mask,[1 1 size(temporal_stack,3)]);
+
+ref_image = ref_image.*capillary_mask;
+temporal_stack = temporal_stack.*capillary_masks;
+% visible_stack = visible_stack.*uint8(capillary_masks);
 
 %% Isolate individual profiles
 ref_coords = round(ref_coords);
@@ -154,7 +164,7 @@ for i=1:size(ref_coords,1)
                 cellseg_mask = imerode(cellseg_mask, ones(3));
                 cellseg_inds{i} = find(cellseg_mask~=0);
                 
-                ref_image(cellseg_inds{i})= 0;
+                ref_image(cellseg_inds{i})= -1;
             end
         case 'box'
             roiradius = 1;
@@ -169,7 +179,7 @@ for i=1:size(ref_coords,1)
 
                 cellseg_inds{i} = cellseg_inds{i}(:);
                 
-                ref_image(cellseg_inds{i})= 0;
+                ref_image(cellseg_inds{i})= -1;
                 
 %                 figure(1); imagesc(ref_image); colormap gray; axis image;
                 
@@ -192,7 +202,7 @@ for i=1:size(ref_coords,1)
 
                 cellseg_inds{i} = cellseg_inds{i}(:);
                 
-                ref_image(cellseg_inds{i})= 0;
+                ref_image(cellseg_inds{i})= -1;
                 
 %                 figure(1); imagesc(ref_image); colormap gray; axis image;
             end
@@ -206,7 +216,7 @@ colorcoded_im = repmat(ref_image,[1 1 3]);
 max_overlap = max(vis_masks(:));
 max_red_mult = max(ref_image(:))/max_overlap;
             
-seg_mask = ref_image == 0;
+seg_mask = ref_image == -1;
 
 if ~isempty( vis_masks )
                         
