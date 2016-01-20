@@ -18,7 +18,7 @@ divVideo = zeros(size(pceptVideo,1),size(pceptVideo,2),numFrames-1);
 for i=1:numFrames-1
     
     % Find the regions in each frame that do not have data, make a mask to
-    % ignore in both of the frames
+    % ignore in all frames
     ignoremask = (pceptVideo(:,:,i) == 0) | (pceptVideo(:,:,i+1) ==0);
     
     divVideo(:,:,i) = ~ignoremask.*(pceptVideo(:,:,i)./pceptVideo(:,:,i+1));
@@ -35,9 +35,10 @@ end
 
 mfDivVideo = zeros(size(pceptVideo,1),size(pceptVideo,2),size(divVideo,3)-1);
 
-
 for i=1:size(divVideo,3)-1
     
+    % Find the regions in each frame that do not have data, make a mask to
+    % ignore in all frames
     ignoremask = (divVideo(:,:,i) == 0) | (divVideo(:,:,i+1) ==0);
     
     mfDivVideo(:,:,i) = ~ignoremask.*(divVideo(:,:,i)+divVideo(:,:,i+1))/2 ;
@@ -106,8 +107,7 @@ sdImagestretched = 255*sdImageminsub./max(sdImageminsub(:));
 
 figure(1); imagesc( sdImagestretched ); colormap gray; axis image; title('SD Image');
 
-
-threshold = mean(sdImagestretched(:))  + 0.5*std(sdImagestretched(:));
+threshold = mean(sdImagestretched(:))  + std(sdImagestretched(:))/3;
 figure(2); imagesc( sdImagestretched > threshold ); colormap gray; axis image; title('Vessel Mask');
 
 sdImageMasked = (sdImagestretched > threshold);

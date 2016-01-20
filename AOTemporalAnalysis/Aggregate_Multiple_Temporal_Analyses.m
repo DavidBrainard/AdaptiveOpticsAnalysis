@@ -170,8 +170,12 @@ plot( timeBase,pooled_std_stim,'r'); hold on;
 plot( timeBase,pooled_std_control,'b'); hold on;
 legend('Stimulus cones','Control cones');
 
+% Stim train
+trainlocs = 66/hz:1/hz:99/hz;
+plot(trainlocs, max(pooled_std_stim)*ones(size(trainlocs)),'r*'); hold off;
+
 % plot(stim_locs, max([ref_variance_stim; ref_variance_control])*ones(size(stim_locs)),'r*'); hold off;
-ylabel('Pooled Standard deviation'); xlabel('Time (s)'); title( ['Pooled variance of ' num2str(length(profileDataNames)) ' signals.'] );
+ylabel('Pooled Standard deviation'); xlabel('Time (s)'); title( ['Pooled standard deviation of ' num2str(length(profileDataNames)) ' signals.'] );
 saveas(gcf, fullfile(pwd,['pooled_var_aggregate_' num2str(length(profileDataNames)) '_signals.png' ] ) );
 
 

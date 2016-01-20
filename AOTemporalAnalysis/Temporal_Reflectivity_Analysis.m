@@ -74,11 +74,12 @@ for i=1:length(stim_locs)
     
     vis_frm = visible_stack(:,:,stim_locs(i));        
 %     figure(1); imagesc(vis_frm); colormap gray; axis image;       
-    noise_floor = 4;
+    noise_floor = 10;
     vis_frm = vis_frm-min(vis_frm(:));
     vis_frm( vis_frm<=2*noise_floor ) = 0;
     vis_frm( vis_frm>2*noise_floor )  = 1;
     vis_masks(:,:,i+1) = imclose(vis_frm, strel('disk',9) );
+    vis_masks(:,:,i+1) = imopen(vis_masks(:,:,i+1), strel('disk',9) );
 %     figure(2); imagesc(vis_masks(:,:,i)); colormap gray; axis image; pause(0.1)
 end
 
@@ -108,6 +109,11 @@ end
 %% Create the capillary mask- only use the data before the stimulus fires to do so.
 
 capillary_mask = double(~tam_etal_capillary_func( temporal_stack(:,:,1:stim_times(1)-1) ));
+
+if ~exist( fullfile(mov_path, 'Capillary_Maps'), 'dir' )
+    mkdir(fullfile(mov_path, 'Capillary_Maps'))
+end
+imwrite(uint8(capillary_mask*255), fullfile(mov_path, 'Capillary_Maps' ,[ref_image_fname(1:end - length('_AVG.tif') ) '_cap_map.png' ] ) );
 
 % Mask the images to exclude zones with capillaries on top of them.
 capillary_masks = repmat(capillary_mask,[1 1 size(temporal_stack,3)]);
@@ -216,19 +222,22 @@ colorcoded_im = repmat(ref_image,[1 1 3]);
 max_overlap = max(vis_masks(:));
 max_red_mult = max(ref_image(:))/max_overlap;
             
-seg_mask = ref_image == -1;
+seg_mask = (ref_image == -1);
 
 if ~isempty( vis_masks )
                         
-    colorcoded_im(:,:,1) = colorcoded_im(:,:,1) + (seg_mask.* (vis_masks.*max_red_mult));
-    colorcoded_im(:,:,3) = colorcoded_im(:,:,3) + (seg_mask.* (control_mask.*max(ref_image(:))) );
+    colorcoded_im(:,:,1) = colorcoded_im(:,:,1) + (capillary_mask.*seg_mask.* (vis_masks.*max_red_mult));
+    colorcoded_im(:,:,3) = colorcoded_im(:,:,3) + (capillary_mask.*seg_mask.* (control_mask.*max(ref_image(:))) );
 
 else
-    colorcoded_im(:,:,3) = colorcoded_im(:,:,3) + (seg_mask.* (control_mask.*max(ref_image(:))) );
+    colorcoded_im(:,:,3) = colorcoded_im(:,:,3) + (capillary_mask.*seg_mask.* (control_mask.*max(ref_image(:))) );
 end
 
-figure(1); imagesc( uint8(colorcoded_im) ); axis image; 
-imwrite(uint8(colorcoded_im), fullfile(mov_path, [ref_image_fname(1:end - length('_AVG.tif') ) '_stim_map.png' ] ) );
+figure(1); imagesc( uint8(colorcoded_im) ); axis image;
+if ~exist( fullfile(mov_path, 'Stim_Maps'), 'dir' )
+    mkdir(fullfile(mov_path, 'Stim_Maps'))
+end
+imwrite(uint8(colorcoded_im), fullfile(mov_path, 'Stim_Maps' ,[ref_image_fname(1:end - length('_AVG.tif') ) '_stim_map.png' ] ) );
 
 
 
@@ -440,15 +449,22 @@ end
 hz=16.6;
 figure(10); hold off;
 
-plot( ref_times,ref_stddev_stim,'r'); hold on;
-plot( ref_times,ref_stddev_control,'b'); hold on;
+plot( ref_times/hz,ref_stddev_stim,'r'); hold on;
+plot( ref_times/hz,ref_stddev_control,'b'); hold on;
 legend('Stimulus cones','Control cones');
-plot(stim_locs, max([ref_stddev_stim; ref_stddev_control])*ones(size(stim_locs)),'r*'); hold off;
+plot(stim_locs/hz, max([ref_stddev_stim; ref_stddev_control])*ones(size(stim_locs)),'r*'); hold off;
 ylabel('Standard deviation'); xlabel('Time (s)'); title( strrep( [ref_image_fname(1:end - length('_AVG.tif') ) '_' profile_method '_stddev_ref_plot' ], '_',' ' ) );
-saveas(gcf, fullfile(mov_path, [ref_image_fname(1:end - length('_AVG.tif') ) '_' profile_method '_cutoff_' norm_type '_' num2str(cutoff*100) '_stddev_ref_plot.png' ] ) );
-% pause;
 
-save([ref_image_fname(1:end - length('_AVG.tif') ) '_' profile_method '_cutoff_' norm_type '_' num2str(cutoff*100) '_profiledata.mat'], 'stim_cell_times', 'norm_stim_cell_reflectance', ...
+if ~exist( fullfile(mov_path, 'Std_Dev_Plots'), 'dir' )
+    mkdir(fullfile(mov_path, 'Std_Dev_Plots'))
+end
+saveas(gcf, fullfile(mov_path, 'Std_Dev_Plots' , [ref_image_fname(1:end - length('_AVG.tif') ) '_' profile_method '_cutoff_' norm_type '_' num2str(cutoff*100) '_stddev_ref_plot.png' ] ) );
+
+
+if ~exist( fullfile(mov_path, 'Mat_Profile_Data'), 'dir' )
+    mkdir(fullfile(mov_path, 'Mat_Profile_Data'))
+end
+save(fullfile(mov_path, 'Mat_Profile_Data' ,[ref_image_fname(1:end - length('_AVG.tif') ) '_' profile_method '_cutoff_' norm_type '_' num2str(cutoff*100) '_profiledata.mat']), 'stim_cell_times', 'norm_stim_cell_reflectance', ...
       'control_cell_times', 'norm_control_cell_reflectance' );
 
 %%
@@ -470,7 +486,10 @@ for i=1:length(norm_control_cell_reflectance) % Plot raw
 %     plot(stim_locs, 2*ones(size(stim_locs)),'r*'); hold off;
 %     pause;
 end
-saveas(gcf, fullfile(mov_path, [ref_image_fname(1:end - length('_AVG.tif') ) '_' profile_method  '_cutoff_' norm_type '_' num2str(cutoff*100) '_raw_plot.png' ] ) );
+if ~exist( fullfile(mov_path, 'Raw_Plots'), 'dir' )
+    mkdir(fullfile(mov_path, 'Raw_Plots'))
+end
+saveas(gcf, fullfile(mov_path,  'Raw_Plots' ,[ref_image_fname(1:end - length('_AVG.tif') ) '_' profile_method  '_cutoff_' norm_type '_' num2str(cutoff*100) '_raw_plot.png' ] ) );
 
 
 % plot([0 length(cell_times{i})], [1+2*pstddev 1+2*pstddev],'r');

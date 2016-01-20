@@ -28,7 +28,7 @@ endTime = max(timeBase);
 % pooled_std_stim = ComputeModelPreds(trueParams,timeBase);
 
 %% Start plot
-thePlot = figure; clf; hold on
+thePlot = figure(2); clf; hold on
 set(gca,'FontName','Helvetica','FontSize',14);
 plot(timeBase,pooled_std_stim,'ro','MarkerFaceColor','r','MarkerSize',6);
 % figure(thePlot); plot(timeBase,theResponse,'r','LineWidth',4);
@@ -44,7 +44,7 @@ drawnow;
 % These are known
 fitParams0.type = 'gammapdf';
 fitParams0.preStimValue = -0.1;
-fitParams0.stimOnsetTime = 2;
+fitParams0.stimOnsetTime = 4.33;
 
 % These we make up based on our excellent judgement
 fitParams0.responseDelay = 0;
@@ -77,7 +77,7 @@ options = optimset(options,'Diagnostics','off','Display','off','LargeScale','off
 
 % Initial guess
 x0 = ParamsToX(fitParams0);
-
+fieldnames(fitParams0)
 % First seach on gammaA and scale only, and add to plot
 vlb = [x0(1) 0.01 x0(3) 0.01];
 vub = [x0(1) 100 x0(3) 100];
@@ -158,7 +158,7 @@ switch (params.type)
         stimZeroedTime = timeBase-params.stimOnsetTime;
         delayZeroedTime = stimZeroedTime-params.responseDelay;
         index = find(delayZeroedTime >= 0);
-        preds(index) = params.scale*gampdf(delayZeroedTime(index),params.gammaA,params.gammaB);
+        preds(index) = preds(index)+params.scale*gampdf(delayZeroedTime(index),params.gammaA,params.gammaB);
     otherwise
         error('Unknown model type');
 end
