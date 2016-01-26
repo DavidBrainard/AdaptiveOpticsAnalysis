@@ -16,7 +16,7 @@ end
 
 %% Get inputs and put into common format
 theWavelength = GetWithDefault('Enter wavelength in nanometers',670);
-pupilDiamMm = GetWithDefault('Enter pupil diameter in mm',7);2.54*(3.6*10-2)
+pupilDiamMm = GetWithDefault('Enter pupil diameter in mm',7);
 eyeLengthMm = GetWithDefault('Enter assumed eye length in mm',17);
 LENGTHORAREA = GetWithDefault('Enter stimulus side (1), stimulus diameter (2), or stimulus area (3)?',2);
 switch (LENGTHORAREA)
