@@ -55,14 +55,16 @@ end
 %% Find the frames where the stimulus was on, and create the stimulus
 % "masks"
 visible_signal = zeros(size(visible_stack,3),1);
+
+noise_floor = mean(max(visible_stack(:,:,1)));
 for v=1:size(visible_stack,3)
     
-    vis_frm = visible_stack(:,:,v);        
-    
+    vis_frm = visible_stack(:,:,v);
+%     figure(1); imagesc(vis_frm); colormap gray; axis image;pause(.2);
     visible_signal(v) = mean(vis_frm(:));
 end
 
-stim_times = find( visible_signal > 10 );
+stim_times = find( visible_signal > noise_floor );
 % Make them relative to their actual temporal locations.
 stim_locs = accept_images(stim_times);
 
@@ -72,15 +74,15 @@ vis_masks = zeros(size(visible_stack,1), size(visible_stack,2), size(stim_locs,1
 % The first frame recieves no stimulus
 for i=1:length(stim_locs)
     
-    vis_frm = visible_stack(:,:,stim_locs(i));        
-%     figure(1); imagesc(vis_frm); colormap gray; axis image;       
-    noise_floor = 10;
+    vis_frm = visible_stack(:,:,stim_times(i));        
+%     figure(1); imagesc(vis_frm); colormap gray; axis image;pause(.2)
+
     vis_frm = vis_frm-min(vis_frm(:));
     vis_frm( vis_frm<=2*noise_floor ) = 0;
     vis_frm( vis_frm>2*noise_floor )  = 1;
-    vis_masks(:,:,i+1) = imclose(vis_frm, strel('disk',9) );
+    vis_masks(:,:,i+1) = imclose(vis_frm, strel('disk',13) );
     vis_masks(:,:,i+1) = imopen(vis_masks(:,:,i+1), strel('disk',9) );
-%     figure(2); imagesc(vis_masks(:,:,i)); colormap gray; axis image; pause(0.1)
+%     figure(2); imagesc(vis_masks(:,:,i)); colormap gray; axis image; pause(.1)
 end
 
 if ~isempty(stim_locs) % If there were stimulus frames, find them and set up the masks to use, as well as the normalization frames
@@ -297,13 +299,15 @@ s_cell_ref = s_cell_ref( ~all(isnan(s_cell_ref),2), :);
 
 for t=1:size(c_cell_ref,2)
     c_ref_mean(t) = mean(c_cell_ref( ~isnan(c_cell_ref(:,t)) ,t));    
+    s_ref_mean(t) = mean(s_cell_ref( ~isnan(s_cell_ref(:,t)) ,t));
 end
 
-% plot(c_ref_mean,'b'); hold on; plot(s_ref_mean,'r'); hold off;
+figure(9); plot(c_ref_mean,'b'); hold on; plot(s_ref_mean,'r'); hold off; title('Stimulus mean vs control mean');
 
 norm_stim_cell_reflectance = cell( size(stim_cell_reflectance) );
 
 for i=1:length( stim_cell_reflectance )
+    
     norm_stim_cell_reflectance{i} = stim_cell_reflectance{i}./c_ref_mean;
     
     no_ref = ~isnan(norm_stim_cell_reflectance{i});
@@ -320,6 +324,7 @@ for i=1:length( control_cell_reflectance )
     norm_control_cell_reflectance{i} = control_cell_reflectance{i}./c_ref_mean;
     
     no_ref = ~isnan(norm_control_cell_reflectance{i});
+    
     norm_control_cell_reflectance{i} = norm_control_cell_reflectance{i}(no_ref);
     control_cell_times{i}       = control_cell_times{i}(no_ref);
     
@@ -342,6 +347,8 @@ if ~isempty( strfind(norm_type, 'prestimminus'))
         prestim_std = std( norm_control_cell_reflectance{i}( control_cell_times{i}<stim_locs(1) & ~isnan( norm_control_cell_reflectance{i} ) ) );
 
         norm_control_cell_reflectance{i} = (norm_control_cell_reflectance{i}-prestim_mean)/prestim_std;
+        
+        
 
     end
 elseif ~isempty( strfind(norm_type, 'prestim'))

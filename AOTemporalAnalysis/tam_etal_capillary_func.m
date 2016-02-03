@@ -40,6 +40,7 @@ for i=1:size(divVideo,3)-1
     % Find the regions in each frame that do not have data, make a mask to
     % ignore in all frames
     ignoremask = (divVideo(:,:,i) == 0) | (divVideo(:,:,i+1) ==0);
+    ignoremask = imdilate(ignoremask, strel('disk',5) );
     
     mfDivVideo(:,:,i) = ~ignoremask.*(divVideo(:,:,i)+divVideo(:,:,i+1))/2 ;
     
@@ -81,7 +82,8 @@ for i=1:size(mfDivVideo,3)
     mfDivImage( mfDivImage ~= 0 ) = log(mfDivImage( mfDivImage ~= 0 ));
 
     sdImage = sdImage + (mfDivImage -logMeanMfDiv ).^2;
-    
+%     figure(1); imagesc(sdImage); colormap gray;
+%     figure(2); imagesc(mfDivImage); colormap gray;
 end
 
 % mfDivMask( mfDivMask < 0.33*numFrames ) = 1;
@@ -91,6 +93,8 @@ sdImage = exp( sqrt( sdImage./(mfDivMask-1) ) );
 
 % Squish undefined parts of the image by making them the minimum value
 undefsd = (isnan(sdImage) | isinf(sdImage) | (sdImage ==0));
+
+
 
 sdImage( undefsd ) = min( sdImage( ~undefsd ) );
 

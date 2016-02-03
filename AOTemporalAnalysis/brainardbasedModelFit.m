@@ -1,4 +1,4 @@
-function brainardbasedModelFit(timeBase, pooled_std_stim)
+function [max_resp_ampl]=brainardbasedModelFit(timeBase, pooled_std_stim)
 % gammaFitTutorial
 %
 % Illustrates using fmincon to fit a gamma function to data.
@@ -43,8 +43,16 @@ drawnow;
 
 % These are known
 fitParams0.type = 'gammapdf';
-fitParams0.preStimValue = -0.1;
-fitParams0.stimOnsetTime = 4.33;
+
+fitParams0.stimOnsetTime = 4.096;
+
+% Remove any nan.
+maskout = ~isnan(pooled_std_stim);
+
+pooled_std_stim = pooled_std_stim(maskout);
+timeBase = timeBase(maskout);
+
+fitParams0.preStimValue = mean( pooled_std_stim( timeBase < fitParams0.stimOnsetTime ) );
 
 % These we make up based on our excellent judgement
 fitParams0.responseDelay = 0;
@@ -97,6 +105,8 @@ fitParams = XToParams(x,fitParams0);
 predictions = ComputeModelPreds(fitParams,timeBase);
 figure(thePlot); plot(timeBase,predictions,'g','LineWidth',2);
 legend({' Data', 'Underlying Fcn' ' Initial Guess', ' Intermediate Fit' ' Final Fit'},'FontSize',14,'Location','NorthEast');
+
+max_resp_ampl = max(predictions)-fitParams0.preStimValue;
 
 end
 
