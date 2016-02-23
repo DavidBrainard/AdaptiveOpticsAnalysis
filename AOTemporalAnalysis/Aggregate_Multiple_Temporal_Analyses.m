@@ -93,8 +93,7 @@ for j=1:length(profileDataNames)
     
     % Pooled variance of all cells before first stimulus
     [ ref_variance_stim{j}, ref_stim_times{j}, ref_stim_count{j} ]    = reflectance_pooled_variance( stim_cell_times, norm_stim_cell_reflectance, allmax );
-    [ ref_variance_control{j},ref_control_times{j}, ref_control_count{j} ] = reflectance_pooled_variance( control_cell_times, norm_control_cell_reflectance, allmax );
-    
+    [ ref_variance_control{j},ref_control_times{j}, ref_control_count{j} ] = reflectance_pooled_variance( control_cell_times, norm_control_cell_reflectance, allmax );    
 
 
     i=1;
@@ -158,7 +157,7 @@ end
 % If its in the normalization, subtract the control value from the stimulus
 % value
 % if ~isempty( strfind(norm_type, 'sub') )
-hz=16.6;
+hz=16.66666666;
 timeBase = (1:allmax)/hz;
 pooled_std_stim    = sqrt(pooled_variance_stim)-sqrt(pooled_variance_control);
 pooled_std_control = sqrt(pooled_variance_control)-sqrt(pooled_variance_control);
@@ -171,13 +170,13 @@ plot( timeBase,pooled_std_control,'b'); hold on;
 legend('Stimulus cones','Control cones');
 
 % Stim train
-trainlocs = 66/hz:1/hz:(66+33)/hz;
+trainlocs = 66/hz:1/hz:(65+33)/hz;
 plot(trainlocs, max(pooled_std_stim)*ones(size(trainlocs)),'r*'); hold off;
 
 % plot(stim_locs, max([ref_variance_stim; ref_variance_control])*ones(size(stim_locs)),'r*'); hold off;
 ylabel('Pooled Standard deviation'); xlabel('Time (s)'); title( ['Pooled standard deviation of ' num2str(length(profileDataNames)) ' signals.'] );
 saveas(gcf, fullfile(pwd,['pooled_var_aggregate_' num2str(length(profileDataNames)) '_signals.png' ] ) );
-save( fullfile(pwd,['pooled_var_aggregate_' num2str(length(profileDataNames)) '_signals.mat' ] ), 'pooled_std_stim', 'timeBase' );
+% save( fullfile(pwd,['pooled_var_aggregate_' num2str(length(profileDataNames)) '_signals.mat' ] ), 'pooled_std_stim', 'timeBase' );
 
 
 brainardbasedModelFit(timeBase, pooled_std_stim)

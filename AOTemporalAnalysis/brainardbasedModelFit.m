@@ -44,7 +44,7 @@ drawnow;
 % These are known
 fitParams0.type = 'gammapdf';
 
-fitParams0.stimOnsetTime = 4.096;
+fitParams0.stimOnsetTime = 3.96;
 
 % Remove any nan.
 maskout = ~isnan(pooled_std_stim);
@@ -85,7 +85,7 @@ options = optimset(options,'Diagnostics','off','Display','off','LargeScale','off
 
 % Initial guess
 x0 = ParamsToX(fitParams0);
-fieldnames(fitParams0)
+% fieldnames(fitParams0);
 % First seach on gammaA and scale only, and add to plot
 vlb = [x0(1) 0.01 x0(3) 0.01];
 vub = [x0(1) 100 x0(3) 100];
@@ -95,18 +95,27 @@ figure(thePlot); plot(timeBase,predictions1,'c:','LineWidth',2);
 
 % Then full search
 vlb = [0 0.01 0.01 0.1];
-vub = [2 100 100 1000];
+vub = [100 100 100 1000];
 x = fmincon(@(x)FitModelErrorFunction(x,timeBase,pooled_std_stim,fitParams0),x1,[],[],[],[],vlb,vub,[],options);
 
 % Extract fit parameters
-fitParams = XToParams(x,fitParams0);
+fitParams = XToParams(x,fitParams0)
 
 % Add final fit to plot
 predictions = ComputeModelPreds(fitParams,timeBase);
 figure(thePlot); plot(timeBase,predictions,'g','LineWidth',2);
 legend({' Data', 'Underlying Fcn' ' Initial Guess', ' Intermediate Fit' ' Final Fit'},'FontSize',14,'Location','NorthEast');
 
-max_resp_ampl = max(predictions)-fitParams0.preStimValue;
+[max_ampl, max_ind ] = max(predictions);
+
+max_resp_ampl = max_ampl-fitParams0.preStimValue
+
+max_prestim_val = max(pooled_std_stim( timeBase < fitParams0.stimOnsetTime ) )
+
+resp_start_time = timeBase( min( find( predictions > max_prestim_val ) ) )
+
+time_to_peak  = timeBase(max_ind) - fitParams0.stimOnsetTime
+
 
 end
 
@@ -147,7 +156,7 @@ end
 function params = XToParams(x,params)
 switch (params.type)
     case 'gammapdf'
-        params.delay = x(1);
+        params.responseDelay = x(1);
         params.gammaA = x(2);
         params.gammaB = x(3);
         params.scale = x(4);
@@ -168,7 +177,9 @@ switch (params.type)
         stimZeroedTime = timeBase-params.stimOnsetTime;
         delayZeroedTime = stimZeroedTime-params.responseDelay;
         index = find(delayZeroedTime >= 0);
+        
         preds(index) = preds(index)+params.scale*gampdf(delayZeroedTime(index),params.gammaA,params.gammaB);
+%         preds = (params.scale*gampdf(timeBase-params.responseDelay,params.gammaA,params.gammaB))+params.preStimValue;
     otherwise
         error('Unknown model type');
 end
