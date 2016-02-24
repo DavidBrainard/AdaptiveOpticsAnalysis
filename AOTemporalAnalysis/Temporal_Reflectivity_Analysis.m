@@ -292,12 +292,20 @@ for i=1:length(cellseg_inds)
 end
 close(wbh);
 
+
 %% Normalize the intensities of each cone to the average value of the control cones
 c_cell_ref = cell2mat(control_cell_reflectance);
+% Get the indexes of the stimulated cells.
+contcellinds = find( ~all(isnan(c_cell_ref),2) );
 c_cell_ref = c_cell_ref( ~all(isnan(c_cell_ref),2), :);
 
 s_cell_ref = cell2mat(stim_cell_reflectance);
+% Get the indexes of the stimulated cells.
+stimcellinds = find( ~all(isnan(s_cell_ref),2) );
 s_cell_ref = s_cell_ref( ~all(isnan(s_cell_ref),2), :);
+
+
+
 
 for t=1:size(c_cell_ref,2)
     c_ref_mean(t) = mean(c_cell_ref( ~isnan(c_cell_ref(:,t)) ,t));    
@@ -443,17 +451,20 @@ end
 
 %% Standard deviation of all cells before first stimulus
 
-% Remove the empty cells
-norm_stim_cell_reflectance = norm_stim_cell_reflectance( ~cellfun(@isempty,norm_stim_cell_reflectance) );
-stim_cell_times = stim_cell_times( ~cellfun(@isempty,stim_cell_times) );
-norm_control_cell_reflectance = norm_control_cell_reflectance( ~cellfun(@isempty,norm_control_cell_reflectance) );
-control_cell_times = control_cell_times( ~cellfun(@isempty,control_cell_times) );
+% Remove the empty cells - moved later, to preserve for the output (and
+% repeatability analyses)
+% norm_stim_cell_reflectance = norm_stim_cell_reflectance( ~cellfun(@isempty,norm_stim_cell_reflectance) );
+% stim_cell_times = stim_cell_times( ~cellfun(@isempty,stim_cell_times) );
+% norm_control_cell_reflectance = norm_control_cell_reflectance( ~cellfun(@isempty,norm_control_cell_reflectance) );
+% control_cell_times = control_cell_times( ~cellfun(@isempty,control_cell_times) );
 % Find their max sizes    
-thatstimmax = max( cellfun(@max,stim_cell_times) );
-thatcontrolmax = max( cellfun(@max,control_cell_times) );   
+thatstimmax = max( cellfun(@max,stim_cell_times( ~cellfun(@isempty,stim_cell_times) ) ) );
+thatcontrolmax = max( cellfun(@max, control_cell_times( ~cellfun(@isempty,control_cell_times)) ) );   
 
-[ ref_stddev_stim, ref_stim_times ]    = reflectance_std_dev( stim_cell_times, norm_stim_cell_reflectance, thatstimmax );
-[ ref_stddev_control,ref_control_times ] = reflectance_std_dev( control_cell_times, norm_control_cell_reflectance, thatcontrolmax );
+[ ref_stddev_stim, ref_stim_times ]    = reflectance_std_dev( stim_cell_times( ~cellfun(@isempty,stim_cell_times) ), ...
+                                                              norm_stim_cell_reflectance( ~cellfun(@isempty,norm_stim_cell_reflectance) ), thatstimmax );
+[ ref_stddev_control,ref_control_times ] = reflectance_std_dev( control_cell_times( ~cellfun(@isempty,control_cell_times) ), ...
+                                                                norm_control_cell_reflectance( ~cellfun(@isempty,norm_control_cell_reflectance) ), thatcontrolmax );
 
 ref_times = [];
 
@@ -503,9 +514,17 @@ if ~exist( fullfile(mov_path, 'Mat_Profile_Data'), 'dir' )
     mkdir(fullfile(mov_path, 'Mat_Profile_Data'))
 end
 save(fullfile(mov_path, 'Mat_Profile_Data' ,[ref_image_fname(1:end - length('_AVG.tif') ) '_' profile_method '_cutoff_' norm_type '_' num2str(cutoff*100) '_profiledata.mat']), 'stim_cell_times', 'norm_stim_cell_reflectance', ...
-      'control_cell_times', 'norm_control_cell_reflectance' );
+      'control_cell_times', 'norm_control_cell_reflectance','stimcellinds','contcellinds' );
 
 %%
+
+% Remove the empty cells
+norm_stim_cell_reflectance = norm_stim_cell_reflectance( ~cellfun(@isempty,norm_stim_cell_reflectance) );
+stim_cell_times = stim_cell_times( ~cellfun(@isempty,stim_cell_times) );
+norm_control_cell_reflectance = norm_control_cell_reflectance( ~cellfun(@isempty,norm_control_cell_reflectance) );
+control_cell_times = control_cell_times( ~cellfun(@isempty,control_cell_times) );
+
+
 figure(11);
 for i=1:length(norm_stim_cell_reflectance) % Plot raw
 % 
