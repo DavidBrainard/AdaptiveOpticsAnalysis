@@ -22,7 +22,7 @@ function varargout = AutoAOMontagingGUI(varargin)
 
 % Edit the above text to modify the response to help AutoAOMontagingGUI
 
-% Last Modified by GUIDE v2.5 15-Dec-2015 14:47:10
+% Last Modified by GUIDE v2.5 24-Feb-2016 17:16:29
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -177,8 +177,15 @@ function montageAll_Callback(hObject, eventdata, handles)
 % hObject    handle to montageAll (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
+
+TransType=0;
+switch get(get(handles.uibuttongroup1,'SelectedObject'),'Tag')
+      case 'radiobutton2',  TransType=0;
+      case 'radiobutton3',  TransType=1;
+      case 'radiobutton4',  TransType=3;
+end
 tic
-handles.combinedFile_names = AOMosiacAllMultiModal(handles.imgfolder_name,handles.postionFile_name,'A1:C59',handles.outputFolder_name,[1 2 3], 0 );
+handles.combinedFile_names = AOMosiacAllMultiModal(handles.imgfolder_name,handles.postionFile_name,'A1:C59',handles.outputFolder_name,[1 2 3], TransType);
 toc
 
 set(handles.montageList,'String',handles.combinedFile_names,...
@@ -213,3 +220,19 @@ function outputFolder_Callback(hObject, eventdata, handles)
 handles.outputFolder_name = uigetdir;
 set(handles.outputFolderText, 'String', handles.outputFolder_name) ;
 guidata(hObject, handles);
+
+
+% --- Executes on button press in radiobutton1.
+function radiobutton1_Callback(hObject, eventdata, handles)
+% hObject    handle to radiobutton1 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of radiobutton1
+
+
+% --- Executes when selected object is changed in uibuttongroup1.
+function uibuttongroup1_SelectionChangedFcn(hObject, eventdata, handles)
+% hObject    handle to the selected object in uibuttongroup1 
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
