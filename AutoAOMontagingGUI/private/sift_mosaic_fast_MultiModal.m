@@ -63,6 +63,7 @@ for t = 1:5000
   subset = vl_colsubset(1:numMatches_all, 3) ;
     
   H = eye(3,3);
+  TransRadians = 0;
   if (TransType == 0)
       %Score Using Only Translation
       C1 = mean(X1(1:2,subset),2);
@@ -70,25 +71,27 @@ for t = 1:5000
       trans = C2 - C1;
       H(1,3) = trans(1);
       H(2,3) = trans(2);
-
+      TransRadians = 0;
   elseif (TransType == 1)
       %Score Using Only rotation + translation
       [dist,Z,trans]  = procrustes(X2(1:2,subset)',X1(1:2,subset)','scaling', false, 'reflection', false); 
       H = [trans.T' mean(trans.c,1)'; 0 0 1];  
-
+      TransRadians = atan2(H(1,2),H(1,1));
   elseif (TransType == 2)
       %Score Using rotation + translation + scalling
       [dist,Z,trans]  = procrustes(X2(1:2,subset)',X1(1:2,subset)','scaling', true, 'reflection', false); 
       H = [trans.b*trans.T' mean(trans.c)'; 0 0 1];  
-  
+      T = trans.T';
+      TransRadians = atan2(T(1,2),T(1,1));
   elseif(TransType == 3)
-      %Score using homography
+      %Score using homography (affine)
        A = [] ;
        for i = subset
           A = cat(1, A, kron(X1(:,i)', vl_hat(X2(:,i)))) ;
        end
        [U,S,V] = svd(A) ;
        H = reshape(V(:,9),3,3) ;
+       TransRadians = atan2(H(1,2),H(1,1));
   elseif(TransType == 4)
        %individual scale
       [dist,Z,trans]  = procrustes(X2(1:2,subset)',X1(1:2,subset)','scaling', false, 'reflection', false); 
@@ -96,6 +99,7 @@ for t = 1:5000
       a=X2(1,subset)*pinv(Z(:,1)');
       b=X2(2,subset)*pinv(Z(:,2)');
       H = [a 0 0; 0 b 0; 0 0 1] * H;
+      TransRadians = atan2(H(1,2),H(1,1));
   end
    
    
@@ -104,20 +108,8 @@ for t = 1:5000
   dv = X2_(2,:)./X2_(3,:) - X2(2,:)./X2(3,:) ;
   ok = (du.*du + dv.*dv) < 6*6 ;
   score = sum(ok) ;
-
-  if(TransType == 4)
-      a=X2(1,ok)*pinv(X2_(1,ok));
-      b=X2(2,ok)*pinv(X2_(2,ok));
-      H = [a 0 0; 0 b 0; 0 0 1] * H;
-
-      X2_ = H * X1 ;
-      du = X2_(1,:)./X2_(3,:) - X2(1,:)./X2(3,:) ;
-      dv = X2_(2,:)./X2_(3,:) - X2(2,:)./X2(3,:) ;
-      ok = (du.*du + dv.*dv) < 6*6 ;
-      score = sum(ok) ;
-  end
   
-  if(score > bestScore)
+  if((score > bestScore) && ((abs(TransRadians) < (pi/18))))
     bestScore = score;
     bestH = H;
     bestOK_all = ok;  

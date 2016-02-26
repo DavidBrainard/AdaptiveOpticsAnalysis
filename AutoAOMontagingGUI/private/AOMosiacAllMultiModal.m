@@ -115,7 +115,7 @@ d_all = cell(MN,N);
 h = waitbar(0,'Calculating Sift Features 0%');
 for n=1:N
     
-    for m = 1:MN
+    parfor m = 1:MN
         im = im2single(imread(char(imageFilename{m,n})));
         [f1,d1] = vl_sift(im,'Levels',55);
         f_all{m,n} = f1;
