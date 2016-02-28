@@ -3,8 +3,8 @@
 % 12-31-2015
 % This script calculates pooled variance across a set of given signals.
 
-clear;
-close all force;
+% clear;
+% close all force;
 
 
 
@@ -13,60 +13,10 @@ profileDataNames = read_folder_contents(pwd,'mat');
 thatstimmax=0;
 thatcontrolmax=0;
 %% Code for determining variance across all signals at given timepoint
-% for j=1:length(profileDataNames)
-% 
-%     load(profileDataNames{j});
-%     
-%     % Remove the empty cells
-%     norm_stim_cell_reflectance = norm_stim_cell_reflectance( ~cellfun(@isempty,norm_stim_cell_reflectance) );
-%     stim_cell_times = stim_cell_times( ~cellfun(@isempty,stim_cell_times) );
-%     norm_control_cell_reflectance = norm_control_cell_reflectance( ~cellfun(@isempty,norm_control_cell_reflectance) );
-%     control_cell_times = control_cell_times( ~cellfun(@isempty,control_cell_times) );
-%     
-%     
-%     thismax = max( cellfun(@max,stim_cell_times) );
-%     if thismax > thatstimmax
-%        thatstimmax = thismax; 
-%     end
-%     
-%     thismax = max( cellfun(@max,control_cell_times) );
-%     if thismax > thatcontrolmax
-%        thatcontrolmax = thismax; 
-%     end
-% end
-% 
-% all_stim_ref = cell(thatstimmax,1);
-% 
-% all_control_ref = cell(thatcontrolmax,1);
-% 
-% % Consolidate all of the data
-% for j=1:length(profileDataNames)
-% 
-%     load(profileDataNames{j});
-%     
-%     % Remove the empty cells
-%     norm_stim_cell_reflectance = norm_stim_cell_reflectance( ~cellfun(@isempty,norm_stim_cell_reflectance) );
-%     stim_cell_times = stim_cell_times( ~cellfun(@isempty,stim_cell_times) );
-%     
-%     norm_control_cell_reflectance = norm_control_cell_reflectance( ~cellfun(@isempty,norm_control_cell_reflectance) );
-%     control_cell_times = control_cell_times( ~cellfun(@isempty,control_cell_times) );
-%     
-%     for i=1:length(stim_cell_times)
-%         for k=1:length(stim_cell_times{i})
-%             all_stim_ref{ stim_cell_times{i}(k) } = [all_stim_ref{ stim_cell_times{i}(k) } norm_stim_cell_reflectance{i}(k)];
-%         end
-%     end
-%     
-%     for i=1:length(control_cell_times)
-%         for k=1:length(control_cell_times{i})
-%             all_control_ref{ control_cell_times{i}(k) } = [all_stim_ref{ control_cell_times{i}(k) } norm_control_cell_reflectance{i}(k)];
-%         end
-%     end
-%     
-% end
 
 allmax=0;
 
+mean_control_reflectance = zeros(500,1);
 
 for j=1:length(profileDataNames)
 
@@ -74,9 +24,11 @@ for j=1:length(profileDataNames)
     
     % Remove the empty cells
     norm_stim_cell_reflectance = norm_stim_cell_reflectance( ~cellfun(@isempty,norm_stim_cell_reflectance) );
-    stim_cell_times = stim_cell_times( ~cellfun(@isempty,stim_cell_times) );
-    norm_control_cell_reflectance = norm_control_cell_reflectance( ~cellfun(@isempty,norm_control_cell_reflectance) );
-    control_cell_times = control_cell_times( ~cellfun(@isempty,control_cell_times) );
+    stim_cell_times            = stim_cell_times(  ~cellfun(@isempty,stim_cell_times) );
+    norm_control_cell_reflectance = norm_control_cell_reflectance( ~cellfun(@isempty,norm_control_cell_reflectance)  );
+    control_cell_times            = control_cell_times( ~cellfun(@isempty,control_cell_times) );
+    
+    
     
     
     thatstimmax = max( cellfun(@max,stim_cell_times) );    
@@ -115,6 +67,19 @@ for j=1:length(profileDataNames)
             i = i+1;
         end
 
+    end
+    
+    for i=1 : length(norm_control_cell_reflectance)
+        for k=1 : length( norm_control_cell_reflectance{i} )
+
+            if ~isnan( norm_control_cell_reflectance{i}(k) )
+                if mean_control_reflectance(k) == 0
+                    mean_control_reflectance(k) = norm_control_cell_reflectance{i}(k);
+                else
+                    mean_control_reflectance(k) = (mean_control_reflectance(k) + norm_control_cell_reflectance{i}( (k) ) )/2;
+                end
+            end
+        end
     end
     
 
@@ -159,8 +124,8 @@ end
 % if ~isempty( strfind(norm_type, 'sub') )
 hz=16.66666666;
 timeBase = (1:allmax)/hz;
-pooled_std_stim    = sqrt(pooled_variance_stim)-sqrt(pooled_variance_control);
-pooled_std_control = sqrt(pooled_variance_control)-sqrt(pooled_variance_control);
+pooled_std_stim    = sqrt(pooled_variance_stim);%-sqrt(pooled_variance_control);
+pooled_std_control = sqrt(pooled_variance_control);%-sqrt(pooled_variance_control);
     
 % end
 
@@ -179,4 +144,4 @@ saveas(gcf, fullfile(pwd,['pooled_var_aggregate_' num2str(length(profileDataName
 % save( fullfile(pwd,['pooled_var_aggregate_' num2str(length(profileDataNames)) '_signals.mat' ] ), 'pooled_std_stim', 'timeBase' );
 
 
-brainardbasedModelFit(timeBase, pooled_std_stim)
+% brainardbasedModelFit(timeBase, pooled_std_stim)

@@ -520,10 +520,9 @@ save(fullfile(mov_path, 'Mat_Profile_Data' ,[ref_image_fname(1:end - length('_AV
 
 % Remove the empty cells
 norm_stim_cell_reflectance = norm_stim_cell_reflectance( ~cellfun(@isempty,norm_stim_cell_reflectance) );
-stim_cell_times = stim_cell_times( ~cellfun(@isempty,stim_cell_times) );
-norm_control_cell_reflectance = norm_control_cell_reflectance( ~cellfun(@isempty,norm_control_cell_reflectance) );
-control_cell_times = control_cell_times( ~cellfun(@isempty,control_cell_times) );
-
+stim_cell_times            = stim_cell_times(  ~cellfun(@isempty,stim_cell_times) );
+norm_control_cell_reflectance = norm_control_cell_reflectance( ~cellfun(@isempty,norm_control_cell_reflectance)  );
+control_cell_times            = control_cell_times( ~cellfun(@isempty,control_cell_times) );
 
 figure(11);
 for i=1:length(norm_stim_cell_reflectance) % Plot raw
