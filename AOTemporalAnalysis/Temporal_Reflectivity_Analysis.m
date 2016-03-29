@@ -7,9 +7,9 @@ clear;
 close all force;
 
 
-profile_method = 'box';
+profile_method = 'segmentation';
 norm_type = 'regional_norm_prestimminusdiv_sub';
-cutoff = 0.8; % The percentage of time a cone must be stimulated relative to all stimulus in order to be included for analysis
+cutoff = 0.9; % The percentage of time a cone must be stimulated relative to all stimulus in order to be included for analysis
 
 % mov_path=pwd;
 [ref_image_fname, mov_path]  = uigetfile(fullfile(pwd,'*.tif'));
@@ -33,7 +33,8 @@ accept_images = sort(accept_images)' +1; % For some dumb reason it doesn't store
 
 ref_coords = dlmread( fullfile(mov_path, ref_coords_fname));
 
-ref_coords = [ref_coords(:,1)-2 ref_coords(:,2)-3];
+% ref_coords = [ref_coords(:,1)-2 ref_coords(:,2)-3];
+ref_coords = [ref_coords(:,1) ref_coords(:,2)];
 
 temporal_stack_reader = VideoReader( fullfile(mov_path,temporal_stack_fname) );
 if exist(fullfile(mov_path,visible_stack_fname),'file')
@@ -129,7 +130,6 @@ ref_coords = round(ref_coords);
 
 cellseg = cell(size(ref_coords,1),1);
 cellseg_inds = cell(size(ref_coords,1),1);
-
 
 
 wbh = waitbar(0,'Segmenting coordinate 0');
@@ -235,13 +235,34 @@ else
     colorcoded_im(:,:,3) = colorcoded_im(:,:,3) + (capillary_mask.*seg_mask.* (control_mask.*max(ref_image(:))) );
 end
 
-figure(1); imagesc( uint8(colorcoded_im) ); axis image;
+cropfig = figure(1); 
+imagesc( uint8(colorcoded_im) ); axis image;
 if ~exist( fullfile(mov_path, 'Stim_Maps'), 'dir' )
     mkdir(fullfile(mov_path, 'Stim_Maps'))
 end
 imwrite(uint8(colorcoded_im), fullfile(mov_path, 'Stim_Maps' ,[ref_image_fname(1:end - length('_AVG.tif') ) '_stim_map.png' ] ) );
 
+% Crop each area to a certain size
+cropsize = 100;
+croprect = [0 0 cropsize cropsize];
 
+figure(cropfig); 
+title('Select the crop region for the STIMULUS cones');
+h=imrect(gca, croprect);
+stim_mask_rect = wait(h);
+close(cropfig)
+stim_mask = poly2mask([stim_mask_rect(1) stim_mask_rect(1)                   stim_mask_rect(1)+stim_mask_rect(3) stim_mask_rect(1)+stim_mask_rect(3) stim_mask_rect(1)],...
+                      [stim_mask_rect(2) stim_mask_rect(2)+stim_mask_rect(4) stim_mask_rect(2)+stim_mask_rect(4) stim_mask_rect(2)                   stim_mask_rect(2)],...
+                      size(colorcoded_im,1), size(colorcoded_im,2));
+
+cropfig = figure(1); 
+imagesc( uint8(colorcoded_im) ); axis image; title('Select the crop region for the CONTROL cones');
+h=imrect(gca, croprect);
+control_mask_rect = wait(h);
+close(cropfig)
+control_mask = poly2mask([control_mask_rect(1) control_mask_rect(1)                      control_mask_rect(1)+control_mask_rect(3) control_mask_rect(1)+control_mask_rect(3) control_mask_rect(1)],...
+                         [control_mask_rect(2) control_mask_rect(2)+control_mask_rect(4) control_mask_rect(2)+control_mask_rect(4) control_mask_rect(2)                      control_mask_rect(2)],...
+                         size(colorcoded_im,1), size(colorcoded_im,2));
 
 %% Extract the raw reflectance of each cell.
 cellseg_inds = cellseg_inds(~cellfun(@isempty,cellseg_inds));
@@ -384,12 +405,33 @@ if ~isempty( strfind(norm_type, 'prestimminusdiv'))
     prestim_cont = prestim_std;
     prestim_mean_cont = prestim_mean;
     
-    mean(prestim_stim(~isnan(prestim_stim)))
-    mean(prestim_cont(~isnan(prestim_cont)))
+%     mean(prestim_stim(~isnan(prestim_stim)))
+%     mean(prestim_cont(~isnan(prestim_cont)))
+%     
+%     mean(prestim_mean_stim(~isnan(prestim_mean_stim)))
+%     mean(prestim_mean_cont(~isnan(prestim_mean_cont)))
+elseif ~isempty( strfind(norm_type, 'prestimminus'))
+    % Then normalize to the average intensity of each cone BEFORE stimulus.
+    for i=1:length( norm_stim_cell_reflectance ) % STIM
+
+        prestim_mean(i) = mean( norm_stim_cell_reflectance{i}(stim_cell_times{i}<stim_locs(1) & ~isnan( norm_stim_cell_reflectance{i} )) );
+
+        norm_stim_cell_reflectance{i} = (norm_stim_cell_reflectance{i}-prestim_mean(i));
+    end
+    prestim_stim = prestim_std;
+    prestim_mean_stim = prestim_mean;
+    prestim_std=[];
+    prestim_mean=[];
     
-    mean(prestim_mean_stim(~isnan(prestim_mean_stim)))
-    mean(prestim_mean_cont(~isnan(prestim_mean_cont)))
-    
+    for i=1:length( norm_control_cell_reflectance ) % CONTROL
+
+        prestim_mean(i) = mean( norm_control_cell_reflectance{i}( control_cell_times{i}<stim_locs(1) & ~isnan( norm_control_cell_reflectance{i} ) ) );        
+
+        norm_control_cell_reflectance{i} = (norm_control_cell_reflectance{i}-prestim_mean(i));
+    end
+    prestim_cont = prestim_std;
+    prestim_mean_cont = prestim_mean;
+        
 elseif ~isempty( strfind(norm_type, 'prestim'))
     % Then normalize to the average intensity of each cone BEFORE stimulus.
     for i=1:length( norm_stim_cell_reflectance ) % STIM
@@ -508,7 +550,7 @@ if ~exist( fullfile(mov_path, 'Std_Dev_Plots'), 'dir' )
     mkdir(fullfile(mov_path, 'Std_Dev_Plots'))
 end
 saveas(gcf, fullfile(mov_path, 'Std_Dev_Plots' , [ref_image_fname(1:end - length('_AVG.tif') ) '_' profile_method '_cutoff_' norm_type '_' num2str(cutoff*100) '_stddev_ref_plot.png' ] ) );
-
+% saveas(gcf, fullfile(mov_path, 'Std_Dev_Plots' , [ref_image_fname(1:end - length('_AVG.tif') ) '_' profile_method '_cutoff_' norm_type '_' num2str(cropsize) '_stddev_ref_plot.png' ] ) );
 
 if ~exist( fullfile(mov_path, 'Mat_Profile_Data'), 'dir' )
     mkdir(fullfile(mov_path, 'Mat_Profile_Data'))

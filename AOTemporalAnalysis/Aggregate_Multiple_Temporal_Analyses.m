@@ -129,9 +129,9 @@ pooled_std_control = sqrt(pooled_variance_control);%-sqrt(pooled_variance_contro
     
 % end
 
-figure(10); hold off;
-plot( timeBase,pooled_std_stim,'r'); hold on;
-plot( timeBase,pooled_std_control,'b'); hold on;
+figure(10); hold on;
+plot( timeBase,pooled_std_stim,'r');
+plot( timeBase,pooled_std_control,'b');
 legend('Stimulus cones','Control cones');
 
 % Stim train
