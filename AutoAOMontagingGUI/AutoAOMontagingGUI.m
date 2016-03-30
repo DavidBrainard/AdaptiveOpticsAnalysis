@@ -22,16 +22,16 @@ function varargout = AutoAOMontagingGUI(varargin)
 
 % Edit the above text to modify the response to help AutoAOMontagingGUI
 
-% Last Modified by GUIDE v2.5 24-Feb-2016 17:16:29
+% Last Modified by GUIDE v2.5 23-Mar-2016 18:50:27
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
 gui_State = struct('gui_Name',       mfilename, ...
-                   'gui_Singleton',  gui_Singleton, ...
-                   'gui_OpeningFcn', @AutoAOMontagingGUI_OpeningFcn, ...
-                   'gui_OutputFcn',  @AutoAOMontagingGUI_OutputFcn, ...
-                   'gui_LayoutFcn',  [] , ...
-                   'gui_Callback',   []);
+    'gui_Singleton',  gui_Singleton, ...
+    'gui_OpeningFcn', @AutoAOMontagingGUI_OpeningFcn, ...
+    'gui_OutputFcn',  @AutoAOMontagingGUI_OutputFcn, ...
+    'gui_LayoutFcn',  [] , ...
+    'gui_Callback',   []);
 if nargin && ischar(varargin{1})
     gui_State.gui_Callback = str2func(varargin{1});
 end
@@ -57,8 +57,17 @@ function AutoAOMontagingGUI_OpeningFcn(hObject, eventdata, handles, varargin)
 % Choose default command line output for AutoAOMontagingGUI
 handles.output = hObject;
 
-%exim= imread('D:\MCW\Normative_Metrics_2014\data\Normal Data\AD_10253\AD_10253_OS_seeded_0.5176umppx_trim_flat.tif');
-%exim= imread('C:\Users\Min\Dropbox (Aguirre-Brainard Lab)\AOSLOImageProcessing\ConstructMontage\InputImages_Set1\CO_20140408_NIR_OS_0012_ref_126_lps_8_lbss_8_sr_n_50_cropped_5.tif');
+%allocate variables and defaults
+handles.outputFolder_name=[];
+handles.combinedFile_names=[];
+handles.imgfolder_name=[];
+handles.imageFile_names=[];
+handles.modalitiesInfo = {'Confocal' 'confocal';
+    'Split Detection' 'split';
+    'Dark Field' 'avg';
+    'Modality 4' '';
+    'Modality 5' '';};
+handles.inputExt = 1;%default to .tif
 % addpath(genpath('./private'))
 % exim= imread('C:\Users\Min\Documents\Research\AdaptiveOpticsMosaic\NewDataSet2_DF_2015_8_26\CS_13213_20150302_OS_1p00_Montage_DarkField.bmp');
 % axes(handles.canvas);
@@ -72,7 +81,7 @@ guidata(hObject, handles);
 
 
 % --- Outputs from this function are returned to the command line.
-function varargout = AutoAOMontagingGUI_OutputFcn(hObject, eventdata, handles) 
+function varargout = AutoAOMontagingGUI_OutputFcn(hObject, eventdata, handles)
 % varargout  cell array for returning output args (see VARARGOUT);
 % hObject    handle to figure
 % eventdata  reserved - to be defined in a future version of MATLAB
@@ -98,11 +107,12 @@ function imageList_Callback(hObject, eventdata, handles)
 % Hints: contents = cellstr(get(hObject,'String')) returns imageList contents as cell array
 %        contents{get(hObject,'Value')} returns selected item from imageList
 
-index_selected = get(handles.imageList,'Value');
-axes(handles.canvas);
-img = imread(fullfile(handles.imgfolder_name,handles.imageFile_names{index_selected}));
-imagesc(img); colormap gray; axis equal; axis off;
-
+if(~isempty(handles.imgfolder_name) && ~isempty(handles.imageFile_names))
+    index_selected = get(handles.imageList,'Value');
+    axes(handles.canvas);
+    img = imread(fullfile(handles.imgfolder_name,handles.imageFile_names{index_selected}));
+    imagesc(img); colormap gray; axis equal; axis off;
+end
 
 % --- Executes during object creation, after setting all properties.
 function imageList_CreateFcn(hObject, eventdata, handles)
@@ -126,11 +136,27 @@ handles.imgfolder_name = uigetdir;
 set(handles.selectFolderText, 'String', handles.imgfolder_name) ;
 Allfiles = dir(strcat(handles.imgfolder_name,'\*.tif'));
 Allfiles = {Allfiles.name};
-confocal = sort(Allfiles(~cellfun(@isempty, strfind(Allfiles, '_confocal_'))));
 
-handles.imageFile_names = confocal;
+handles.imageFile_names =[];
+%Use current identifiers to locate all images
+dataSummary = cell(1,1);
+dataSummary{1} = 'Input Data Summary';
+for m = 1:size(handles.modalitiesInfo,1)
+    if (~isempty(handles.modalitiesInfo{m,2}))%check it's not empty
+        found = sort(Allfiles(~cellfun(@isempty, strfind(Allfiles, handles.modalitiesInfo{m,2}))));
+        handles.imageFile_names = [handles.imageFile_names, found];%search
+        dataSummary{end+1} =[num2str(size(found,2)),' ',char(handles.modalitiesInfo{m,1}),' image(s) found.'];
+    end
+
+end
+
+dataSummary{end+1} = '';
+dataSummary{end+1} = 'Note: You can modify how to search for each modality under Preferences->Input Settings.';
+msgbox(dataSummary,'Input Complete');
+
+
 set(handles.imageList,'String',handles.imageFile_names,...
-	'Value',1)
+    'Value',1)
 guidata(hObject, handles);
 
 
@@ -153,10 +179,12 @@ function montageList_Callback(hObject, eventdata, handles)
 % Hints: contents = cellstr(get(hObject,'String')) returns montageList contents as cell array
 %        contents{get(hObject,'Value')} returns selected item from montageList
 
-index_selected = get(handles.montageList,'Value');
-axes(handles.canvas);
-img = imread(fullfile(handles.outputFolder_name,handles.combinedFile_names{index_selected}));
-imagesc(img); colormap gray; axis equal; axis off;
+if(~isempty(handles.combinedFile_names) && ~isempty(handles.outputFolder_name))
+    index_selected = get(handles.montageList,'Value');
+    axes(handles.canvas);
+    img = imread(fullfile(handles.outputFolder_name,handles.combinedFile_names{index_selected}));
+    imagesc(img(:,:,1)); colormap gray; axis equal; axis off;
+end
 
 
 % --- Executes during object creation, after setting all properties.
@@ -178,22 +206,65 @@ function montageAll_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
+%Get Transformation Type
 TransType=0;
 switch get(get(handles.uibuttongroup1,'SelectedObject'),'Tag')
-      case 'radiobutton2',  TransType=0;
-      case 'radiobutton3',  TransType=1;
-      case 'radiobutton4',  TransType=3;
+    case 'radiobutton2',  TransType=0;
+    case 'radiobutton3',  TransType=1;
+    case 'radiobutton4',  TransType=3;
 end
+
+
+%New Montage Or Append to Existing?
+AppendToExisting=0;
+MontageSave=[];
+switch get(get(handles.uibuttongroup2,'SelectedObject'),'Tag')
+    case 'radiobutton5'
+        % If new check for existing save file exists
+        if(exist(fullfile(handles.outputFolder_name, 'AOMontageSave.mat'), 'file'))
+            choice = questdlg('AOMontageSave.mat file found in output folder. Overwrite existing montage?','Warrning');
+            if(~isequal(choice,'Yes'))
+                return;
+            end
+        end
+        AppendToExisting=0;
+    case 'radiobutton6',
+        %If appending check for existing save file
+        if(~exist(fullfile(handles.outputFolder_name, 'AOMontageSave.mat'), 'file'))
+            
+            
+            
+            
+            choice = questdlg('Appending Failed: AOMontageSave.mat file not found in output folder. Continue as New?','Error');
+            if(isequal(choice,'Yes'))
+                AppendToExisting = 0;
+            else
+                return;
+            end
+        else
+            MontageSave = fullfile(handles.outputFolder_name, 'AOMontageSave.mat');
+            AppendToExisting=1;
+        end
+end
+
+%read filename substrings to search for different modalities
+
+
 tic
-handles.combinedFile_names = AOMosiacAllMultiModal(handles.imgfolder_name,handles.postionFile_name,'A1:C59',handles.outputFolder_name,[1 2 3], TransType);
+handles.combinedFile_names = AOMosiacAllMultiModal(handles.imgfolder_name,handles.postionFile_name,handles.outputFolder_name,handles.modalitiesInfo(:,2), TransType,AppendToExisting,MontageSave);
 toc
 
+if(~isempty(handles.combinedFile_names))
 set(handles.montageList,'String',handles.combinedFile_names,...
-	'Value',1)
+    'Value',1)
 img=imread(fullfile(handles.outputFolder_name,handles.combinedFile_names{1}));
 axes(handles.canvas);
-imagesc(img); colormap gray; axis equal; axis off;
+imagesc(img(:,:,1)); colormap gray; axis equal; axis off;
 guidata(hObject, handles);
+else
+errordlg('Montage Interrupted!','Error');    
+end
+
 
 
 
@@ -209,7 +280,7 @@ function close_Callback(hObject, eventdata, handles)
 % hObject    handle to close (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
- close all;
+close all;
 
 
 % --- Executes on button press in outputFolder.
@@ -233,6 +304,71 @@ function radiobutton1_Callback(hObject, eventdata, handles)
 
 % --- Executes when selected object is changed in uibuttongroup1.
 function uibuttongroup1_SelectionChangedFcn(hObject, eventdata, handles)
-% hObject    handle to the selected object in uibuttongroup1 
+% hObject    handle to the selected object in uibuttongroup1
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+
+% --------------------------------------------------------------------
+function prefmenu_Callback(hObject, eventdata, handles)
+% hObject    handle to prefmenu (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+
+% --------------------------------------------------------------------
+function inputsettings_Callback(hObject, eventdata, handles)
+% hObject    handle to inputsettings (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+prompt = {'Filename substrings for identifying each modality:','Image extension:'};
+dlg_title = 'Input';
+num_lines = [5 50;1 10];
+%defaultsettings = {char({'confocal';'split';'avg';''});'.tif'};
+defaultsettings = {'confocal\nsplit\navg\n','.tif'};
+
+Title = 'Input Settings';
+
+%%%% SETTING DIALOG OPTIONS
+% Options.WindowStyle = 'modal';
+Options.Resize = 'on';
+Options.Interpreter = 'tex';
+Options.CancelButton = 'on';
+Options.ApplyButton = 'off';
+Options.ButtonNames = {'Save','Cancel'}; %<- default names, included here just for illustration
+Option.Dim = 4; % Horizontal dimension in fields
+
+Prompt = {};
+Formats = {};
+DefAns = struct([]);
+
+Prompt(1,:) = {'Filename substrings for identifying each modality:','modalitiesInfo',[]};
+Formats(1,1).type = 'table';
+Formats(1,1).format = {'char', 'char'}; % table (= table in main dialog) / window (= table in separate dialog)
+Formats(1,1).items = {'Modality Name' 'Substring'};
+Formats(1,1).size = [158.5 106];
+Formats(1,1).margin = 2;
+Formats(1,1).span = [1 1];  % item is 2 field x 1 fields
+Formats(1,1).labelloc = 'topcenter';
+Formats(1,1).unitsloc = 'bottomcenter';
+DefAns(1).modalitiesInfo = handles.modalitiesInfo;
+
+Prompt(end+1,:) = {'Input images extension:','inputExt',[]};
+Formats(2,1).type = 'list';
+Formats(2,1).style = 'popupmenu';
+Formats(2,1).items = {'.tif','.png'};
+DefAns(1).inputExt = handles.inputExt;
+
+[Input,Cancelled] = inputsdlg(Prompt,Title,Formats,DefAns,Options);
+
+if(~Cancelled)
+    handles.modalitiesInfo=Input.modalitiesInfo;
+    handles.inputExt=Input.inputExt;
+    guidata(hObject, handles);
+end
+% --------------------------------------------------------------------
+function outputsettings_Callback(hObject, eventdata, handles)
+% hObject    handle to outputsettings (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
