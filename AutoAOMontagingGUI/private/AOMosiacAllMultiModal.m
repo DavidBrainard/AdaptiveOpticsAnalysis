@@ -101,16 +101,20 @@ for n = 1:N
         if (~isempty(strfind(inData{1,n}, C{i,1})))
             
             %first try looking at coordinate grid
-            Loc = strsplit(C{i,3},',');
-            if(size(Loc,2) == 2)
-                LocXY(1,n) = str2double(strtrim(Loc{1}));
-                LocXY(2,n) = str2double(strtrim(Loc{2}));
-             end
-            %coordinate grind c
-            if(isnan(LocXY(1,n)) || isnan(LocXY(2,n))) 
-                LocXY(:,n) = parseShorthandLoc(C{i,2},eyeSide);
+            if(size(C,2) >= 3)
+                Loc = strsplit(C{i,3},',');
+                if(size(Loc,2) == 2)
+                    LocXY(1,n) = str2double(strtrim(Loc{1}));
+                    LocXY(2,n) = str2double(strtrim(Loc{2}));
+                end
             end
             
+            if(size(C,2) >= 2)
+                %coordinate grind c
+                if(isnan(LocXY(1,n)) || isnan(LocXY(2,n))) 
+                    LocXY(:,n) = parseShorthandLoc(C{i,2},eyeSide);
+                end
+            end
             if(isnan(LocXY(1,n)) || isnan(LocXY(2,n)))
                 errordlg(['Error: Location missing or invalid for image ' ImageID_m1]);
                 outNameList = [];

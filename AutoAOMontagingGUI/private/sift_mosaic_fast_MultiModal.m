@@ -56,8 +56,8 @@ numMatches_all = size(X1,2);
 
 clear H score ok ;
 bestScore = -1;
-bestH = zeros(3,3);
-bestOK_all = zeros(size(X1));
+bestH = eye(3,3);
+bestOK_all = zeros(1,size(X1,2));
 for t = 1:5000
   % estimate model
   subset = vl_colsubset(1:numMatches_all, 3) ;

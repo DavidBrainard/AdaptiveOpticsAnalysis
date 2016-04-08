@@ -2,30 +2,37 @@ function LocXY = parseShorthandLoc(inputString,eyeSide)
 
 inputString = upper(inputString);%make input all caps just in case
 LocXY = nan(2,1);
-%check special cases first
+
+%Flip x coordinate if eye is 'OD'
+EyeFlip = 1;
+if(strcmpi(eyeSide,'OD'))
+    EyeFlip = -1;
+end
+
+%check foveal cases first
 switch inputString
     
     case 'TL'
-        LocXY = [-1, 1]';
+        LocXY = [1, 1]';
     case 'TM'
         LocXY = [0, 1]';
     case 'TR'
-        LocXY = [1, 1]';
+        LocXY = [-1, 1]';
     case 'ML'
-        LocXY = [-1, 0]';
+        LocXY = [1, 0]';
     case 'C'
         LocXY = [0, 0]';
     case 'MR'
-        LocXY = [1, 0]';
+        LocXY = [-1, 0]';
     case 'BL'
-        LocXY = [-1, -1]';
+        LocXY = [1, -1]';
     case 'BM'
         LocXY = [0, -1]';
     case 'BR'
-        LocXY = [1, -1]';
+        LocXY = [-1, -1]';
 end
 
-%if not special case then parse
+%if not foveal case then parse
 if(isnan(LocXY(1)) || isnan(LocXY(2)))
     
     lettersLoc = find(isletter(inputString));
@@ -47,9 +54,9 @@ if(isnan(LocXY(1)) || isnan(LocXY(2)))
         
         switch upper(inputString(lettersLoc(i)))
             case 'T'
-                LocXY(1)=str2double(inputString(lettersLoc(i)+1:lastNum));
+                LocXY(1)=EyeFlip*str2double(inputString(lettersLoc(i)+1:lastNum));
             case 'N'
-                 LocXY(1)=-str2double(inputString(lettersLoc(i)+1:lastNum));
+                 LocXY(1)=-EyeFlip*str2double(inputString(lettersLoc(i)+1:lastNum));
             case 'S'
                  LocXY(2)=str2double(inputString(lettersLoc(i)+1:lastNum));
             case 'I'
@@ -58,8 +65,5 @@ if(isnan(LocXY(1)) || isnan(LocXY(2)))
     end
 end
 
-%flip if coordinate if eye is 'OD'
-if(strcmpi(eyeSide,'OD'))
-    LocXY(1) = -LocXY(1);
-end
+
 end
