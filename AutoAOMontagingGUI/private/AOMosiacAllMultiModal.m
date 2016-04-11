@@ -423,7 +423,7 @@ for m = 1:MN
             
             %# you need to set Photometric before Compression
             tob.setTag('Photometric',Tiff.Photometric.MinIsBlack)
-            tob.setTag('Compression',Tiff.Compression.None)
+            tob.setTag('Compression',Tiff.Compression.LZW)
             
             %# tell the program that channel 4 is alpha
             tob.setTag('ExtraSamples',Tiff.ExtraSamples.AssociatedAlpha)
@@ -463,7 +463,7 @@ for m = 1:MN
         
         %# you need to set Photometric before Compression
         tob.setTag('Photometric',Tiff.Photometric.MinIsBlack)
-        tob.setTag('Compression',Tiff.Compression.None)
+        tob.setTag('Compression',Tiff.Compression.LZW)
         
         %# tell the program that channel 4 is alpha
         tob.setTag('ExtraSamples',Tiff.ExtraSamples.AssociatedAlpha)
