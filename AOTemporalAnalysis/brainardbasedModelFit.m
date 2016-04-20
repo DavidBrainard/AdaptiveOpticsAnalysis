@@ -27,6 +27,9 @@ endTime = max(timeBase);
 % trueParams.noiseSd = 0.3;
 % pooled_std_stim = ComputeModelPreds(trueParams,timeBase);
 
+%Remove values below zero
+
+
 %% Start plot
 thePlot = figure(2); clf; hold on
 set(gca,'FontName','Helvetica','FontSize',14);
@@ -55,7 +58,7 @@ timeBase = timeBase(maskout);
 fitParams0.preStimValue = mean( pooled_std_stim( timeBase < fitParams0.stimOnsetTime ) );
 
 % These we make up based on our excellent judgement
-fitParams0.responseDelay = 0;
+fitParams0.responseDelay = -1;
 fitParams0.gammaA = 2;
 
 % Then rate parameter so that mode of distribution happens at

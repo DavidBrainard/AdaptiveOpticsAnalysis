@@ -3,8 +3,8 @@
 % 12-31-2015
 % This script calculates pooled variance across a set of given signals.
 
-% clear;
-% close all force;
+clear;
+close all force;
 
 
 
@@ -19,7 +19,7 @@ allmax=0;
 mean_control_reflectance = zeros(500,1);
 
 for j=1:length(profileDataNames)
-
+    profileDataNames{j}
     load(profileDataNames{j});
     
     % Remove the empty cells
@@ -68,6 +68,8 @@ for j=1:length(profileDataNames)
         end
 
     end
+    
+    figure(1); plot(ref_stim_times{j}, sqrt(ref_variance_stim{j}) ); hold on;
     
     for i=1 : length(norm_control_cell_reflectance)
         for k=1 : length( norm_control_cell_reflectance{i} )
@@ -124,8 +126,8 @@ end
 % if ~isempty( strfind(norm_type, 'sub') )
 hz=16.66666666;
 timeBase = (1:allmax)/hz;
-pooled_std_stim    = sqrt(pooled_variance_stim);%-sqrt(pooled_variance_control);
-pooled_std_control = sqrt(pooled_variance_control);%-sqrt(pooled_variance_control);
+pooled_std_stim    = sqrt(pooled_variance_stim)-sqrt(pooled_variance_control);
+pooled_std_control = sqrt(pooled_variance_control)-sqrt(pooled_variance_control);
     
 % end
 
@@ -144,4 +146,4 @@ saveas(gcf, fullfile(pwd,['pooled_var_aggregate_' num2str(length(profileDataName
 % save( fullfile(pwd,['pooled_var_aggregate_' num2str(length(profileDataNames)) '_signals.mat' ] ), 'pooled_std_stim', 'timeBase' );
 
 
-% brainardbasedModelFit(timeBase, pooled_std_stim)
+brainardbasedModelFit(timeBase, pooled_std_stim)
