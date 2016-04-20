@@ -1,4 +1,4 @@
-function  outNameList = AOMosiacAllMultiModal(imageDir,posFileLoc,posFileCells,outputDir,modalitiesToUse,TransType)
+function  outNameList = AOMosiacAllMultiModal(imageDir,posFileLoc,outputDir,ModalitiesSrchStrings,TransType,AppendToExisting,MontageSave)
 tic
 %Load Data
 %baseDir = 'C:\Users\Min\Dropbox\AOSLOImageProcessing\ConstructMontage\InputImages_Set1\';
@@ -9,66 +9,75 @@ tic
 % C_text = textscan(fileID,formatSpec,9,'Delimiter','\t');
 % C = textscan(fileID, '%d8 %s %s %s %s %d8 %s %d8 %d8', 'delimiter', '\t');
 %N = size(C{1},1);
-
-%imageDir = 'C:\Users\Min\Dropbox\AOSLOImageProcessing\ConstructMontage\InputImages_Set3\Images';
-%Allfiles = dir('C:\Users\Min\Dropbox\AOSLOImageProcessing\ConstructMontage\InputImages_Set3\Images\*.tif');
+parallelFlag = exist('parfor');
 Allfiles = dir(fullfile(imageDir,'*.tif'));
 Allfiles = {Allfiles.name};
-confocal = sort(Allfiles(~cellfun(@isempty, strfind(Allfiles, '_confocal_'))));
-darkfield = sort(Allfiles(~cellfun(@isempty, strfind(Allfiles, '_avg_'))));
-splitDecision = sort(Allfiles(~cellfun(@isempty, strfind(Allfiles, '_split_'))));
 
+MN = size(ModalitiesSrchStrings,1);
+inData = [];
 
 %create multi-modal data structure
 %depending on parameter array modalitiesToUse
+counter = 0;
+for m = 1:MN
+    
+    if (~isempty(ModalitiesSrchStrings{m}))%check it's not empty
+        imagesFound = sort(Allfiles(~cellfun(@isempty, strfind(Allfiles, ModalitiesSrchStrings{m}))));%search for image of this modality
+        if(~isempty(imagesFound))
+            inData = [inData; imagesFound];
+            counter = counter + 1;
+        end
 
-inData = [];
-%inData = [confocal; splitDecision; darkfield];
-for m = modalitiesToUse
-
-    if (m == 1)
-        inData = [inData; confocal];
-    elseif (m == 2)
-        inData = [inData; splitDecision];
-    elseif (m == 3)
-        inData = [inData; darkfield];
     end
+    %confocal = sort(Allfiles(~cellfun(@isempty, strfind(Allfiles, '_confocal_'))));
+    %darkfield = sort(Allfiles(~cellfun(@isempty, strfind(Allfiles, '_avg_'))));
+    %splitDecision = sort(Allfiles(~cellfun(@isempty, strfind(Allfiles, '_split_'))));
     
 end
-
-
-
-MN = size(inData,1);
+MN = counter;%only using nonempty identifiers
 N = size(inData,2);
 
 
+%inData = [confocal; splitDecision; darkfield];
+%for m = modalitiesToUse
+%
+%     if (m == 1)
+%         inData = [inData; confocal];
+%     elseif (m == 2)
+%         inData = [inData; splitDecision];
+%     elseif (m == 3)
+%         inData = [inData; darkfield];
+%     end
+%
+%end
 
-%initialization
-LocXY = 100000*ones(2,N);%set as a ridiculous coordinate, incase can't find in spreadsheet
-RelativeTransformToRef = zeros(3,3,N);
-imageFilename = cell(MN,N);
-Matched = zeros(1,N);
-MatchedTo = zeros(1,N);
 
+
+%initialize all variables
+LocXY = nan(2,N);%set NaN to start
+RelativeTransformToRef = zeros(3,3,N);%stores relative transform between matched pairs
+imageFilename = cell(MN,N);%stores all filenames
+Matched = zeros(1,N);%store if image is matched already
+MatchedTo = zeros(1,N);%keeps track of which image is matched to which
+
+%stores all pairwise transforms
 ResultsNumOkMatches = -ones(N,N);
 ResultsNumMatches = -ones(N,N);
 ResultsTransformToRef = zeros(3,3,N,N);
 
+%stores sift features for each image
+f_all = cell(MN,N);
+d_all = cell(MN,N);
 
-%load info from excel
-%Dataset 2
-
+%load position info from excel spreadsheet
 [temp,C,temp] = xlsread(posFileLoc);
-%Dataset 3
-%'C:\Users\Min\Documents\Research\AdaptiveOpticsMosaic\NewDataSet3_2015_8_25\ImageInfoRaw_NC_11028_20140527.xlsx'
-%[temp,C,temp] = xlsread(posFileLoc,'A9:C60');
 
 
-%verify that the image id's line up for allmodalities
+%verify that the image id's line up for all modalities
 %example _0018_ref_7_
 matchexp = '_\d\d\d\d_ref_\d';
+eyeSide = 'OS';
 for n = 1:N
-    
     %build filename structure and check to make sure all modalities are
     %present for all ids
     imageFilename{1,n} = fullfile(imageDir, inData{1,n});
@@ -77,29 +86,45 @@ for n = 1:N
         imageFilename{m,n} = fullfile(imageDir, inData{m,n});
         ImageID_mf = regexpi(inData{m,n},matchexp,'match');
         if(~strcmpi(ImageID_m1,ImageID_mf));
-            error('Error: Mismatch detected. Every image frame must have all modalities. Check input images.');
+            errordlg(['Error: Mismatch detected. Every image number must have the same number of modalities. Check image ' ImageID_m1]);
+            outNameList = [];
             return
         end
     end
-    %load info from excel
-    %  imageFilename{n} = fullfile(imageDir, inData{n});
+    %match with info from excel
     for i = 1:size(C,1)
+        
+        if(strcmpi(C{i,1},'eye'))
+            eyeSide = C{i,2};
+        end
+        
         if (~isempty(strfind(inData{1,n}, C{i,1})))
-            Loc = strsplit(C{i,3},',');
-            LocXY(1,n) = str2double(strtrim(Loc{1}));
-            LocXY(2,n) = str2double(strtrim(Loc{2}));
+            
+            %first try looking at coordinate grid
+            if(size(C,2) >= 3)
+                Loc = strsplit(C{i,3},',');
+                if(size(Loc,2) == 2)
+                    LocXY(1,n) = str2double(strtrim(Loc{1}));
+                    LocXY(2,n) = str2double(strtrim(Loc{2}));
+                end
+            end
+            
+            if(size(C,2) >= 2)
+                %coordinate grind c
+                if(isnan(LocXY(1,n)) || isnan(LocXY(2,n))) 
+                    LocXY(:,n) = parseShorthandLoc(C{i,2},eyeSide);
+                end
+            end
+            if(isnan(LocXY(1,n)) || isnan(LocXY(2,n)))
+                errordlg(['Error: Location missing or invalid for image ' ImageID_m1]);
+                outNameList = [];
+                return
+            end
             break;
         end
     end
+    
 end
-
-%old format
-% for n=1:N
-%    imageFilename{n} = fullfile(baseDir, strcat(C{2}(n),C{5}(n),C{3}(n),num2str(C{6}(n)),C{4}(n),'.tif'));
-%    LocXY(1,n) = C{8}(n);
-%    LocXY(2,n) = C{9}(n);
-% end
-%[indexStructs(i).prefix indexStructs(i).videoAndRef indexStructs(i).middle num2str(indexStructs(i).nNum) indexStructs(i).suffix '.tif']);
 
 %sort using LocXY
 [sortLocXY I] = sortrows(abs(LocXY)',[1,2]);
@@ -108,21 +133,99 @@ LocXY=LocXY(:,I);
 for m = 1:MN
     imageFilename(m,:)=imageFilename(m,I);
 end
-%Calculate All Sift Features
-f_all = cell(MN,N);
-d_all = cell(MN,N);
 
-h = waitbar(0,'Calculating Sift Features 0%');
-for n=1:N
-    
-    parfor m = 1:MN
-        im = im2single(imread(char(imageFilename{m,n})));
-        [f1,d1] = vl_sift(im,'Levels',55);
-        f_all{m,n} = f1;
-        d_all{m,n} = d1;
-        
+if(~AppendToExisting)
+    %If new then calculate All Sift Features
+    h = waitbar(0,'Calculating Sift Features (0%)');
+    for n=1:N
+        if(parallelFlag)
+            parfor m = 1:MN
+                im = im2single(imread(char(imageFilename{m,n})));
+                [f1,d1] = vl_sift(im,'Levels',55);
+                f_all{m,n} = f1;
+                d_all{m,n} = d1;
+            end
+        else
+            for m = 1:MN
+                im = im2single(imread(char(imageFilename{m,n})));
+                [f1,d1] = vl_sift(im,'Levels',55);
+                f_all{m,n} = f1;
+                d_all{m,n} = d1;
+            end
+        end
+        waitbar(n/(N),h,strcat('Calculating Sift Features (',num2str(100*n/N,3),'%)'));
     end
-    waitbar(n/(N),h,strcat('Calculating Sift Features (',num2str(100*n/N,3),'%)'));
+else
+    %If appending we start by loading variable from the save
+    saved = load(MontageSave,'LocXY','inData','TransType',...
+        'ResultsNumOkMatches','ResultsNumMatches',...
+        'ResultsTransformToRef','f_all','d_all','N');
+    if(~isfield(saved,'TransType') || (saved.TransType ~= TransType))
+        choice = questdlg('Selected transformation type does not match that saved in AOMontageSave.mat. Proceed anyways?','Warrning');
+        if(~isequal(choice,'Yes'))
+            outNameList = [];
+            return;
+        end
+    end
+    
+    outputDir = fullfile(outputDir,'Append');
+    mkdir(outputDir);
+    
+    %Check saved info and match indexes
+    verified = zeros(1,N);%verify if image was available in previous run
+    transferFrom = zeros(1,N);%store reference index from previous run of same image
+    for n = 1:N
+        for s = 1:saved.N
+            for m=1:MN
+                if(isequal(inData(1,n),saved.inData(m,s)) && isequal(LocXY(:,n),saved.LocXY(:,s)))
+                    verified(n) = 1;
+                    transferFrom(n) = s;
+                end
+            end
+            
+        end
+    end
+    
+    L = length(find(verified~=1));
+    newCounter=0;
+    %transfer saved info and calculate sift features for new images
+    h = waitbar(0,'Calculating Sift Features For New Images (0%)');
+    for n1 = 1:N
+        if(verified(n1))%check if it exists in save
+            s1 = transferFrom(n1);
+            for m = 1:MN%copy sift features
+                f_all{m,n1} = saved.f_all{m,s1};
+                d_all{m,n1} = saved.d_all{m,s1};
+            end
+            for n2 = 1:N%copy pairwise matches
+                if(verified(n2))
+                    s2 = transferFrom(n2);
+                    ResultsNumOkMatches(n1,n2) = saved.ResultsNumOkMatches(s1,s2);
+                    ResultsNumMatches(n1,n2) = saved.ResultsNumMatches(s1,s2);
+                    ResultsTransformToRef(:,:,n1,n2) = saved.ResultsTransformToRef(:,:,s1,s2);
+                end
+            end
+        else%if not calculate sift features
+            if(parallelFlag)
+                parfor m = 1:MN
+                    im = im2single(imread(char(imageFilename{m,n1})));
+                    [f1,d1] = vl_sift(im,'Levels',55);
+                    f_all{m,n1} = f1;
+                    d_all{m,n1} = d1;
+                end
+            else
+                for m = 1:MN
+                    im = im2single(imread(char(imageFilename{m,n1})));
+                    [f1,d1] = vl_sift(im,'Levels',55);
+                    f_all{m,n1} = f1;
+                    d_all{m,n1} = d1;
+                end
+            end
+            
+            waitbar(newCounter/(L),h,strcat('Calculating Sift Features For New Images(',num2str(100*newCounter/L,3),'%)'));
+        end
+    end
+    
 end
 
 %Begin Matching
@@ -133,10 +236,10 @@ while (sum(Matched) < N)
     %find the closest unmatched image to the origin. Set as new reference frame
     unMatchedI = find(Matched == 0);
     unMatchedLocXY = LocXY(:,unMatchedI);
-    [sortUnMatchedLocXY I] = sortrows(abs(unMatchedLocXY)',[1,2]);
+    [sortUnMatchedLocXY, I] = sortrows(abs(unMatchedLocXY)',[1,2]);
     
     %set reference frame
-    refIndex = unMatchedI(I(1))
+    refIndex = unMatchedI(I(1));
     RelativeTransformToRef(:,:,refIndex) = eye(3,3);
     Matched(refIndex) = 1;
     MatchedTo(refIndex) = refIndex;
@@ -154,8 +257,8 @@ while (sum(Matched) < N)
     %find all matches linking to this reference frame
     while(stuckFlag == 0)
         stuckFlag = 1; %make sure something changes this latest iteration
-        for n=2:N
-            if(Matched(n) == 0) % look for an unmatached Images
+        for n=1:N
+            if(Matched(n) == 0) % look for an unmatched Images
                 disp(strcat('Matching n',int2str(n), ' at location (', num2str(LocXY(1,n)),',', ...
                     num2str(LocXY(2,n)),')'));
                 %reset variables
@@ -169,11 +272,9 @@ while (sum(Matched) < N)
                             disp(strcat('  Checking against n',int2str(refIndex), ' at location (', num2str(LocXY(1,refIndex)),',', ...
                                 num2str(LocXY(2,refIndex)),')'));
                             
-                            if (ResultsNumOkMatches(n,refIndex) == -1) %skip if match has already been found before
-                                
-                                
-                                refImg = cell(2,1);
-                                currentImg= cell(2,1);
+                            if (ResultsNumOkMatches(n,refIndex) == -1) %check if match has already been checked before
+                                refImg = cell(MN,1);
+                                currentImg= cell(MN,1);
                                 for m= 1:MN
                                     refImg{m} = imread(char(imageFilename{m,refIndex}));
                                     currentImg{m} = imread(char(imageFilename{m,n}));
@@ -183,13 +284,14 @@ while (sum(Matched) < N)
                                     ',',num2str(LocXY(2,refIndex)),')','.jpg');
                                 
                                 saveMatchesName=fullfile(outputDir,saveMatchesName);
-                                [relativeTransform, numOkMatches, numMatches]=sift_mosaic_fast_MultiModal(refImg, currentImg, saveMatchesName,1,f_all(:,refIndex),d_all(:,refIndex),f_all(:,n),d_all(:,n),TransType);
+                                [relativeTransform, numOkMatches, numMatches]=sift_mosaic_fast_MultiModal(refImg, currentImg, saveMatchesName,0,f_all(:,refIndex),d_all(:,refIndex),f_all(:,n),d_all(:,n),TransType);
                                 
                                 ResultsNumOkMatches(n,refIndex) = numOkMatches;
                                 ResultsNumMatches(n,refIndex) = numMatches;
                                 ResultsTransformToRef(:,:,n,refIndex) = relativeTransform;
                             end
                             
+                            %set as best if better than current best
                             if(ResultsNumOkMatches(n,refIndex)>bestNumOkMatches || ((ResultsNumOkMatches(n,refIndex)==bestNumOkMatches) && ...
                                     (ResultsNumOkMatches(n,refIndex)/ResultsNumMatches(n,refIndex) > bestNumOkMatches/bestNumMatches)))
                                 bestRefIndex = refIndex;
@@ -311,17 +413,81 @@ for m = 1:MN
             %figure(i)
             %imshow(imCombined)
             [pathstr,name,ext] = fileparts(char(imageFilename{m,n})) ;
-            imwrite(im_,fullfile(outputDir,[name,'_aligned_m',num2str(m),'.png']),'alpha',double(~isnan(im_)));
+            
+            rgba = repmat(im_,[1,1,2]);
+            rgba(:,:,2) = ~isnan(im_);
+            rgba = uint8(round(rgba*255));
+            
+            %# create a tiff object
+            tob = Tiff(fullfile(outputDir,[name,'_aligned_to_ref',num2str(i),'_m',num2str(m),'.tif']),'w');
+            
+            %# you need to set Photometric before Compression
+            tob.setTag('Photometric',Tiff.Photometric.MinIsBlack)
+            tob.setTag('Compression',Tiff.Compression.None)
+            
+            %# tell the program that channel 4 is alpha
+            tob.setTag('ExtraSamples',Tiff.ExtraSamples.AssociatedAlpha)
+            
+            %# set additional tags (you may want to use the structure
+            %# version of this for convenience)
+            tob.setTag('ImageLength',size(im_,1));
+            tob.setTag('ImageWidth',size(im_,2));
+            tob.setTag('BitsPerSample',8);
+            tob.setTag('RowsPerStrip',16);
+            tob.setTag('PlanarConfiguration',Tiff.PlanarConfiguration.Separate);
+            tob.setTag('Software','MATLAB')
+            tob.setTag('SamplesPerPixel',2);
+            
+            %# write and close the file
+            tob.write(rgba)
+            tob.close
+            
         end
         
         %figure(i);clf;
         %imshow(imCombined)
-        outName = strcat('ref_',num2str(i),'_combined_m',num2str(m),'.png');
-        outNameList{i,m}=outName;
-        imwrite(imCombined,fullfile(outputDir,outName),'alpha',double(~isnan(imCombined)));
+        outName = strcat('ref_',num2str(i),'_combined_m',num2str(m),'.tif');
+
+        if(AppendToExisting)
+            outNameList{i,m}=fullfile('Append',outName);
+        else
+            outNameList{i,m}=outName;
+        end
+        
+        rgba = repmat(imCombined,[1,1,2]);
+        rgba(:,:,2) = ~isnan(imCombined);
+        rgba = uint8(round(rgba*255));
+        
+        %# create a tiff object
+        tob = Tiff(fullfile(outputDir,outName),'w');
+        
+        %# you need to set Photometric before Compression
+        tob.setTag('Photometric',Tiff.Photometric.MinIsBlack)
+        tob.setTag('Compression',Tiff.Compression.None)
+        
+        %# tell the program that channel 4 is alpha
+        tob.setTag('ExtraSamples',Tiff.ExtraSamples.AssociatedAlpha)
+        
+        %# set additional tags (you may want to use the structure
+        %# version of this for convenience)
+        tob.setTag('ImageLength',size(im_,1));
+        tob.setTag('ImageWidth',size(im_,2));
+        tob.setTag('BitsPerSample',8);
+        tob.setTag('RowsPerStrip',16);
+        tob.setTag('PlanarConfiguration',Tiff.PlanarConfiguration.Separate);
+        tob.setTag('Software','MATLAB')
+        tob.setTag('SamplesPerPixel',2);
+        
+        %# write and close the file
+        tob.write(rgba)
+        tob.close
+        
     end
 end
 
 runtime=toc
 %save variables
-save(fullfile(outputDir,'outputVariables'));
+save(fullfile(outputDir,'AOMontageSave'),'LocXY','inData','TransType',...
+    'ResultsNumOkMatches','ResultsNumMatches',...
+    'ResultsTransformToRef','f_all','d_all','N');
+
