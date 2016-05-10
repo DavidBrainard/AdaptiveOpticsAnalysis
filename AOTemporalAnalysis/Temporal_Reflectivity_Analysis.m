@@ -8,7 +8,7 @@ close all force;
 
 
 profile_method = 'box';
-norm_type = 'regional_norm_prestimminusdiv';
+norm_type = 'regional_norm_minus'; %'regional_norm_prestimminusdiv';
 cutoff = 0.9; % The percentage of time a cone must be stimulated relative to all stimulus in order to be included for analysis
 
 % mov_path=pwd;
@@ -342,7 +342,7 @@ for t=1:size(c_cell_ref,2)
 end
 
 figure(9); plot(c_ref_mean,'b'); hold on; plot(s_ref_mean,'r'); hold off; title('Stimulus mean vs control mean');
-
+%% Normalization
 norm_stim_cell_reflectance = cell( size(stim_cell_reflectance) );
 
 for i=1:length( stim_cell_reflectance )
@@ -386,7 +386,7 @@ for i=1:length( control_cell_reflectance )
 %     plot( control_cell_times{i}, norm_control_cell_reflectance{i},'b'); hold on;
 end
 
-
+%% Standardization
 if ~isempty( strfind(norm_type, 'prestimminusdiv'))
     % Then normalize to the average intensity of each cone BEFORE stimulus.
     for i=1:length( norm_stim_cell_reflectance ) % STIM
@@ -426,7 +426,7 @@ elseif ~isempty( strfind(norm_type, 'prestimminus'))
 
         norm_stim_cell_reflectance{i} = (norm_stim_cell_reflectance{i}-prestim_mean(i));
     end
-    prestim_stim = prestim_std;
+%     prestim_stim = prestim_std;
     prestim_mean_stim = prestim_mean;
     prestim_std=[];
     prestim_mean=[];
@@ -439,7 +439,21 @@ elseif ~isempty( strfind(norm_type, 'prestimminus'))
     end
     prestim_cont = prestim_std;
     prestim_mean_cont = prestim_mean;
-        
+elseif ~isempty( strfind(norm_type, 'minus'))
+    % Then normalize to the  intensity of each cone at it's starting point.
+    for i=1:length( norm_stim_cell_reflectance ) % STIM
+        if ~isempty( norm_stim_cell_reflectance{i} )
+            norm_stim_cell_reflectance{i} = (norm_stim_cell_reflectance{i}-norm_stim_cell_reflectance{i}(1));
+        end
+    end
+    
+    for i=1:length( norm_control_cell_reflectance ) % CONTROL
+        if ~isempty( norm_control_cell_reflectance{i})
+            norm_control_cell_reflectance{i} = (norm_control_cell_reflectance{i}-norm_control_cell_reflectance{i}(1));
+        end
+    end
+
+            
 elseif ~isempty( strfind(norm_type, 'prestim'))
     % Then normalize to the average intensity of each cone BEFORE stimulus.
     for i=1:length( norm_stim_cell_reflectance ) % STIM
