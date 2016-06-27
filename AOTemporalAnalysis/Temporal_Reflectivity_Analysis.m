@@ -1,18 +1,18 @@
-
+function []=Temporal_Reflectivity_Analysis(mov_path, ref_image_fname)
 % Robert F Cooper 11-3-2015 10:40AM
 %
 % This software is responsible for the data processing of temporal
 % datasets.
-clear;
-close all force;
 
 
 profile_method = 'box';
-norm_type = 'regional_norm_minus'; %'regional_norm_prestimminusdiv';
+norm_type = 'regional_norm_prestimminusdiv_sub';
 cutoff = 0.9; % The percentage of time a cone must be stimulated relative to all stimulus in order to be included for analysis
 
 % mov_path=pwd;
-[ref_image_fname, mov_path]  = uigetfile(fullfile(pwd,'*.tif'));
+if isempty(mov_path) || isempty(ref_image_fname)
+    [ref_image_fname, mov_path]  = uigetfile(fullfile(pwd,'*.tif'));
+end
 ref_coords_fname = [ref_image_fname(1:end-4) '_coords.csv'];
 stack_fnames = read_folder_contents( mov_path,'avi' );
 
@@ -21,6 +21,7 @@ for i=1:length(stack_fnames)
         temporal_stack_fname = stack_fnames{i};
         acceptable_frames_fname = [stack_fnames{i}(1:end-4) '_acceptable_frames.csv'];
         visible_stack_fname = strrep(temporal_stack_fname,'confocal','visible');
+        visible_stack_fname = strrep(visible_stack_fname,'split_det','visible');
         break;
     end
 end
@@ -121,6 +122,7 @@ imwrite(uint8(capillary_mask*255), fullfile(mov_path, 'Capillary_Maps' ,[ref_ima
 % Mask the images to exclude zones with capillaries on top of them.
 capillary_masks = repmat(capillary_mask,[1 1 size(temporal_stack,3)]);
 
+var_ref_image = stdfilt(ref_image,ones(3));
 ref_image = ref_image.*capillary_mask;
 temporal_stack = temporal_stack.*capillary_masks;
 % visible_stack = visible_stack.*uint8(capillary_masks);
@@ -130,6 +132,7 @@ ref_coords = round(ref_coords);
 
 cellseg = cell(size(ref_coords,1),1);
 cellseg_inds = cell(size(ref_coords,1),1);
+
 
 
 wbh = waitbar(0,'Segmenting coordinate 0');
@@ -146,11 +149,16 @@ for i=1:size(ref_coords,1)
                (ref_coords(i,2) - roiradius) > 1 && (ref_coords(i,2) + roiradius) < size(ref_image,1)
 
 
-                roi = ref_image(ref_coords(i,2) - roiradius : ref_coords(i,2) + roiradius, ref_coords(i,1) - roiradius : ref_coords(i,1) + roiradius);
-
+%                 roi = ref_image(ref_coords(i,2) - roiradius : ref_coords(i,2) + roiradius, ref_coords(i,1) - roiradius : ref_coords(i,1) + roiradius);
+                roi = var_ref_image(ref_coords(i,2) - roiradius : ref_coords(i,2) + roiradius, ref_coords(i,1) - roiradius : ref_coords(i,1) + roiradius);
+                
                 polarroi = imcart2pseudopolar(roi,.25,2);
 
-                [pad_roi, adj, rowcol]=segment_splitcell(polarroi);
+                diffpim = diff(polarroi,1,2);
+
+                diffpim = diffpim - min(diffpim(:));
+                
+                [pad_roi, adj, rowcol]=segment_splitcell(diffpim);
 
                 dg = digraph(adj);        
 
@@ -561,6 +569,13 @@ if ~isempty( strfind(norm_type, 'sub') )
         ref_stddev_control = ref_stddev_control-ref_stddev_control;
     
 end
+% if ~isempty( strfind(norm_type, 'div') )
+%         
+%         ref_stddev_stim    = ref_stddev_stim./ref_stddev_control;
+%         ref_stddev_control = ref_stddev_control./ref_stddev_control;
+%     
+% end
+
 hz=16.6;
 figure(10); hold off;
 

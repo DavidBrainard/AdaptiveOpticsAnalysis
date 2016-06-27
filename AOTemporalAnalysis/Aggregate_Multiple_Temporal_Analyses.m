@@ -124,8 +124,14 @@ end
 % If its in the normalization, subtract the control value from the stimulus
 % value
 % if ~isempty( strfind(norm_type, 'sub') )
+
+
+
 hz=16.66666666;
 timeBase = (1:allmax)/hz;
+
+dlmwrite(fullfile(pwd,['pooled_var_aggregate_' num2str(length(profileDataNames)) '_signals.csv' ] ), [timeBase' sqrt(pooled_variance_stim) sqrt(pooled_variance_control)], ',' );
+
 pooled_std_stim    = sqrt(pooled_variance_stim)-sqrt(pooled_variance_control);
 pooled_std_control = sqrt(pooled_variance_control)-sqrt(pooled_variance_control);
     
@@ -146,4 +152,4 @@ saveas(gcf, fullfile(pwd,['pooled_var_aggregate_' num2str(length(profileDataName
 % save( fullfile(pwd,['pooled_var_aggregate_' num2str(length(profileDataNames)) '_signals.mat' ] ), 'pooled_std_stim', 'timeBase' );
 
 
-brainardbasedModelFit(timeBase, pooled_std_stim)
+modelFit(timeBase, pooled_std_stim)

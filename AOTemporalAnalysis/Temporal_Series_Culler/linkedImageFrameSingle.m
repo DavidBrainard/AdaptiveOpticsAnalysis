@@ -141,6 +141,7 @@ uiwait(multihand);
             % TL TR BR BL
             cropregion = [floor(min(cropregion)); [ceil(max(cropregion(:,1))) floor( min(cropregion(:,2))) ]; ...
                           ceil(max(cropregion));  [floor(min(cropregion(:,1))) ceil( max(cropregion(:,2)))] ];
+            cropregion(cropregion==0) = 1;
             selected = logical(selected);
             uiresume;
         elseif strcmp(get(gcf,'CurrentCharacter'),'r') % r for reject
@@ -196,8 +197,8 @@ uiwait(multihand);
                      
         selected(selectionid) = 0;
         
-        if (selectionid+1) <= length(images)
-            suggestMask()
+        suggestMask()
+        if (selectionid+1) <= length(images)            
             butdwn([], selectionid+1)
         end
   
@@ -228,7 +229,7 @@ uiwait(multihand);
         set(sliderui,'Value', selectionid )
         
         set(imfigs,'CData',images{selectionid});
-        title(titles{selectionid});
+        title( [titles{selectionid} ' Total Selected: ' num2str(sum(selected)) ]);
         set(imfigs,'ButtonDownFcn',@butdwn);
         
     end
