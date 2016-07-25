@@ -349,7 +349,13 @@ for t=1:size(c_cell_ref,2)
     s_ref_mean(t) = mean(s_cell_ref( ~isnan(s_cell_ref(:,t)) ,t));
 end
 
-figure(9); plot(c_ref_mean,'b'); hold on; plot(s_ref_mean,'r'); hold off; title('Stimulus mean vs control mean');
+figure(9); plot(c_ref_mean,'b'); hold on; plot(s_ref_mean,'r'); hold off; title('Relative change from start: Stimulus mean vs control mean');
+
+if ~exist( fullfile(mov_path, 'Frame_Mean_Plots'), 'dir' )
+    mkdir(fullfile(mov_path, 'Frame_Mean_Plots'))
+end
+saveas(gcf, fullfile(mov_path, 'Frame_Mean_Plots' , [ref_image_fname(1:end - length('_AVG.tif') ) '_' profile_method '_cutoff_' norm_type '_' num2str(cutoff*100) '_mean_plot.png' ] ) );
+
 %% Normalization
 norm_stim_cell_reflectance = cell( size(stim_cell_reflectance) );
 
@@ -613,6 +619,16 @@ stim_coords_used           = stim_coords_used(~cellfun(@isempty,stim_cell_times)
 control_coords_used        = control_coords_used(~cellfun(@isempty,control_cell_times),:);
 
 figure(11);
+for i=1:length(norm_control_cell_reflectance) % Plot raw
+%     i
+    plot(control_cell_times{i}, norm_control_cell_reflectance{i},'b' ); hold on;
+%     axis([0 250 -15 15]);
+%     plot([0 length(cell_times{i})], [1+2*pstddev 1+2*pstddev],'r');
+%     plot([0 length(cell_times{i})], [1-2*pstddev 1-2*pstddev],'r');
+%     plot(stim_locs, 2*ones(size(stim_locs)),'r*'); hold off;
+%     pause;
+end
+
 for i=1:length(norm_stim_cell_reflectance) % Plot raw
 %     i
     plot(stim_cell_times{i}, norm_stim_cell_reflectance{i},'r' ); hold on;
@@ -629,16 +645,6 @@ end
 
 % hold off;
 
-
-for i=1:length(norm_control_cell_reflectance) % Plot raw
-%     i
-    plot(control_cell_times{i}, norm_control_cell_reflectance{i},'b' ); hold on;
-%     axis([0 250 -15 15]);
-%     plot([0 length(cell_times{i})], [1+2*pstddev 1+2*pstddev],'r');
-%     plot([0 length(cell_times{i})], [1-2*pstddev 1-2*pstddev],'r');
-%     plot(stim_locs, 2*ones(size(stim_locs)),'r*'); hold off;
-%     pause;
-end
 if ~exist( fullfile(mov_path, 'Raw_Plots'), 'dir' )
     mkdir(fullfile(mov_path, 'Raw_Plots'))
 end
