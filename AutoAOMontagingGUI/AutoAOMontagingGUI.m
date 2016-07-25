@@ -22,7 +22,7 @@ function varargout = AutoAOMontagingGUI(varargin)
 
 % Edit the above text to modify the response to help AutoAOMontagingGUI
 
-% Last Modified by GUIDE v2.5 23-Mar-2016 18:50:27
+% Last Modified by GUIDE v2.5 25-Jul-2016 09:40:38
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -60,6 +60,7 @@ handles.output = hObject;
 %allocate variables and defaults
 handles.outputFolder_name=[];
 handles.combinedFile_names=[];
+handles.postionFile_name=[];
 handles.imgfolder_name=[];
 handles.imageFile_names=[];
 handles.modalitiesInfo = {'Confocal' 'confocal';
@@ -67,7 +68,9 @@ handles.modalitiesInfo = {'Confocal' 'confocal';
     'Dark Field' 'avg';
     'Modality 4' '';
     'Modality 5' '';};
-handles.inputExt = 1;%default to .tif
+handles.inputExt = 1;
+handles.device_mode = 'aoip';
+%default to .tif
 % addpath(genpath('./private'))
 % exim= imread('C:\Users\Min\Documents\Research\AdaptiveOpticsMosaic\NewDataSet2_DF_2015_8_26\CS_13213_20150302_OS_1p00_Montage_DarkField.bmp');
 % axes(handles.canvas);
@@ -140,18 +143,26 @@ Allfiles = {Allfiles.name};
 handles.imageFile_names =[];
 %Use current identifiers to locate all images
 dataSummary = cell(1,1);
-dataSummary{1} = 'Input Data Summary';
-for m = 1:size(handles.modalitiesInfo,1)
-    if (~isempty(handles.modalitiesInfo{m,2}))%check it's not empty
-        found = sort(Allfiles(~cellfun(@isempty, strfind(Allfiles, handles.modalitiesInfo{m,2}))));
-        handles.imageFile_names = [handles.imageFile_names, found];%search
-        dataSummary{end+1} =[num2str(size(found,2)),' ',char(handles.modalitiesInfo{m,1}),' image(s) found.'];
-    end
+dataSummary{1} = 'Input Data Summary:';
 
+if strcmp(handles.device_mode, 'aoip')
+    for m = 1:size(handles.modalitiesInfo,1)
+        if (~isempty(handles.modalitiesInfo{m,2}))%check it's not empty
+            found = sort(Allfiles(~cellfun(@isempty, strfind(Allfiles, handles.modalitiesInfo{m,2}))));
+            handles.imageFile_names = [handles.imageFile_names, found];%search
+            dataSummary{end+1} =[num2str(size(found,2)),' ',char(handles.modalitiesInfo{m,1}),' image(s) found.'];
+        end
+    end
+    
+    dataSummary{end+1} = '';
+    dataSummary{end+1} = 'Note: You can modify how to search for each modality under Preferences->Input Settings.';
+
+elseif strcmp(handles.device_mode, 'canon')
+    found = sort(Allfiles(cellfun(@(s) strcmp(s(1:4),'206-'), Allfiles )));
+    handles.imageFile_names = [handles.imageFile_names, found];%search
+    dataSummary{end+1} =[num2str(size(found,2)),' image(s) found.'];
 end
 
-dataSummary{end+1} = '';
-dataSummary{end+1} = 'Note: You can modify how to search for each modality under Preferences->Input Settings.';
 msgbox(dataSummary,'Input Complete');
 
 
@@ -251,7 +262,10 @@ end
 
 
 tic
-handles.combinedFile_names = AOMosiacAllMultiModal(handles.imgfolder_name,handles.postionFile_name,handles.outputFolder_name,handles.modalitiesInfo(:,2), TransType,AppendToExisting,MontageSave);
+handles.combinedFile_names = AOMosiacAllMultiModal(handles.imgfolder_name, handles.postionFile_name, ...
+                                                   handles.outputFolder_name, handles.device_mode, ...
+                                                   handles.modalitiesInfo(:,2), TransType,AppendToExisting, ...
+                                                   MontageSave);
 toc
 
 if(~isempty(handles.combinedFile_names))
@@ -372,3 +386,34 @@ function outputsettings_Callback(hObject, eventdata, handles)
 % hObject    handle to outputsettings (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
+
+
+% --------------------------------------------------------------------
+function aoip_device_Callback(hObject, eventdata, handles)
+% hObject    handle to aoip_device (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+set(handles.canon_device, 'Checked', 'off');
+set(handles.aoip_device, 'Checked', 'on');
+set(handles.selectPosFile, 'Enable','on');
+set(handles.inputsettings,'Enable','on');
+
+handles.device_mode = 'aoip';
+guidata(hObject, handles);
+
+% --------------------------------------------------------------------
+function canon_device_Callback(hObject, eventdata, handles)
+% hObject    handle to canon_device (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+set(handles.canon_device, 'Checked', 'on');
+set(handles.aoip_device, 'Checked', 'off');
+set(handles.posFileText,'String','');
+set(handles.selectPosFile, 'Enable','off');
+set(handles.inputsettings,'Enable','off');
+
+handles.modalitiesInfo = {'Canon confocal','206-'};
+handles.device_mode = 'canon';
+guidata(hObject, handles);

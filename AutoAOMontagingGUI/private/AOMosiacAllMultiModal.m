@@ -1,4 +1,4 @@
-function  outNameList = AOMosiacAllMultiModal(imageDir,posFileLoc,outputDir,ModalitiesSrchStrings,TransType,AppendToExisting,MontageSave)
+function  outNameList = AOMosiacAllMultiModal(imageDir, posFileLoc, outputDir, device_mode, ModalitiesSrchStrings,TransType,AppendToExisting,MontageSave)
 tic
 %Load Data
 %baseDir = 'C:\Users\Min\Dropbox\AOSLOImageProcessing\ConstructMontage\InputImages_Set1\';
@@ -38,21 +38,6 @@ MN = counter;%only using nonempty identifiers
 N = size(inData,2);
 
 
-%inData = [confocal; splitDecision; darkfield];
-%for m = modalitiesToUse
-%
-%     if (m == 1)
-%         inData = [inData; confocal];
-%     elseif (m == 2)
-%         inData = [inData; splitDecision];
-%     elseif (m == 3)
-%         inData = [inData; darkfield];
-%     end
-%
-%end
-
-
-
 %initialize all variables
 LocXY = nan(2,N);%set NaN to start
 RelativeTransformToRef = zeros(3,3,N);%stores relative transform between matched pairs
@@ -69,61 +54,70 @@ ResultsTransformToRef = zeros(3,3,N,N);
 f_all = cell(MN,N);
 d_all = cell(MN,N);
 
-%load position info from excel spreadsheet
-[temp,C,temp] = xlsread(posFileLoc);
+if strcmp(device_mode, 'aoip')
+
+    %load position info from excel spreadsheet
+    [temp,C,temp] = xlsread(posFileLoc);
 
 
-%verify that the image id's line up for all modalities
-%example _0018_ref_7_
-matchexp = '_\d\d\d\d_ref_\d';
-eyeSide = 'OS';
-for n = 1:N
-    %build filename structure and check to make sure all modalities are
-    %present for all ids
-    imageFilename{1,n} = fullfile(imageDir, inData{1,n});
-    ImageID_m1 = regexpi(inData{1,n},matchexp,'match');
-    for m = 2:MN
-        imageFilename{m,n} = fullfile(imageDir, inData{m,n});
-        ImageID_mf = regexpi(inData{m,n},matchexp,'match');
-        if(~strcmpi(ImageID_m1,ImageID_mf));
-            errordlg(['Error: Mismatch detected. Every image number must have the same number of modalities. Check image ' ImageID_m1]);
-            outNameList = [];
-            return
-        end
-    end
-    %match with info from excel
-    for i = 1:size(C,1)
-        
-        if(strcmpi(C{i,1},'eye'))
-            eyeSide = C{i,2};
-        end
-        
-        if (~isempty(strfind(inData{1,n}, C{i,1})))
-            
-            %first try looking at coordinate grid
-            if(size(C,2) >= 3)
-                Loc = strsplit(C{i,3},',');
-                if(size(Loc,2) == 2)
-                    LocXY(1,n) = str2double(strtrim(Loc{1}));
-                    LocXY(2,n) = str2double(strtrim(Loc{2}));
-                end
-            end
-            
-            if(size(C,2) >= 2)
-                %coordinate grind c
-                if(isnan(LocXY(1,n)) || isnan(LocXY(2,n))) 
-                    LocXY(:,n) = parseShorthandLoc(C{i,2},eyeSide);
-                end
-            end
-            if(isnan(LocXY(1,n)) || isnan(LocXY(2,n)))
-                errordlg(['Error: Location missing or invalid for image ' ImageID_m1]);
+    %verify that the image id's line up for all modalities
+    %example _0018_ref_7_
+    matchexp = '_\d\d\d\d_ref_\d';
+    eyeSide = 'OS';
+    for n = 1:N
+        %build filename structure and check to make sure all modalities are
+        %present for all ids
+        imageFilename{1,n} = fullfile(imageDir, inData{1,n});
+        ImageID_m1 = regexpi(inData{1,n},matchexp,'match');
+        for m = 2:MN
+            imageFilename{m,n} = fullfile(imageDir, inData{m,n});
+            ImageID_mf = regexpi(inData{m,n},matchexp,'match');
+            if(~strcmpi(ImageID_m1,ImageID_mf));
+                errordlg(['Error: Mismatch detected. Every image number must have the same number of modalities. Check image ' ImageID_m1]);
                 outNameList = [];
                 return
             end
-            break;
         end
+        %match with info from excel
+        for i = 1:size(C,1)
+
+            if(strcmpi(C{i,1},'eye'))
+                eyeSide = C{i,2};
+            end
+
+            if (~isempty(strfind(inData{1,n}, C{i,1})))
+
+                %first try looking at coordinate grid
+                if(size(C,2) >= 3)
+                    Loc = strsplit(C{i,3},',');
+                    if(size(Loc,2) == 2)
+                        LocXY(1,n) = str2double(strtrim(Loc{1}));
+                        LocXY(2,n) = str2double(strtrim(Loc{2}));
+                    end
+                end
+
+                if(size(C,2) >= 2)
+                    %coordinate grind c
+                    if(isnan(LocXY(1,n)) || isnan(LocXY(2,n))) 
+                        LocXY(:,n) = parseShorthandLoc(C{i,2},eyeSide);
+                    end
+                end
+                if(isnan(LocXY(1,n)) || isnan(LocXY(2,n)))
+                    errordlg(['Error: Location missing or invalid for image ' ImageID_m1]);
+                    outNameList = [];
+                    return
+                end
+                break;
+            end
+        end
+
     end
     
+elseif strcmp(device_mode, 'canon')
+    for n = 1:N
+        [ eyeSide, LocXY(:,n) ] = parseCanonFName( inData{1,n} );
+        imageFilename{1,n} = fullfile(imageDir, inData{1,n});
+    end
 end
 
 %sort using LocXY
