@@ -137,7 +137,7 @@ function imagefolder_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 handles.imgfolder_name = uigetdir;
 set(handles.selectFolderText, 'String', handles.imgfolder_name) ;
-Allfiles = dir(strcat(handles.imgfolder_name,'\*.tif'));
+Allfiles = dir(fullfile(handles.imgfolder_name,'*.tif'));
 Allfiles = {Allfiles.name};
 
 handles.imageFile_names =[];
@@ -399,6 +399,11 @@ set(handles.aoip_device, 'Checked', 'on');
 set(handles.selectPosFile, 'Enable','on');
 set(handles.inputsettings,'Enable','on');
 
+handles.modalitiesInfo = {'Confocal' 'confocal';
+                          'Split Detection' 'split';
+                          'Dark Field' 'avg';
+                          'Modality 4' '';
+                          'Modality 5' '';};
 handles.device_mode = 'aoip';
 guidata(hObject, handles);
 
