@@ -1,6 +1,6 @@
 function [ eyeSide, LocXY ] = parseCanonFName( filenameStr )
-
-
+%Parses Canon AO images to find nominal coordinate location and eye information
+%Written by Robert F. Cooper (rfcooper@sas.upenn.edu)
 
 %% File structure:
 % ???-YYYMMDD???????-SUBID-??-SEX-EYE--XXXYYY-SCANTYPE-SCANNUM-EXPORTINFO
