@@ -1,4 +1,11 @@
 function LocXY = parseShorthandLoc(inputString,eyeSide)
+%Parses shorthand strings to determine coordinate locations.
+%Inputs:
+%inputString -- string to parse
+%eyeSide -- string indicating which eye is being observed (OD or OS)
+%Output:
+%LocXY -- [X, Y] location parsed from string
+%Written by Min Chen (minchen1@upenn.edu)
 
 inputString = upper(inputString);%make input all caps just in case
 LocXY = nan(2,1);

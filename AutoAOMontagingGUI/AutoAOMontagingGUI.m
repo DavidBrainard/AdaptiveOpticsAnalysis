@@ -71,10 +71,13 @@ handles.modalitiesInfo = {'Confocal' 'confocal';
 handles.inputExt = 1;
 handles.device_mode = 'aoip';
 %default to .tif
-% addpath(genpath('./private'))
-% exim= imread('C:\Users\Min\Documents\Research\AdaptiveOpticsMosaic\NewDataSet2_DF_2015_8_26\CS_13213_20150302_OS_1p00_Montage_DarkField.bmp');
-% axes(handles.canvas);
-% imagesc(exim); colormap gray; axis off;
+
+%add path and setup vl_feat
+currentFile = mfilename('fullpath');
+[currentFileLoc,name,ext] = fileparts(currentFile); 
+genpath(fullfile(currentFileLoc,'SupportFunctions'));
+addpath(genpath(fullfile(currentFileLoc,'SupportFunctions')));
+vl_setup;
 
 % Update handles structure
 guidata(hObject, handles);
