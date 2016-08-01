@@ -116,6 +116,8 @@ end
 
 close all;
 
+
+
 % Remove the frames that weren't in the list
 confocal_vid = confocal_vid(selected);
 visible_vid = visible_vid(selected);

@@ -142,6 +142,8 @@ uiwait(multihand);
             cropregion = [floor(min(cropregion)); [ceil(max(cropregion(:,1))) floor( min(cropregion(:,2))) ]; ...
                           ceil(max(cropregion));  [floor(min(cropregion(:,1))) ceil( max(cropregion(:,2)))] ];
             cropregion(cropregion==0) = 1;
+            cropregion( cropregion(3,1)>size(images{1},2) ) = size(images{1},2);
+            cropregion( cropregion(3,2)>size(images{1},1) ) = size(images{1},1);
             selected = logical(selected);
             uiresume;
         elseif strcmp(get(gcf,'CurrentCharacter'),'r') % r for reject
