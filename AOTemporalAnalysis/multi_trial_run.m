@@ -3,15 +3,31 @@ clear;
 close all force;
 clc;
 
-[mov_path] = uigetdir(pwd);
+reprocess=false;
 
-[fnamelist, isdir ] = read_folder_contents(mov_path,'tif');
+rootDir = uigetdir(pwd);
 
-for i=1:size(fnamelist,1)
+fPaths = read_folder_contents_rec(rootDir,'tif');
+
+wbh = waitbar(0,['Converting image 0 of ' num2str(length(fPaths)) '.']);
+
+for i=1:size(fPaths,1)
     
-    ref_image_fname = fnamelist{i};
     
-    Temporal_Reflectivity_Analysis(mov_path,ref_image_fname);
+    [mov_path, ref_image_fname] = getparent(fPaths{i});
+    
+    waitbar(i/length(fPaths), wbh, ['Analyzing image ' ref_image_fname ' (' num2str(i) ' of ' num2str(length(fPaths)) ').']);
     
     
+    if reprocess || ~exist(fullfile(mov_path,'Mat_Profile_Data',[ref_image_fname(1:end - length('AVG.tif') ) 'box_cutoff_regional_norm_prestimminusdiv_sub_90_profiledata.mat'] ), 'file' );
+        
+        try    
+            Temporal_Reflectivity_Analysis(mov_path,ref_image_fname);
+        catch ex
+           disp([ref_image_fname ' failed to process.']);
+        end
+    end
+    close all;
 end
+
+close(wbh);

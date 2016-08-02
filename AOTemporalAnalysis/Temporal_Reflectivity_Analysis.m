@@ -3,7 +3,7 @@ function []=Temporal_Reflectivity_Analysis(mov_path, ref_image_fname)
 %
 % This software is responsible for the data processing of temporal
 % datasets.
-
+gui=false;
 
 profile_method = 'box';
 norm_type = 'regional_norm_prestimminusdiv_sub';
@@ -243,8 +243,10 @@ else
     colorcoded_im(:,:,3) = colorcoded_im(:,:,3) + (capillary_mask.*seg_mask.* (control_mask.*max(ref_image(:))) );
 end
 
+if gui
 cropfig = figure(1); 
 imagesc( uint8(colorcoded_im) ); axis image;
+end
 if ~exist( fullfile(mov_path, 'Stim_Maps'), 'dir' )
     mkdir(fullfile(mov_path, 'Stim_Maps'))
 end
