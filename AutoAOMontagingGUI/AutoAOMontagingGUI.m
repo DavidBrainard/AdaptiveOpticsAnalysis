@@ -79,6 +79,9 @@ genpath(fullfile(currentFileLoc,'SupportFunctions'));
 addpath(genpath(fullfile(currentFileLoc,'SupportFunctions')));
 vl_setup;
 
+%set default options
+set(handles.uibuttongroup1,'selectedobject',handles.radiobutton3);
+
 % Update handles structure
 guidata(hObject, handles);
 
