@@ -1,14 +1,15 @@
-
+function [fitCharacteristics]=Aggregate_Multiple_Temporal_Analyses(rootDir)
 % Robert F Cooper
 % 12-31-2015
 % This script calculates pooled variance across a set of given signals.
 
 clear;
 close all force;
+if ~exist('rootDir','var')
+    rootDir = uigetdir(pwd);
+end
 
-
-
-profileDataNames = read_folder_contents(pwd,'mat');
+profileDataNames = read_folder_contents(rootDir,'mat');
 
 thatstimmax=0;
 thatcontrolmax=0;
@@ -20,7 +21,7 @@ mean_control_reflectance = zeros(500,1);
 
 for j=1:length(profileDataNames)
     profileDataNames{j}
-    load(profileDataNames{j});
+    load(fullfile(rootDir,profileDataNames{j}));
     
     % Remove the empty cells
     norm_stim_cell_reflectance = norm_stim_cell_reflectance( ~cellfun(@isempty,norm_stim_cell_reflectance) );
@@ -125,12 +126,17 @@ end
 % value
 % if ~isempty( strfind(norm_type, 'sub') )
 
+[remain kid] = getparent(rootDir);
+[remain stim_time] = getparent(remain);
+[remain stim_intensity] = getparent(remain);
+[remain id] = getparent(remain);
 
+outFname = [id '_' stim_intensity '_' stim_time 'pooled_var_aggregate_' num2str(length(profileDataNames)) '_signals'];
 
 hz=16.66666666;
 timeBase = (1:allmax)/hz;
 
-dlmwrite(fullfile(pwd,['pooled_var_aggregate_' num2str(length(profileDataNames)) '_signals.csv' ] ), [timeBase' sqrt(pooled_variance_stim) sqrt(pooled_variance_control)], ',' );
+dlmwrite(fullfile(pwd, [outFname '.csv']), [timeBase' sqrt(pooled_variance_stim) sqrt(pooled_variance_control)], ',' );
 
 pooled_std_stim    = sqrt(pooled_variance_stim)-sqrt(pooled_variance_control);
 pooled_std_control = sqrt(pooled_variance_control)-sqrt(pooled_variance_control);
@@ -148,8 +154,9 @@ plot(trainlocs, max(pooled_std_stim)*ones(size(trainlocs)),'r*'); hold off;
 
 % plot(stim_locs, max([ref_variance_stim; ref_variance_control])*ones(size(stim_locs)),'r*'); hold off;
 ylabel('Pooled Standard deviation'); xlabel('Time (s)'); title( ['Pooled standard deviation of ' num2str(length(profileDataNames)) ' signals.'] );
-saveas(gcf, fullfile(pwd,['pooled_var_aggregate_' num2str(length(profileDataNames)) '_signals.png' ] ) );
+
+saveas(gcf, fullfile(pwd, [outFname '.png']) );
 % save( fullfile(pwd,['pooled_var_aggregate_' num2str(length(profileDataNames)) '_signals.mat' ] ), 'pooled_std_stim', 'timeBase' );
 
 
-modelFit(timeBase, pooled_std_stim)
+fitCharacteristics = modelFit(timeBase, pooled_std_stim)

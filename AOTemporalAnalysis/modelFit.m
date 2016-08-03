@@ -103,7 +103,7 @@ options = optimset(options,'Diagnostics','off','Display','off','LargeScale','off
 x0 = ParamsToX(fitParams0);
 % fieldnames(fitParams0);
 % First seach on gammaA and scale only, and add to plot
-vlb = [x0(1) 0.01 x0(3) 0.01 x0(5) 0.01 x0(7) 0.01];
+vlb = [x0(1) 0.01 x0(3) 0.01 x0(5) 0.01 x0(7) -100];
 vub = [x0(1) 100 x0(3) 100 x0(5) 100 x0(7) 100];
 x1 = fmincon(@(x)FitModelErrorFunction(x,timeBase,pooled_std_stim,fitParams0),x0,[],[],[],[],vlb,vub,[],options);
 predictions1 = ComputeModelPreds(XToParams(x1,fitParams0),timeBase);
