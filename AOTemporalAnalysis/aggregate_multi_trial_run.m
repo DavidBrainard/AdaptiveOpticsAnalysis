@@ -13,20 +13,24 @@ end
 
 dataPath = unique(dataPath)';
 
-wbh = waitbar(0,['Aggregating dataset 0 of ' num2str(length(fPaths)) '.']);
+wbh = waitbar(0,['Aggregating dataset 0 of ' num2str(length(dataPath)) '.']);
 
 for i=1:size(dataPath,1)
        
-    waitbar(i/length(fPaths), wbh, ['Aggregating dataset 0 of ' ref_image_fname ' (' num2str(i) ' of ' num2str(length(fPaths)) ').']);
+    waitbar(i/length(dataPath), wbh, ['Aggregating dataset (' num2str(i) ' of ' num2str(length(dataPath)) ').']);
 
     try    
-        fitData(i) = Aggregate_Multiple_Temporal_Analyses(dataPath);
+        fitData(i) = Aggregate_Multiple_Temporal_Analyses(dataPath{i});
     catch ex
        disp([ref_image_fname ' failed to analyze:']);
-       disp([ex.message ': line ' num2str(ex.stack(1).line)] );
+       disp([ex.message ' ' ex.stack(1).name ': line ' num2str(ex.stack(1).line)] );
     end
 
-    close all;
+    
 end
 
 close(wbh);
+
+fitData = struct2table(fitData);
+
+writetable(fitData,['Aggregate_Summary_' date '.csv']);

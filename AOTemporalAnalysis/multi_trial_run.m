@@ -3,7 +3,7 @@ clear;
 close all force;
 clc;
 
-reprocess=false;
+reprocess=true;
 
 rootDir = uigetdir(pwd);
 
@@ -28,6 +28,7 @@ for i=1:size(fPaths,1)
            disp([ex.message ': line ' num2str(ex.stack(1).line)] );
         end
     end
+    pause(1);
     close all;
 end
 

@@ -6,11 +6,11 @@ function []=Temporal_Reflectivity_Analysis(mov_path, ref_image_fname)
 gui=false;
 
 profile_method = 'box';
-norm_type = 'regional_norm_prestimminusdiv_sub';
+norm_type = 'control_norm_prestimminusdiv_sub';
 cutoff = 0.9; % The percentage of time a cone must be stimulated relative to all stimulus in order to be included for analysis
 
 % mov_path=pwd;
-if isempty(mov_path) || isempty(ref_image_fname)
+if ~exist('mov_path','var') || ~exist('ref_image_fname','var')
     [ref_image_fname, mov_path]  = uigetfile(fullfile(pwd,'*.tif'));
 end
 ref_coords_fname = [ref_image_fname(1:end-4) '_coords.csv'];
@@ -321,31 +321,66 @@ for i=1:length(cellseg_inds)
         else            
             control_cell_reflectance{i}(t) =  NaN;
         end
+
     end
 
 end
 close(wbh);
 
+save thisshit.mat
 
 %% Normalize the intensities of each cone to the average value of the control cones
 c_cell_ref = cell2mat(control_cell_reflectance);
+
 % Get the indexes of the control cells.
-control_coords_used = coords_used(~all(isnan(c_cell_ref),2), :);
+% control_coords_used = coords_used(~all(isnan(c_cell_ref),2), :);
 
 contcellinds = find( ~all(isnan(c_cell_ref),2) );
 c_cell_ref = c_cell_ref( ~all(isnan(c_cell_ref),2), :);
 
-
 s_cell_ref = cell2mat(stim_cell_reflectance);
+
 % Get the indexes of the stimulated cells.
-stim_coords_used = coords_used(~all(isnan(s_cell_ref),2),:);
+% stim_coords_used = coords_used(~all(isnan(s_cell_ref),2),:);
 
 stimcellinds = find( ~all(isnan(s_cell_ref),2) );
 s_cell_ref = s_cell_ref( ~all(isnan(s_cell_ref),2), :);
 
 
+%% Find and remove any extrema reflectance
+% log_first_stim_ref = log(s_cell_ref(:,1));
+% stim_cutoff = ~isnan(log_first_stim_ref);
+% 
+% first_stim_mean = mean(log_first_stim_ref(stim_cutoff));
+% first_stim_stddev = std(log_first_stim_ref(stim_cutoff));
+% 
+% stim_cutoff = stim_cutoff & log_first_stim_ref >= first_stim_mean-2*first_stim_stddev;
+% stim_cutoff = stim_cutoff & log_first_stim_ref <= first_stim_mean+2*first_stim_stddev;
+% 
+% stimcellinds = stimcellinds(stim_cutoff);
+% stim_coords_used = coords_used(stimcellinds,:);
+% 
+% log_first_control_ref = log(c_cell_ref(:,1));
+% control_cutoff = ~isnan(log_first_control_ref);
+% 
+% first_control_mean = mean(log_first_control_ref(control_cutoff));
+% first_control_stddev = std(log_first_control_ref(control_cutoff));
+% 
+% control_cutoff = control_cutoff & log_first_control_ref >= first_control_mean-2*first_control_stddev;
+% control_cutoff = control_cutoff & log_first_control_ref <= first_control_mean+2*first_control_stddev;
+% 
+% contcellinds = contcellinds(control_cutoff);
+% control_coords_used = coords_used(contcellinds,:);
+% 
+% %% Remove cells that had extrema for the first frame.
+% stim_cell_reflectance = stim_cell_reflectance(stimcellinds);
+% control_cell_reflectance = control_cell_reflectance(contcellinds);
+% 
+% 
+% c_cell_ref = c_cell_ref(control_cutoff, :);
+% s_cell_ref = s_cell_ref(stim_cutoff, :);
 
-
+%% Find the means
 for t=1:size(c_cell_ref,2)
     c_ref_mean(t) = mean(c_cell_ref( ~isnan(c_cell_ref(:,t)) ,t));    
     s_ref_mean(t) = mean(s_cell_ref( ~isnan(s_cell_ref(:,t)) ,t));
@@ -592,6 +627,11 @@ plot( ref_times/hz,ref_stddev_control,'b'); hold on;
 legend('Stimulus cones','Control cones');
 plot(stim_locs/hz, max([ref_stddev_stim; ref_stddev_control])*ones(size(stim_locs)),'r*'); hold off;
 ylabel('Standard deviation'); xlabel('Time (s)'); title( strrep( [ref_image_fname(1:end - length('_AVG.tif') ) '_' profile_method '_stddev_ref_plot' ], '_',' ' ) );
+hold on; plot(ref_times/hz, (s_ref_mean./c_ref_mean)-1, 'g'); hold off;
+
+%% Mean to starting value correlation
+mean_ratio = s_ref_mean./c_ref_mean;
+
 
 if ~exist( fullfile(mov_path, 'Std_Dev_Plots'), 'dir' )
     mkdir(fullfile(mov_path, 'Std_Dev_Plots'))
@@ -603,10 +643,12 @@ if ~exist( fullfile(mov_path, 'Mat_Profile_Data'), 'dir' )
     mkdir(fullfile(mov_path, 'Mat_Profile_Data'))
 end
 save(fullfile(mov_path, 'Mat_Profile_Data' ,[ref_image_fname(1:end - length('_AVG.tif') ) '_' profile_method '_cutoff_' norm_type '_' num2str(cutoff*100) '_profiledata.mat']), 'stim_cell_times', 'norm_stim_cell_reflectance', ...
-      'control_cell_times', 'norm_control_cell_reflectance','stimcellinds','contcellinds' );
+      'control_cell_times', 'norm_control_cell_reflectance','stimcellinds','contcellinds','mean_ratio' );
 
 %%
-
+prestim_ref = ref_stddev_stim(ref_times<stim_locs(1) & ~isnan( ref_stddev_stim ));
+prestim_ratio = mean_ratio( ref_times<stim_locs(1) & ~isnan(ref_stddev_stim) )-1;
+figure(12); plot(prestim_ratio,prestim_ref,'*b');
 
 % Remove the empty cells
 norm_stim_cell_reflectance = norm_stim_cell_reflectance( ~cellfun(@isempty,norm_stim_cell_reflectance) );
@@ -616,9 +658,9 @@ norm_control_cell_reflectance = norm_control_cell_reflectance( ~cellfun(@isempty
 control_cell_times            = control_cell_times( ~cellfun(@isempty,control_cell_times) );
 
 %For roistackviewer
-stim_cell_reflectance      = stim_cell_reflectance( ~cellfun(@isempty,norm_stim_cell_reflectance) );
-stim_coords_used           = stim_coords_used(~cellfun(@isempty,stim_cell_times),:);
-control_coords_used        = control_coords_used(~cellfun(@isempty,control_cell_times),:);
+% stim_cell_reflectance      = stim_cell_reflectance( ~cellfun(@isempty,norm_stim_cell_reflectance) );
+% stim_coords_used           = stim_coords_used( ~cellfun(@isempty,stim_cell_times),:);
+% control_coords_used        = control_coords_used(~cellfun(@isempty,control_cell_times),:);
 
 figure(11);
 for i=1:length(norm_control_cell_reflectance) % Plot raw
