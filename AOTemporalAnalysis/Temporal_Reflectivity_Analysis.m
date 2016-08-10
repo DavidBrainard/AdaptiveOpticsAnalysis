@@ -642,12 +642,15 @@ saveas(gcf, fullfile(mov_path, 'Std_Dev_Plots' , [ref_image_fname(1:end - length
 if ~exist( fullfile(mov_path, 'Mat_Profile_Data'), 'dir' )
     mkdir(fullfile(mov_path, 'Mat_Profile_Data'))
 end
-save(fullfile(mov_path, 'Mat_Profile_Data' ,[ref_image_fname(1:end - length('_AVG.tif') ) '_' profile_method '_cutoff_' norm_type '_' num2str(cutoff*100) '_profiledata.mat']), 'stim_cell_times', 'norm_stim_cell_reflectance', ...
-      'control_cell_times', 'norm_control_cell_reflectance','stimcellinds','contcellinds','mean_ratio' );
 
-%%
 prestim_ref = ref_stddev_stim(ref_times<stim_locs(1) & ~isnan( ref_stddev_stim ));
 prestim_ratio = mean_ratio( ref_times<stim_locs(1) & ~isnan(ref_stddev_stim) )-1;
+
+save(fullfile(mov_path, 'Mat_Profile_Data' ,[ref_image_fname(1:end - length('_AVG.tif') ) '_' profile_method '_cutoff_' norm_type '_' num2str(cutoff*100) '_profiledata.mat']), 'stim_cell_times', 'norm_stim_cell_reflectance', ...
+      'control_cell_times', 'norm_control_cell_reflectance','stimcellinds','contcellinds','mean_ratio','prestim_ref','prestim_ratio' );
+
+%%
+
 figure(12); plot(prestim_ratio,prestim_ref,'*b');
 
 % Remove the empty cells

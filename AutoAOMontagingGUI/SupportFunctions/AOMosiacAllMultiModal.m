@@ -85,7 +85,7 @@ d_all = cell(MN,N);
 if strcmp(device_mode, 'aoip')
 
     %load position info from excel spreadsheet
-    [temp,C,temp] = xlsread(posFileLoc);
+    [temp,temp,C] = xlsread(posFileLoc);
 
 
     %verify that the image id's line up for all modalities
