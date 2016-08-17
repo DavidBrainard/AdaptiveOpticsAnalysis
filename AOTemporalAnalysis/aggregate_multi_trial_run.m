@@ -26,7 +26,7 @@ for i=1:size(dataPath,1)
        disp([ex.message ' ' ex.stack(1).name ': line ' num2str(ex.stack(1).line)] );
     end
 
-    
+%     pause;
 end
 
 close(wbh);

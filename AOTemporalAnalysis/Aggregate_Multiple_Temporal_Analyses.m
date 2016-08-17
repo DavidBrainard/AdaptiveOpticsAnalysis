@@ -168,6 +168,7 @@ dlmwrite(fullfile(pwd, [date '_all_plots.csv']), [ [str2double(id(4:end)), str2d
 
 save thisshit.mat
 fitCharacteristics = modelFit(timeBase, pooled_std_stim);
+saveas(gcf, fullfile(pwd, [outFname '_wfit.png']) );
 fitCharacteristics.subject = id;
 fitCharacteristics.stim_intensity = stim_intensity;
 fitCharacteristics.stim_length = stimlen;

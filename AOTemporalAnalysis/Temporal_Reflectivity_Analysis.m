@@ -6,7 +6,7 @@ function []=Temporal_Reflectivity_Analysis(mov_path, ref_image_fname)
 gui=false;
 
 profile_method = 'box';
-norm_type = 'control_norm_prestimminusdiv_sub';
+norm_type = 'stimulus_norm_prestimminusdiv_sub';
 cutoff = 0.9; % The percentage of time a cone must be stimulated relative to all stimulus in order to be included for analysis
 
 % mov_path=pwd;
@@ -386,6 +386,11 @@ for t=1:size(c_cell_ref,2)
     s_ref_mean(t) = mean(s_cell_ref( ~isnan(s_cell_ref(:,t)) ,t));
 end
 
+if ~isempty( strfind( norm_type, 'scaled_control_norm') )
+    mean_ratio = s_ref_mean./c_ref_mean;
+    s_ref_mean = s_ref_mean./mean(mean_ratio);
+end
+
 figure(9); plot(c_ref_mean,'b'); hold on; plot(s_ref_mean,'r'); hold off; title('Relative change from start: Stimulus mean vs control mean');
 
 if ~exist( fullfile(mov_path, 'Frame_Mean_Plots'), 'dir' )
@@ -393,6 +398,7 @@ if ~exist( fullfile(mov_path, 'Frame_Mean_Plots'), 'dir' )
 end
 saveas(gcf, fullfile(mov_path, 'Frame_Mean_Plots' , [ref_image_fname(1:end - length('_AVG.tif') ) '_' profile_method '_cutoff_' norm_type '_' num2str(cutoff*100) '_mean_plot.png' ] ) );
 
+save thisshit.mat;
 %% Normalization
 norm_stim_cell_reflectance = cell( size(stim_cell_reflectance) );
 
@@ -404,6 +410,10 @@ for i=1:length( stim_cell_reflectance )
         norm_stim_cell_reflectance{i} = stim_cell_reflectance{i} ./ s_ref_mean;
     elseif ~isempty( strfind( norm_type, 'no_norm') )
         norm_stim_cell_reflectance{i} = stim_cell_reflectance{i};
+    elseif ~isempty( strfind( norm_type, 'scaled_control_norm') )                
+        norm_stim_cell_reflectance{i} = stim_cell_reflectance{i} ./ s_ref_mean;
+    elseif ~isempty( strfind( norm_type, 'stimulus_norm') )                
+        norm_stim_cell_reflectance{i} = stim_cell_reflectance{i} ./ s_ref_mean;
     else
         error('No normalization selected!')
     end
@@ -425,6 +435,10 @@ for i=1:length( control_cell_reflectance )
         norm_control_cell_reflectance{i} = control_cell_reflectance{i} ./ c_ref_mean;
     elseif ~isempty( strfind( norm_type, 'no_norm') )
         norm_control_cell_reflectance{i} = control_cell_reflectance{i};
+    elseif ~isempty( strfind( norm_type, 'scaled_control_norm') )
+        norm_control_cell_reflectance{i} = control_cell_reflectance{i} ./ c_ref_mean;
+    elseif ~isempty( strfind( norm_type, 'stimulus_norm') )                
+        norm_control_cell_reflectance{i} = control_cell_reflectance{i} ./ s_ref_mean;
     else
         error('No normalization selected!')
     end
@@ -437,38 +451,53 @@ for i=1:length( control_cell_reflectance )
 %     plot( control_cell_times{i}, norm_control_cell_reflectance{i},'b'); hold on;
 end
 
+
 %% Standardization
 if ~isempty( strfind(norm_type, 'prestimminusdiv'))
     % Then normalize to the average intensity of each cone BEFORE stimulus.
     for i=1:length( norm_stim_cell_reflectance ) % STIM
-
-%         norm_stim_cell_reflectance{i}(stim_cell_times{i}<stim_locs(1) & ~isnan( norm_stim_cell_reflectance{i} )) = norm_stim_cell_reflectance{i}(stim_cell_times{i}<stim_locs(1) & ~isnan( norm_stim_cell_reflectance{i} ))*1.2;
         
         prestim_mean(i) = mean( norm_stim_cell_reflectance{i}(stim_cell_times{i}<stim_locs(1) & ~isnan( norm_stim_cell_reflectance{i} )) );
+        
+        norm_stim_cell_reflectance{i} = norm_stim_cell_reflectance{i}-prestim_mean(i);
+        
         prestim_std(i) = std( norm_stim_cell_reflectance{i}(stim_cell_times{i}<stim_locs(1) & ~isnan( norm_stim_cell_reflectance{i} )) );
-
-        norm_stim_cell_reflectance{i} = (norm_stim_cell_reflectance{i}-prestim_mean(i))/prestim_std(i);
+        
+        norm_stim_cell_reflectance{i} = norm_stim_cell_reflectance{i}/( prestim_std(i) /sqrt(length(norm_stim_cell_reflectance{i})) );
     end
-    prestim_stim = prestim_std;
     prestim_mean_stim = prestim_mean;
+    prestim_std_stim = prestim_std;
     prestim_std=[];
     prestim_mean=[];
     
     for i=1:length( norm_control_cell_reflectance ) % CONTROL
 
         prestim_mean(i) = mean( norm_control_cell_reflectance{i}( control_cell_times{i}<stim_locs(1) & ~isnan( norm_control_cell_reflectance{i} ) ) );
+        
+        norm_control_cell_reflectance{i} = norm_control_cell_reflectance{i}-prestim_mean(i);
+        
         prestim_std(i) = std( norm_control_cell_reflectance{i}( control_cell_times{i}<stim_locs(1) & ~isnan( norm_control_cell_reflectance{i} ) ) );
-
-        norm_control_cell_reflectance{i} = (norm_control_cell_reflectance{i}-prestim_mean(i))/prestim_std(i);
+        
+        norm_control_cell_reflectance{i} = norm_control_cell_reflectance{i}/( prestim_std(i) /sqrt(length(norm_control_cell_reflectance{i})) );
     end
-    prestim_cont = prestim_std;
-    prestim_mean_cont = prestim_mean;
+    prestim_mean_control = prestim_mean;
+    prestim_std_control = prestim_std;
     
-%     mean(prestim_stim(~isnan(prestim_stim)))
-%     mean(prestim_cont(~isnan(prestim_cont)))
-%     
-%     mean(prestim_mean_stim(~isnan(prestim_mean_stim)))
-%     mean(prestim_mean_cont(~isnan(prestim_mean_cont)))
+    % Mean stats
+    mean(prestim_mean_stim(~isnan(prestim_mean_stim)))
+    std(prestim_mean_stim(~isnan(prestim_mean_stim)))
+    mean(prestim_mean_control(~isnan(prestim_mean_control)))
+    std(prestim_mean_control(~isnan(prestim_mean_control)))
+    % Std dev stats    
+    mean(prestim_std_stim(~isnan(prestim_std_stim)))
+    std(prestim_std_stim(~isnan(prestim_std_stim)))
+    mean(prestim_std_control(~isnan(prestim_std_control)))
+    std(prestim_std_control(~isnan(prestim_std_control)))
+    
+    
+    mean(prestim_std_stim(~isnan(prestim_std_stim)))-mean(prestim_std_control(~isnan(prestim_std_control)))
+    
+%     hold off; plot(prestim_std_control,'b'); hold on; plot(prestim_std_stim,'r'); hold off;
 elseif ~isempty( strfind(norm_type, 'prestimminus'))
     % Then normalize to the average intensity of each cone BEFORE stimulus.
     for i=1:length( norm_stim_cell_reflectance ) % STIM
@@ -478,7 +507,7 @@ elseif ~isempty( strfind(norm_type, 'prestimminus'))
         norm_stim_cell_reflectance{i} = (norm_stim_cell_reflectance{i}-prestim_mean(i));
     end
 %     prestim_stim = prestim_std;
-    prestim_mean_stim = prestim_mean;
+%     prestim_mean_stim = prestim_mean;
     prestim_std=[];
     prestim_mean=[];
     
@@ -488,8 +517,8 @@ elseif ~isempty( strfind(norm_type, 'prestimminus'))
 
         norm_control_cell_reflectance{i} = (norm_control_cell_reflectance{i}-prestim_mean(i));
     end
-    prestim_cont = prestim_std;
-    prestim_mean_cont = prestim_mean;
+%     prestim_cont = prestim_std;
+%     prestim_mean_cont = prestim_mean;
 elseif ~isempty( strfind(norm_type, 'minus'))
     % Then normalize to the  intensity of each cone at it's starting point.
     for i=1:length( norm_stim_cell_reflectance ) % STIM
@@ -651,7 +680,7 @@ save(fullfile(mov_path, 'Mat_Profile_Data' ,[ref_image_fname(1:end - length('_AV
 
 %%
 
-figure(12); plot(prestim_ratio,prestim_ref,'*b');
+% figure(12); plot(prestim_ratio,prestim_ref,'*b');
 
 % Remove the empty cells
 norm_stim_cell_reflectance = norm_stim_cell_reflectance( ~cellfun(@isempty,norm_stim_cell_reflectance) );
