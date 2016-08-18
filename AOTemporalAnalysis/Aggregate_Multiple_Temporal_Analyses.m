@@ -68,7 +68,7 @@ for j=1:length(profileDataNames)
 
     end
     
-    figure(1); plot(ref_stim_times{j}, sqrt(ref_variance_stim{j}) ); hold on;
+%     figure(1); plot(ref_stim_times{j}, sqrt(ref_variance_stim{j}) ); hold on;
     
     for i=1 : length(norm_control_cell_reflectance)
         for k=1 : length( norm_control_cell_reflectance{i} )
@@ -85,7 +85,7 @@ for j=1:length(profileDataNames)
     
 
 end
-hold off;
+% hold off;
 
 pooled_variance_stim = zeros(allmax,1);
 pooled_variance_stim_count = zeros(allmax,1);
@@ -130,7 +130,7 @@ end
 [remain kid] = getparent(remain);
 [remain stim_time] = getparent(remain);
 [remain stim_intensity] = getparent(remain);
-[remain id] = getparent(remain);
+[~, id] = getparent(remain);
 
 outFname = [id '_' stim_intensity '_' stim_time '_pooled_var_aggregate_' num2str(length(profileDataNames)) '_signals'];
 

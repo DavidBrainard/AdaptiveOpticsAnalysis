@@ -6,7 +6,7 @@ function []=Temporal_Reflectivity_Analysis(mov_path, ref_image_fname)
 gui=false;
 
 profile_method = 'box';
-norm_type = 'stimulus_norm_prestimminusdiv_sub';
+norm_type = 'control_norm_prestimminusdiv_sub';
 cutoff = 0.9; % The percentage of time a cone must be stimulated relative to all stimulus in order to be included for analysis
 
 % mov_path=pwd;

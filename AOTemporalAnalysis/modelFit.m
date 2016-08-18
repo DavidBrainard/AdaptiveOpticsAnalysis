@@ -71,13 +71,22 @@ maxTime = timeBase(maxRespIndex(1));
 % And set scale so that initial max predition matches max data
 if ~isempty( strfind( fitParams0.type, 'gammapdf') )
     
+    maxPreStimVal = max(pooled_std_stim( timeBase < fitParams0.stimOnsetTime ))
+    overPreStim = find( pooled_std_stim > maxPreStimVal );
+    
+    if isempty(overPreStim)
+       overPreStim = find( pooled_std_stim > mean(pooled_std_stim( timeBase < fitParams0.stimOnsetTime )) );
+    end
+    
     fitParams0.scale1 = 1;
-    fitParams0.responseDelay1 = 0;
+    fitParams0.responseDelay1 = 0;%(timeBase( overPreStim(1) )-fitParams0.stimOnsetTime)
     fitParams0.gammaA1 = 2;
     
+    
+%     fitParams0.gammaA1 = (fitParams0.gammaB1*maxResp)+1;
     fitParams0.gammaB1 = (fitParams0.gammaA1-1)/(maxTime - fitParams0.stimOnsetTime);
     if (fitParams0.gammaB1 <= 0)
-       fitParams0.gammaB1 = 0.5;
+       fitParams0.gammaB1 = 1;
     end
     
     if strcmp( fitParams0.type, '2xgammapdf')
@@ -93,14 +102,14 @@ if ~isempty( strfind( fitParams0.type, 'gammapdf') )
     end
     
     if strcmp( fitParams0.type, 'gammapdfexp')
-        negafterpeak = find(pooled_std_stim(maxRespIndex:end) <= 0 );
-        if isempty(negafterpeak)
-           negafterpeak = 0; 
-        end
+%         negafterpeak = find(pooled_std_stim(maxRespIndex:end) <= 0 );
+%         if isempty(negafterpeak)
+%            negafterpeak = 0; 
+%         end
         
-        fitParams0.responseDelay2 = timeBase(maxRespIndex(1)+negafterpeak(1)) - fitParams0.stimOnsetTime - .5;
+%         fitParams0.responseDelay2 = timeBase(maxRespIndex(1)+negafterpeak(1)) - fitParams0.stimOnsetTime - .5;
         fitParams0.decay   = .5;
-        fitParams0.offset = .5; %pooled_std_stim(maxRespIndex(1)+negafterpeak(1));
+        fitParams0.offset = max(pooled_std_stim)-min(pooled_std_stim); %pooled_std_stim(maxRespIndex(1)+negafterpeak(1));
     end
     
     tempPreds = ComputeModelPreds(fitParams0,timeBase);
@@ -136,8 +145,8 @@ switch fitParams0.type
         vlb = [x0(1) 0.01 x0(3) 0.01 x0(5) 0.01 x0(7) 0.01 x0(9)];
         vub = [x0(1) 100 x0(3) 100 x0(5) 100 x0(7) 100 x0(9)];
     case 'gammapdfexp'
-        vlb = [x0(1) 0.01 x0(3) 0.01 x0(5) 0 x0(7)];
-        vub = [x0(1) 100 x0(3) 100 x0(5) 10 x0(7)];
+        vlb = [x0(1) 0.01 x0(3) 0.01 0 0];
+        vub = [x0(1) 10 x0(3) 10   10 2];
 end
 
 x1 = fmincon(@(x)FitModelErrorFunction(x,timeBase,pooled_std_stim,fitParams0),x0,[],[],[],[],vlb,vub,[],options);
@@ -147,20 +156,22 @@ figure(thePlot); plot(timeBase,predictions1,'c:','LineWidth',2);
 % Then full search
 switch fitParams0.type
     case 'gammapdf'
-        vlb = [0 0.01 0.01 0.1];
-        vub = [100 100 100 1000];        
+        vlb = [-1 0.01 0.01 0.1];
+        vub = [10 100 100 1000];        
     case '2xgammapdf'
-        vlb = [0 0.01 0.01 0.1 .5 0.01 0.01 0.1 -2];
-        vub = [100 100 100 1000 100 100 100 1000 2];
+        vlb = [-1 0.01 0.01 0.1 .5 0.01 0.01 0.1 -2];
+        vub = [2 100 100 1000 100 100 100 1000 2];
     case 'gammapdfexp'
-        vlb = [0  0.01 0.01 0.1 -1 0 0];
-        vub = [100 100 100 1000 6 10 2];
+%         vlb = [0  0.01 0.01 0.1 -1 0 0];
+%         vub = [100 100 100 1000 6 10 2];
+        vlb = [-1 0.01 0.01 0 0 0];
+        vub = [2 10 10 10 10 2];
 end
 x = fmincon(@(x)FitModelErrorFunction(x,timeBase,pooled_std_stim,fitParams0),x1,[],[],[],[],vlb,vub,[],options);
 
 % Extract fit parameters
 fitParams = XToParams(x,fitParams0);
-
+fitParams
 % Add final fit to plot
 predictions = ComputeModelPreds(fitParams,timeBase);
 figure(thePlot); plot(timeBase,predictions,'g','LineWidth',2);
@@ -178,7 +189,9 @@ max_prestim_val = max(pooled_std_stim( timeBase < fitParams0.stimOnsetTime ) );
 
 fitCharacteristics.resp_start = timeBase( min( find( predictions > max_prestim_val ) ) );
 
-time_to_peak  = timeBase(max_ind) - fitParams0.stimOnsetTime;
+fitCharacteristics.time_to_peak  = timeBase(max_ind) - fitParams0.stimOnsetTime;
+
+fitCharacteristics.decay_constant = -fitParams.decay*fitParams.offset;
 
 
 end
@@ -211,7 +224,8 @@ switch (params.type)
     case '2xgammapdf'
         x = [params.responseDelay1 params.gammaA1 params.gammaB1 params.scale1 params.responseDelay2 params.gammaA2 params.gammaB2 params.scale2 params.offset];
     case 'gammapdfexp'
-        x = [params.responseDelay1 params.gammaA1 params.gammaB1 params.scale1 params.responseDelay2 params.decay params.offset];
+%         x = [params.responseDelay1 params.gammaA1 params.gammaB1 params.scale1 params.responseDelay2 params.decay params.offset];
+        x = [params.responseDelay1 params.gammaA1 params.gammaB1 params.scale1 params.decay params.offset];
     otherwise
         error('Unknown model type');
 end
@@ -243,9 +257,9 @@ switch (params.type)
         params.gammaA1 = x(2);
         params.gammaB1 = x(3);
         params.scale1  = x(4);
-        params.responseDelay2 = x(5);
-        params.decay   = x(6);        
-        params.offset  = x(7);        
+%         params.responseDelay2 = x(5);
+        params.decay   = x(5);        
+        params.offset  = x(6);        
     otherwise
         error('Unknown model type');
 end
@@ -282,16 +296,40 @@ switch (params.type)
         stimZeroedTime = timeBase-params.stimOnsetTime;
         
         firstDelayZeroedTime  = stimZeroedTime-params.responseDelay1;
-        secondDelayZeroedTime = stimZeroedTime-params.responseDelay2;
+        
 
         index1 = find(firstDelayZeroedTime >= 0); % Don't use find?
-        index2 = find(secondDelayZeroedTime >= 0);
-        
-        preds(index1) = preds(index1) + params.scale1*gampdf(firstDelayZeroedTime(index1),params.gammaA1,params.gammaB1);
                 
-        preds(index2) = preds(index2) -params.offset + params.offset*exp( -params.decay * secondDelayZeroedTime(index2) );
+        preds(index1) = preds(index1) + params.scale1*gampdf(firstDelayZeroedTime(index1),params.gammaA1,params.gammaB1);
         
-%         (preds(index2(1))-params.offset )
+%         % Using maxval as the anchor
+        [maxval, ind] = max(preds);
+        
+%         %The exponential must always line up with the gamma function's
+%         %value!
+        maxmatch = maxval-params.offset;
+        
+        secondDelayZeroedTime = timeBase-timeBase(ind(1));
+        
+        index2 = find( secondDelayZeroedTime >= 0 );
+%         
+        preds(index2) = maxval -params.offset + params.offset*exp( -params.decay * secondDelayZeroedTime(index2) );
+
+        % Using second inflection point as the anchor
+%         accel = diff(preds,2);
+%         
+%         [maxaccel, maxind] = max(accel);
+        
+        % First flip in the acceleration
+%         ind = find( accel(maxind+1:end) > 0)+maxind;
+
+%         secondDelayZeroedTime = timeBase-timeBase(ind(1));
+        
+%         index2 = find( secondDelayZeroedTime >= 0 );
+
+%         preds(index2) = preds(index2) + preds(index2(1)) -params.offset + params.offset*exp( -params.decay * secondDelayZeroedTime(index2) );
+%         preds(index2) = preds(index2) -params.offset + params.offset*exp( -params.decay * secondDelayZeroedTime(index2) );
+
     otherwise
         error('Unknown model type');
 end
