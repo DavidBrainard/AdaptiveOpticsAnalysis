@@ -1,4 +1,4 @@
-function [fitCharacteristics]=Aggregate_Multiple_Temporal_Analyses(rootDir)
+function [fitCharacteristics residuals]=Aggregate_Multiple_Temporal_Analyses(rootDir)
 % Robert F Cooper
 % 12-31-2015
 % This script calculates pooled variance across a set of given signals.
@@ -68,7 +68,7 @@ for j=1:length(profileDataNames)
 
     end
     
-%     figure(1); plot(ref_stim_times{j}, sqrt(ref_variance_stim{j}) ); hold on;
+%     figure(1); plot(ref_stim_times{j}, sqrt(ref_variance_stim{j})-sqrt(ref_variance_stim{j}(1)) ); hold on; drawnow;
     
     for i=1 : length(norm_control_cell_reflectance)
         for k=1 : length( norm_control_cell_reflectance{i} )
@@ -154,22 +154,24 @@ legend('Stimulus cones','Control cones');
 % Stim train
 stimlen = str2double( strrep(stim_time(1:3),'p','.') );
 
-trainlocs = 66/hz:1/hz:(66/hz+stimlen);
+trainlocs = 68/hz:1/hz:(68/hz+stimlen);
 plot(trainlocs, max(pooled_std_stim)*ones(size(trainlocs)),'r*'); hold off;
 
 % plot(stim_locs, max([ref_variance_stim; ref_variance_control])*ones(size(stim_locs)),'r*'); hold off;
 ylabel('Pooled Standard deviation'); xlabel('Time (s)'); title( [stim_intensity ' ' stim_time 'pooled standard deviation of ' num2str(length(profileDataNames)) ' signals.'] );
 hold off;
-saveas(gcf, fullfile(pwd, [outFname '.png']) );
+% saveas(gcf, fullfile(pwd, [outFname '.png']) );
 % save( fullfile(pwd,['pooled_var_aggregate_' num2str(length(profileDataNames)) '_signals.mat' ] ), 'pooled_std_stim', 'timeBase' );
 
 dlmwrite(fullfile(pwd, [date '_all_plots.csv']), [ [str2double(id(4:end)), str2double(stim_intensity(1:3)), stimlen] ;[ timeBase' sqrt(pooled_variance_stim) sqrt(pooled_variance_control) ] ]',...
          '-append', 'delimiter', ',', 'roffset',1);
 
-save thisshit.mat
-fitCharacteristics = modelFit(timeBase, pooled_std_stim);
+% save thisshit.mat
+[fitCharacteristics, residuals] = modelFit(timeBase, pooled_std_stim);
 saveas(gcf, fullfile(pwd, [outFname '_wfit.png']) );
 fitCharacteristics.subject = id;
 fitCharacteristics.stim_intensity = stim_intensity;
 fitCharacteristics.stim_length = stimlen;
+
+
 

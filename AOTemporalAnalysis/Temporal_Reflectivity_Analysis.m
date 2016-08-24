@@ -6,7 +6,7 @@ function []=Temporal_Reflectivity_Analysis(mov_path, ref_image_fname)
 gui=false;
 
 profile_method = 'box';
-norm_type = 'control_norm_prestimminusdiv_sub';
+norm_type = 'regional_norm_prestimminusdiv_sub';
 cutoff = 0.9; % The percentage of time a cone must be stimulated relative to all stimulus in order to be included for analysis
 
 % mov_path=pwd;
@@ -463,7 +463,7 @@ if ~isempty( strfind(norm_type, 'prestimminusdiv'))
         
         prestim_std(i) = std( norm_stim_cell_reflectance{i}(stim_cell_times{i}<stim_locs(1) & ~isnan( norm_stim_cell_reflectance{i} )) );
         
-        norm_stim_cell_reflectance{i} = norm_stim_cell_reflectance{i}/( prestim_std(i) /sqrt(length(norm_stim_cell_reflectance{i})) );
+        norm_stim_cell_reflectance{i} = norm_stim_cell_reflectance{i}/( prestim_std(i) ); % /sqrt(length(norm_stim_cell_reflectance{i})) );
     end
     prestim_mean_stim = prestim_mean;
     prestim_std_stim = prestim_std;
@@ -478,24 +478,24 @@ if ~isempty( strfind(norm_type, 'prestimminusdiv'))
         
         prestim_std(i) = std( norm_control_cell_reflectance{i}( control_cell_times{i}<stim_locs(1) & ~isnan( norm_control_cell_reflectance{i} ) ) );
         
-        norm_control_cell_reflectance{i} = norm_control_cell_reflectance{i}/( prestim_std(i) /sqrt(length(norm_control_cell_reflectance{i})) );
+        norm_control_cell_reflectance{i} = norm_control_cell_reflectance{i}/( prestim_std(i) ); % /sqrt(length(norm_control_cell_reflectance{i})) );
     end
     prestim_mean_control = prestim_mean;
     prestim_std_control = prestim_std;
     
     % Mean stats
-    mean(prestim_mean_stim(~isnan(prestim_mean_stim)))
-    std(prestim_mean_stim(~isnan(prestim_mean_stim)))
-    mean(prestim_mean_control(~isnan(prestim_mean_control)))
-    std(prestim_mean_control(~isnan(prestim_mean_control)))
-    % Std dev stats    
-    mean(prestim_std_stim(~isnan(prestim_std_stim)))
-    std(prestim_std_stim(~isnan(prestim_std_stim)))
-    mean(prestim_std_control(~isnan(prestim_std_control)))
-    std(prestim_std_control(~isnan(prestim_std_control)))
+%     mean(prestim_mean_stim(~isnan(prestim_mean_stim)))
+%     std(prestim_mean_stim(~isnan(prestim_mean_stim)))
+%     mean(prestim_mean_control(~isnan(prestim_mean_control)))
+%     std(prestim_mean_control(~isnan(prestim_mean_control)))
+%     % Std dev stats    
+%     mean(prestim_std_stim(~isnan(prestim_std_stim)))
+%     std(prestim_std_stim(~isnan(prestim_std_stim)))
+%     mean(prestim_std_control(~isnan(prestim_std_control)))
+%     std(prestim_std_control(~isnan(prestim_std_control)))
     
     
-    mean(prestim_std_stim(~isnan(prestim_std_stim)))-mean(prestim_std_control(~isnan(prestim_std_control)))
+%     mean(prestim_std_stim(~isnan(prestim_std_stim)))-mean(prestim_std_control(~isnan(prestim_std_control)))
     
 %     hold off; plot(prestim_std_control,'b'); hold on; plot(prestim_std_stim,'r'); hold off;
 elseif ~isempty( strfind(norm_type, 'prestimminus'))
@@ -656,7 +656,7 @@ plot( ref_times/hz,ref_stddev_control,'b'); hold on;
 legend('Stimulus cones','Control cones');
 plot(stim_locs/hz, max([ref_stddev_stim; ref_stddev_control])*ones(size(stim_locs)),'r*'); hold off;
 ylabel('Standard deviation'); xlabel('Time (s)'); title( strrep( [ref_image_fname(1:end - length('_AVG.tif') ) '_' profile_method '_stddev_ref_plot' ], '_',' ' ) );
-hold on; plot(ref_times/hz, (s_ref_mean./c_ref_mean)-1, 'g'); hold off;
+% hold on; plot(ref_times/hz, (s_ref_mean./c_ref_mean)-1, 'g'); hold off;
 
 %% Mean to starting value correlation
 mean_ratio = s_ref_mean./c_ref_mean;

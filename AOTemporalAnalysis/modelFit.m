@@ -1,4 +1,4 @@
-function [fitCharacteristics] = modelFit(timeBase, pooled_std_stim)
+function [fitCharacteristics, residuals] = modelFit(timeBase, pooled_std_stim)
 % gammaFitTutorial
 %
 % Illustrates using fmincon to fit a gamma function to data.
@@ -39,7 +39,7 @@ thePlot = figure(2); clf; hold on
 set(gca,'FontName','Helvetica','FontSize',14);
 plot(timeBase,pooled_std_stim,'ro','MarkerFaceColor','r','MarkerSize',6);
 % figure(thePlot); plot(timeBase,theResponse,'r','LineWidth',4);
-% xlim([startTime endTime]);
+xlim([0 15]);
 ylim([-1 2]);
 xlabel('Time (secs)','FontSize',18);
 ylabel('Pooled Standard deviation','FontSize',18);
@@ -66,27 +66,35 @@ fitParams0.preStimValue = mean( pooled_std_stim( timeBase < fitParams0.stimOnset
 % the time of maximum response;
 [maxResp,maxRespIndex] = max(pooled_std_stim);
 maxTime = timeBase(maxRespIndex(1));
+preResp = pooled_std_stim(find(timeBase <= fitParams0.stimOnsetTime+.01 & timeBase >= fitParams0.stimOnsetTime-.01));
 
+max_prestim_val = max(pooled_std_stim( timeBase < fitParams0.stimOnsetTime ) );
+
+% Kludgy setup, but works for a simple analysis...
+global peaked;
 
 % And set scale so that initial max predition matches max data
 if ~isempty( strfind( fitParams0.type, 'gammapdf') )
     
-    maxPreStimVal = max(pooled_std_stim( timeBase < fitParams0.stimOnsetTime ))
-    overPreStim = find( pooled_std_stim > maxPreStimVal );
+    overPreStim = find( pooled_std_stim > max_prestim_val*1.2 );
     
-    if isempty(overPreStim)
-       overPreStim = find( pooled_std_stim > mean(pooled_std_stim( timeBase < fitParams0.stimOnsetTime )) );
+    % Supress the gamma function if there is no obvious response.
+    if ~isempty(overPreStim)
+        fitParams0.scale1 = 1;
+        peaked = true;
+    else
+        peaked = false;
+        fitParams0.scale1 = 0;
     end
-    
-    fitParams0.scale1 = 1;
-    fitParams0.responseDelay1 = 0;%(timeBase( overPreStim(1) )-fitParams0.stimOnsetTime)
-    fitParams0.gammaA1 = 2;
+        
+    fitParams0.responseDelay1 = 0.1; %(timeBase( overPreStim(1) )-fitParams0.stimOnsetTime)
+    fitParams0.gammaA1 = 1.5;
     
     
 %     fitParams0.gammaA1 = (fitParams0.gammaB1*maxResp)+1;
     fitParams0.gammaB1 = (fitParams0.gammaA1-1)/(maxTime - fitParams0.stimOnsetTime);
-    if (fitParams0.gammaB1 <= 0)
-       fitParams0.gammaB1 = 1;
+    if (fitParams0.gammaB1 <= .5)
+       fitParams0.gammaB1 = .5;
     end
     
     if strcmp( fitParams0.type, '2xgammapdf')
@@ -94,7 +102,7 @@ if ~isempty( strfind( fitParams0.type, 'gammapdf') )
         fitParams0.gammaA2 = 2;
         
         fitParams0.gammaB2 = (fitParams0.gammaA2-1)/(fitParams0.responseDelay2 - fitParams0.stimOnsetTime);
-        if (fitParams0.gammaB2 <= 0)
+        if (fitParams0.gammaB2 <= 1)
            fitParams0.gammaB2 = 0.5;
         end
         fitParams0.scale2 = 1;
@@ -102,19 +110,17 @@ if ~isempty( strfind( fitParams0.type, 'gammapdf') )
     end
     
     if strcmp( fitParams0.type, 'gammapdfexp')
-%         negafterpeak = find(pooled_std_stim(maxRespIndex:end) <= 0 );
-%         if isempty(negafterpeak)
-%            negafterpeak = 0; 
-%         end
-        
-%         fitParams0.responseDelay2 = timeBase(maxRespIndex(1)+negafterpeak(1)) - fitParams0.stimOnsetTime - .5;
-        fitParams0.decay   = .5;
-        fitParams0.offset = max(pooled_std_stim)-min(pooled_std_stim); %pooled_std_stim(maxRespIndex(1)+negafterpeak(1));
+
+        fitParams0.responseDelay2 = 0;
+        fitParams0.decay   = .25;
+        fitParams0.offset = max(pooled_std_stim)-min(pooled_std_stim); 
     end
     
-    tempPreds = ComputeModelPreds(fitParams0,timeBase);
-    tempMax = max(tempPreds);
-    fitParams0.scale1 = maxResp/tempMax;
+    if peaked
+        tempPreds = ComputeModelPreds(fitParams0,timeBase);
+        tempMax = max(tempPreds);
+        fitParams0.scale1 = maxResp/tempMax;
+    end
     
     if strcmp( fitParams0.type, '2xgammapdf')        
         fitParams0.scale2 = maxResp/(tempMax*2);    
@@ -131,7 +137,7 @@ figure(thePlot); plot(timeBase,predictions0,'k:','LineWidth',2);
 
 % Set fmincon options
 options = optimset('fmincon');
-options = optimset(options,'Diagnostics','off','Display','off','LargeScale','off','Algorithm','active-set');
+options = optimset(options,'Diagnostics','off','Display','off','LargeScale','off','Algorithm','interior-point');
 
 % Initial guess
 x0 = ParamsToX(fitParams0);
@@ -145,8 +151,10 @@ switch fitParams0.type
         vlb = [x0(1) 0.01 x0(3) 0.01 x0(5) 0.01 x0(7) 0.01 x0(9)];
         vub = [x0(1) 100 x0(3) 100 x0(5) 100 x0(7) 100 x0(9)];
     case 'gammapdfexp'
-        vlb = [x0(1) 0.01 x0(3) 0.01 0 0];
-        vub = [x0(1) 10 x0(3) 10   10 2];
+%         vlb = [x0(1) 0.01 x0(3) 0.01  x0(5) 0.01  0];
+%         vub = [x0(1) 10   x0(3) 10    x0(5) 10    2];
+        vlb = [x0(1) 0.01 x0(3) 0.001 0 0];
+        vub = [x0(1) 10   x0(3) 10    3 2];
 end
 
 x1 = fmincon(@(x)FitModelErrorFunction(x,timeBase,pooled_std_stim,fitParams0),x0,[],[],[],[],vlb,vub,[],options);
@@ -162,21 +170,29 @@ switch fitParams0.type
         vlb = [-1 0.01 0.01 0.1 .5 0.01 0.01 0.1 -2];
         vub = [2 100 100 1000 100 100 100 1000 2];
     case 'gammapdfexp'
-%         vlb = [0  0.01 0.01 0.1 -1 0 0];
-%         vub = [100 100 100 1000 6 10 2];
-        vlb = [-1 0.01 0.01 0 0 0];
-        vub = [2 10 10 10 10 2];
+%         vlb = [-1 0.01 0.01 0  -1 .01  0];
+%         vub = [ 2   4    2  4  1   4   2];
+        vlb = [-1 0.01 0.01 0.001  0.01  0];
+        vub = [ 2 10   10   10     3    2];
 end
 x = fmincon(@(x)FitModelErrorFunction(x,timeBase,pooled_std_stim,fitParams0),x1,[],[],[],[],vlb,vub,[],options);
 
 % Extract fit parameters
 fitParams = XToParams(x,fitParams0);
-fitParams
+
+
 % Add final fit to plot
 predictions = ComputeModelPreds(fitParams,timeBase);
+
+residuals = [pooled_std_stim'-predictions; timeBase];
+
 figure(thePlot); plot(timeBase,predictions,'g','LineWidth',2);
-legend({' Data', ' Initial Guess', ' Intermediate Fit' ' Final Fit'},'FontSize',14,'Location','NorthEast');
+figure(thePlot); plot(timeBase, residuals(1,:),'b','LineWidth',1);
+
+legend({' Data', ' Initial Guess', ' Intermediate Fit' ' Final Fit' ' Residuals'},'FontSize',14,'Location','NorthEast');
 hold off;
+
+
 
 % figure(3); plot(timeBase,pooled_std_stim-predictions');
 % title('Residuals');
@@ -185,13 +201,21 @@ hold off;
 
 fitCharacteristics.amplitude = max_ampl-fitParams0.preStimValue;
 
-max_prestim_val = max(pooled_std_stim( timeBase < fitParams0.stimOnsetTime ) );
+% Interpolate to find the exact spot it becomes greater than the prestim
+% value- should help with quantization issues
+aftermaxval = min( find( predictions > max_prestim_val ) );
+beforemaxval = aftermaxval-1;
+interpslope = (predictions(aftermaxval)-predictions(beforemaxval))/(timeBase(aftermaxval)-timeBase(beforemaxval));
 
-fitCharacteristics.resp_start = timeBase( min( find( predictions > max_prestim_val ) ) );
+fitCharacteristics.resp_start = timeBase(beforemaxval) + ((max_prestim_val-predictions(beforemaxval))/interpslope);
 
 fitCharacteristics.time_to_peak  = timeBase(max_ind) - fitParams0.stimOnsetTime;
 
-fitCharacteristics.decay_constant = -fitParams.decay*fitParams.offset;
+fitCharacteristics.decay_initval = fitParams.offset;
+
+fitCharacteristics.decay_constant = fitParams.decay;
+
+
 
 
 end
@@ -270,6 +294,8 @@ end
 % Compute the predictions of the model
 function preds = ComputeModelPreds(params,timeBase)
 
+global peaked;
+
 % Allow multiple model types
 switch (params.type)
     case 'gammapdf'
@@ -294,42 +320,36 @@ switch (params.type)
     case 'gammapdfexp'
         preds = params.preStimValue*ones(size(timeBase));
         stimZeroedTime = timeBase-params.stimOnsetTime;
-        
+
         firstDelayZeroedTime  = stimZeroedTime-params.responseDelay1;
         
-
         index1 = find(firstDelayZeroedTime >= 0); % Don't use find?
                 
         preds(index1) = preds(index1) + params.scale1*gampdf(firstDelayZeroedTime(index1),params.gammaA1,params.gammaB1);
-        
-%         % Using maxval as the anchor
-        [maxval, ind] = max(preds);
-        
-%         %The exponential must always line up with the gamma function's
-%         %value!
-        maxmatch = maxval-params.offset;
-        
-        secondDelayZeroedTime = timeBase-timeBase(ind(1));
-        
-        index2 = find( secondDelayZeroedTime >= 0 );
-%         
-        preds(index2) = maxval -params.offset + params.offset*exp( -params.decay * secondDelayZeroedTime(index2) );
 
-        % Using second inflection point as the anchor
-%         accel = diff(preds,2);
-%         
-%         [maxaccel, maxind] = max(accel);
+        if peaked
+            % Using maxval as the anchor
+            [maxval, ind] = max(preds);
+            secondDelayZeroedTime = timeBase-timeBase(ind(1));
+%         secondDelayZeroedTime = secondDelayZeroedTime-params.responseDelay2;            
+            index2 = find( secondDelayZeroedTime >= 0 );            
+        else
+            % Using maxval as the anchor
+            maxval= preds(index1(1));
+            secondDelayZeroedTime = firstDelayZeroedTime;
+            index2 = index1;
+        end
         
-        % First flip in the acceleration
-%         ind = find( accel(maxind+1:end) > 0)+maxind;
+        % The exponential must always line up with the gamma function's
+        % value!
 
-%         secondDelayZeroedTime = timeBase-timeBase(ind(1));
+        maxmatch = maxval-max(params.offset*exp( -params.decay * secondDelayZeroedTime(index2) ));
         
-%         index2 = find( secondDelayZeroedTime >= 0 );
-
-%         preds(index2) = preds(index2) + preds(index2(1)) -params.offset + params.offset*exp( -params.decay * secondDelayZeroedTime(index2) );
-%         preds(index2) = preds(index2) -params.offset + params.offset*exp( -params.decay * secondDelayZeroedTime(index2) );
-
+%         maxmatch = preds(index2(1))-params.offset;
+        
+        preds(index2) = maxmatch + params.offset*exp( -params.decay * secondDelayZeroedTime(index2) );
+        
+%         figure(400);plot(maxmatch, preds(index2(1)), 'r*'); hold on; drawnow;
     otherwise
         error('Unknown model type');
 end
