@@ -10,10 +10,6 @@ wavelet = 'gaus3';
 
 stimd=0;
 stimless=0;
-x45=[];
-x92=[];
-x04=[];
-
 for j=1:length(profileDataNames)
 
     load(fullfile(baseDir, profileDataNames{j}));
@@ -51,8 +47,6 @@ for j=1:length(profileDataNames)
         
         %Continuous
         D5 = cwt(signal,16,wavelet);
-        
-        if length(D5) >= 190
         D5 = D5(1:190);
         
         %Discrete
@@ -76,7 +70,7 @@ for j=1:length(profileDataNames)
 %         hp = pcolor(1:length(signal),f,abs(cfs)); hp.EdgeColor = 'none';
 %         set(gca,'YScale','log');
 %         xlabel('Sample'); ylabel('log10(f)');
-        end
+
 %         pause(0.1);
     end
     
@@ -95,39 +89,37 @@ for j=1:length(profileDataNames)
 
         %Continuous
         D5 = cwt(signal,16,wavelet);
+        D5 = D5(1:190);
         
-        if length(D5) >= 190
-
-            D5 = D5(1:190);
-
-            %Discrete
-    %         [C, L] = wavedec(signal,5,wavelet);
-    %         [cD1,cD2,cD3,cD4,cD5] = detcoef(C,L,1:5);
-    %         
-    %         D4 = wrcoef('d',C,L,wavelet,4);
-    %         D5 = wrcoef('d',C,L,wavelet,5);
-
-            if all(D5<simplethreshold & D5>-simplethreshold)
-                stimless = [stimless i];
-
-                figure(3);  title('StimLESS cones'); hold on;            
-                plot(D5); 
-                axis([0 250 -10 10])
-            else            
-                stimd = [stimd i];
-
-                figure(2);  title('Stim cones'); hold on;
-                plot(D5); axis([0 250 -10 10])
-            end
+        %Discrete
+%         [C, L] = wavedec(signal,5,wavelet);
+%         [cD1,cD2,cD3,cD4,cD5] = detcoef(C,L,1:5);
+%         
+%         D4 = wrcoef('d',C,L,wavelet,4);
+%         D5 = wrcoef('d',C,L,wavelet,5);
+        
+        if all(D5<simplethreshold & D5>-simplethreshold)
+            stimless = [stimless i];
+            
+            figure(3);  title('StimLESS cones'); hold on;            
+            plot(D5); 
+            axis([0 250 -10 10])
+        else            
+            stimd = [stimd i];
+            
+            figure(2);  title('Stim cones'); hold on;
+            plot(D5); axis([0 250 -10 10])
         end
+%         pause;
     end
 
     cind = randperm(length(norm_control_cell_reflectance), 11);
     aind = randperm(length(stimless), 11);
     sind = randperm(length(stimd), 11);
     
-    x45 = [x45; control_cell_times(cind) norm_control_cell_reflectance(cind)];    
-    x92 = [x92; stim_cell_times(stimless(aind)) norm_stim_cell_reflectance(stimless(aind))];
-    x04 = [x04; stim_cell_times(stimd(sind)) norm_stim_cell_reflectance(stimd(sind))];
+    x45 = [control_cell_times(cind) norm_control_cell_reflectance(cind)];
+    
+    x92 = [stim_cell_times(stimless(aind)) norm_stim_cell_reflectance(stimless(aind))];
+    x04 = [stim_cell_times(stimd(sind)) norm_stim_cell_reflectance(stimd(sind))];
 %     imagesc(avg_spect);
 end

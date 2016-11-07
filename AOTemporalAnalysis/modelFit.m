@@ -39,7 +39,7 @@ thePlot = figure(2); clf; hold on
 set(gca,'FontName','Helvetica','FontSize',14);
 plot(timeBase,pooled_std_stim,'ro','MarkerFaceColor','r','MarkerSize',6);
 % figure(thePlot); plot(timeBase,theResponse,'r','LineWidth',4);
-xlim([0 15]);
+xlim([0 16]);
 ylim([-1 2]);
 xlabel('Time (secs)','FontSize',18);
 ylabel('Pooled Standard deviation','FontSize',18);
@@ -70,32 +70,37 @@ preResp = pooled_std_stim(find(timeBase <= fitParams0.stimOnsetTime+.01 & timeBa
 
 max_prestim_val = max(pooled_std_stim( timeBase < fitParams0.stimOnsetTime ) );
 
+prestim_stddev = std(pooled_std_stim( timeBase < fitParams0.stimOnsetTime ) );
+
+prestim_PI = fitParams0.preStimValue + 2*prestim_stddev;
+
 % Kludgy setup, but works for a simple analysis...
 global peaked;
 
 % And set scale so that initial max predition matches max data
 if ~isempty( strfind( fitParams0.type, 'gammapdf') )
     
-    overPreStim = find( pooled_std_stim > max_prestim_val*1.2 );
+    overPreStim = find( pooled_std_stim(timeBase > fitParams0.stimOnsetTime) > prestim_PI*1.2 );
     
     % Supress the gamma function if there is no obvious response.
     if ~isempty(overPreStim)
         fitParams0.scale1 = 1;
+        fitParams0.gammaA1 = 1.5;
+        fitParams0.gammaB1 = (fitParams0.gammaA1-1)/(maxTime - fitParams0.stimOnsetTime);
+        if (fitParams0.gammaB1 <= .5)
+           fitParams0.gammaB1 = .5;
+        end
         peaked = true;
     else
         peaked = false;
+        
+        fitParams0.gammaA1 = 0.01;
+        fitParams0.gammaB1 = 0.01;
         fitParams0.scale1 = 0;
     end
         
-    fitParams0.responseDelay1 = 0.1; %(timeBase( overPreStim(1) )-fitParams0.stimOnsetTime)
-    fitParams0.gammaA1 = 1.5;
-    
-    
-%     fitParams0.gammaA1 = (fitParams0.gammaB1*maxResp)+1;
-    fitParams0.gammaB1 = (fitParams0.gammaA1-1)/(maxTime - fitParams0.stimOnsetTime);
-    if (fitParams0.gammaB1 <= .5)
-       fitParams0.gammaB1 = .5;
-    end
+
+        fitParams0.responseDelay1 = .15;
     
     if strcmp( fitParams0.type, '2xgammapdf')
         fitParams0.responseDelay2 = 2;
@@ -131,7 +136,7 @@ end
 
 % Add initial guess to the plot
 predictions0 = ComputeModelPreds(fitParams0,timeBase);
-figure(thePlot); plot(timeBase,predictions0,'k:','LineWidth',2);
+% figure(thePlot); plot(timeBase,predictions0,'k:','LineWidth',2);
 
 %% Fit
 
@@ -151,15 +156,18 @@ switch fitParams0.type
         vlb = [x0(1) 0.01 x0(3) 0.01 x0(5) 0.01 x0(7) 0.01 x0(9)];
         vub = [x0(1) 100 x0(3) 100 x0(5) 100 x0(7) 100 x0(9)];
     case 'gammapdfexp'
-%         vlb = [x0(1) 0.01 x0(3) 0.01  x0(5) 0.01  0];
-%         vub = [x0(1) 10   x0(3) 10    x0(5) 10    2];
-        vlb = [x0(1) 0.01 x0(3) 0.001 0 0];
-        vub = [x0(1) 10   x0(3) 10    3 2];
+        if peaked
+            vlb = [x0(1) 0.01 x0(3) 0.001 0 0];
+            vub = [x0(1) 10   x0(3) 10    3 2];
+        else
+            vlb = [x0(1) 0.01 x0(3) 0 0 0];
+            vub = [x0(1) 10   x0(3) 0 3 2];
+        end
 end
 
 x1 = fmincon(@(x)FitModelErrorFunction(x,timeBase,pooled_std_stim,fitParams0),x0,[],[],[],[],vlb,vub,[],options);
 predictions1 = ComputeModelPreds(XToParams(x1,fitParams0),timeBase);
-figure(thePlot); plot(timeBase,predictions1,'c:','LineWidth',2);
+% figure(thePlot); plot(timeBase,predictions1,'c:','LineWidth',2);
 
 % Then full search
 switch fitParams0.type
@@ -170,10 +178,13 @@ switch fitParams0.type
         vlb = [-1 0.01 0.01 0.1 .5 0.01 0.01 0.1 -2];
         vub = [2 100 100 1000 100 100 100 1000 2];
     case 'gammapdfexp'
-%         vlb = [-1 0.01 0.01 0  -1 .01  0];
-%         vub = [ 2   4    2  4  1   4   2];
-        vlb = [-1 0.01 0.01 0.001  0.01  0];
-        vub = [ 2 10   10   10     3    2];
+        if peaked
+            vlb = [-1 0.01 0.01 0.001  0.01  0];
+            vub = [ 2 10   10   10     3    2];
+        else
+            vlb = [-1 0.01 0.01 0  0.01  0];
+            vub = [ 2 10   10   0     3    2];
+        end
 end
 x = fmincon(@(x)FitModelErrorFunction(x,timeBase,pooled_std_stim,fitParams0),x1,[],[],[],[],vlb,vub,[],options);
 
@@ -186,10 +197,10 @@ predictions = ComputeModelPreds(fitParams,timeBase);
 
 residuals = [pooled_std_stim'-predictions; timeBase];
 
-figure(thePlot); plot(timeBase,predictions,'g','LineWidth',2);
-figure(thePlot); plot(timeBase, residuals(1,:),'b','LineWidth',1);
+figure(thePlot); hold on; plot(timeBase,predictions,'g','LineWidth',2); 
+% figure(thePlot); plot(timeBase, residuals(1,:),'b','LineWidth',1);
 
-legend({' Data', ' Initial Guess', ' Intermediate Fit' ' Final Fit' ' Residuals'},'FontSize',14,'Location','NorthEast');
+% legend({' Data', ' Initial Guess', ' Intermediate Fit' ' Final Fit' ' Residuals'},'FontSize',14,'Location','NorthEast');
 hold off;
 
 
@@ -199,15 +210,20 @@ hold off;
 
 [max_ampl, max_ind ] = max(predictions);
 
+threeQind = min( find( predictions > (max_ampl/2) ) );
+threeQval = predictions(threeQind);
+
+% Interpolate to find the exact spot it becomes greater than the 2sd+mean of the prestim
+% value- should help with quantization issues
+prestim_PI = fitParams0.preStimValue + 2*prestim_stddev;
+
 fitCharacteristics.amplitude = max_ampl-fitParams0.preStimValue;
 
-% Interpolate to find the exact spot it becomes greater than the prestim
-% value- should help with quantization issues
-aftermaxval = min( find( predictions > max_prestim_val ) );
-beforemaxval = aftermaxval-1;
-interpslope = (predictions(aftermaxval)-predictions(beforemaxval))/(timeBase(aftermaxval)-timeBase(beforemaxval));
+afterPIval = min( find( predictions > prestim_PI ) );
+beforePIval = afterPIval-1;
+interpslope = (predictions(afterPIval)-predictions(beforePIval))/(timeBase(afterPIval)-timeBase(beforePIval));
 
-fitCharacteristics.resp_start = timeBase(beforemaxval) + ((max_prestim_val-predictions(beforemaxval))/interpslope);
+fitCharacteristics.resp_start = timeBase(beforePIval) + ((prestim_PI-predictions(beforePIval))/interpslope);
 
 fitCharacteristics.time_to_peak  = timeBase(max_ind) - fitParams0.stimOnsetTime;
 
@@ -215,7 +231,19 @@ fitCharacteristics.decay_initval = fitParams.offset;
 
 fitCharacteristics.decay_constant = fitParams.decay;
 
+% afterPIval
+% threeQind
 
+% if threeQind ~= afterPIval
+%     fitCharacteristics.max_slope = (threeQval-predictions(afterPIval))/(timeBase(threeQind)-timeBase(afterPIval))
+% else
+    fitCharacteristics.max_slope = max(diff(predictions))/(timeBase(2)-timeBase(1))
+% end
+
+% figure(thePlot); hold on; 
+%     plot(fitCharacteristics.resp_start,1.5,'g*');
+%     plot(timeBase(max_ind),1.5,'b*');
+% hold off;
 
 
 end
