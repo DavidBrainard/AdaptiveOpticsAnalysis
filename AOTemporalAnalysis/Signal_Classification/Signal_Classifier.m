@@ -11,8 +11,11 @@ wavelet = 'gaus3';
 stimd=0;
 stimless=0;
 x45=[];
+x45ind=[];
 x92=[];
+x92ind =[];
 x04=[];
+x04ind =[];
 
 for j=1:length(profileDataNames)
 
@@ -31,22 +34,7 @@ for j=1:length(profileDataNames)
         times = control_cell_times{i};
         signal = norm_control_cell_reflectance{i}(times>=cutoff);
         times = times(times>=cutoff);        
-        % The profile itself
 
-        
-        % Spectrogram calculation
-%         figure(2); 
-%         spectrogram(signal,8,'yaxis');
-%         Nx = length(signal);
-%         nsc = floor(Nx/16);
-%         nov = floor(nsc/2);
-%         nff = max(256,2^nextpow2(nsc));
-
-%         figure(3);
-%         spectrogram(signal,hamming(nsc),nov,nff,'yaxis', 16.6);
-        
-
-%         figure;
         figure(1); hold on; title('Control cones');
         
         %Continuous
@@ -68,16 +56,12 @@ for j=1:length(profileDataNames)
 %         subplot(5,1,4); plot(D4);
 %         subplot(5,1,5);
          plot(D5);
-        
-        
 
         controlcoeffs(i,:) = D5;
         plot(D5); axis([0 250 -10 10])
-%         hp = pcolor(1:length(signal),f,abs(cfs)); hp.EdgeColor = 'none';
-%         set(gca,'YScale','log');
-%         xlabel('Sample'); ylabel('log10(f)');
+
         end
-%         pause(0.1);
+
     end
     
     simplethreshold = 3*std(controlcoeffs);
@@ -101,16 +85,18 @@ for j=1:length(profileDataNames)
             D5 = D5(1:190);
 
             %Discrete
-    %         [C, L] = wavedec(signal,5,wavelet);
-    %         [cD1,cD2,cD3,cD4,cD5] = detcoef(C,L,1:5);
-    %         
-    %         D4 = wrcoef('d',C,L,wavelet,4);
-    %         D5 = wrcoef('d',C,L,wavelet,5);
+%             [C, L] = wavedec(signal,5,wavelet);
+%             [cD1,cD2,cD3,cD4,cD5] = detcoef(C,L,1:5);
+            
+%             D4 = wrcoef('d',C,L,wavelet,4);
+%             D5 = wrcoef('d',C,L,wavelet,5);
 
+            stimdcoeffs(i,:) = D5;
+        
             if all(D5<simplethreshold & D5>-simplethreshold)
                 stimless = [stimless i];
 
-                figure(3);  title('StimLESS cones'); hold on;            
+                figure(3);  title('StimLESS cones'); hold on;
                 plot(D5); 
                 axis([0 250 -10 10])
             else            
@@ -118,16 +104,36 @@ for j=1:length(profileDataNames)
 
                 figure(2);  title('Stim cones'); hold on;
                 plot(D5); axis([0 250 -10 10])
+                
             end
         end
     end
-
-    cind = randperm(length(norm_control_cell_reflectance), 11);
-    aind = randperm(length(stimless), 11);
-    sind = randperm(length(stimd), 11);
     
-    x45 = [x45; control_cell_times(cind) norm_control_cell_reflectance(cind)];    
-    x92 = [x92; stim_cell_times(stimless(aind)) norm_stim_cell_reflectance(stimless(aind))];
-    x04 = [x04; stim_cell_times(stimd(sind)) norm_stim_cell_reflectance(stimd(sind))];
+    
+    
+    alllabels=[repmat('contl',length(norm_control_cell_reflectance),1);...
+               repmat('stims',length(norm_stim_cell_reflectance),1)];
+    allcoeffs=[controlcoeffs; stimdcoeffs];
+    
+    
+    SVMModel = fitcsvm(allcoeffs,alllabels);       
+    sv = SVMModel.SupportVectors;
+figure
+gscatter(allcoeffs(:,1),allcoeffs(:,2),alllabels)
+hold on
+plot(sv(:,1),sv(:,2),'ko','MarkerSize',10)
+legend('versicolor','virginica','Support Vector')
+hold off
+
+%     cind = randperm(length(norm_control_cell_reflectance), 11);
+%     aind = randperm(length(stimless), 11);
+%     sind = randperm(length(stimd), 11);
+%     
+%     x45ind = [x45ind cind]; 
+%     x92ind = [x92ind aind]; 
+%     x04ind = [x04ind sind];
+%     x45 = [x45; control_cell_times(cind) norm_control_cell_reflectance(cind)];    
+%     x92 = [x92; stim_cell_times(stimless(aind)) norm_stim_cell_reflectance(stimless(aind))];
+%     x04 = [x04; stim_cell_times(stimd(sind)) norm_stim_cell_reflectance(stimd(sind))];
 %     imagesc(avg_spect);
 end
