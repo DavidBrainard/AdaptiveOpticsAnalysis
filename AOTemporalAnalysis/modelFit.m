@@ -40,7 +40,7 @@ set(gca,'FontName','Helvetica','FontSize',14);
 plot(timeBase,pooled_std_stim,'ro','MarkerFaceColor','r','MarkerSize',6);
 % figure(thePlot); plot(timeBase,theResponse,'r','LineWidth',4);
 xlim([0 16]);
-ylim([-1 2]);
+ylim([-1 3]);
 xlabel('Time (secs)','FontSize',18);
 ylabel('Pooled Standard deviation','FontSize',18);
 title('Pooled standard deviation data and fit');

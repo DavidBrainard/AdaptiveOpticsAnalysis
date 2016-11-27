@@ -114,6 +114,9 @@ else % If there were no detected stimuli frames.
     
 end
 
+%% Shrink the control area to get further away from potentially stimulated cones.
+
+control_mask = imerode(control_mask, ones(100));
 
 
 %% Create the capillary mask- only use the data before the stimulus fires to do so.
@@ -261,27 +264,27 @@ if ~exist( fullfile(mov_path, 'Stim_Maps'), 'dir' )
 end
 imwrite(uint8(colorcoded_im), fullfile(mov_path, 'Stim_Maps' ,[ref_image_fname(1:end - length('_AVG.svg') ) '_stim_map.png' ] ) );
 
-% Crop each area to a certain size
-cropsize = 225;
-croprect = [0 0 cropsize cropsize];
-
-figure(cropfig); 
-title('Select the crop region for the STIMULUS cones');
-h=imrect(gca, croprect);
-stim_mask_rect = wait(h);
-close(cropfig)
-stim_mask = poly2mask([stim_mask_rect(1) stim_mask_rect(1)                   stim_mask_rect(1)+stim_mask_rect(3) stim_mask_rect(1)+stim_mask_rect(3) stim_mask_rect(1)],...
-                      [stim_mask_rect(2) stim_mask_rect(2)+stim_mask_rect(4) stim_mask_rect(2)+stim_mask_rect(4) stim_mask_rect(2)                   stim_mask_rect(2)],...
-                      size(colorcoded_im,1), size(colorcoded_im,2));
-
-cropfig = figure(1); 
-imagesc( uint8(colorcoded_im) ); axis image; title('Select the crop region for the CONTROL cones');
-h=imrect(gca, croprect);
-control_mask_rect = wait(h);
-close(cropfig)
-control_mask = poly2mask([control_mask_rect(1) control_mask_rect(1)                      control_mask_rect(1)+control_mask_rect(3) control_mask_rect(1)+control_mask_rect(3) control_mask_rect(1)],...
-                         [control_mask_rect(2) control_mask_rect(2)+control_mask_rect(4) control_mask_rect(2)+control_mask_rect(4) control_mask_rect(2)                      control_mask_rect(2)],...
-                         size(colorcoded_im,1), size(colorcoded_im,2));
+%% Crop each area to a certain size
+% cropsize = 225;
+% croprect = [0 0 cropsize cropsize];
+% 
+% figure(cropfig); 
+% title('Select the crop region for the STIMULUS cones');
+% h=imrect(gca, croprect);
+% stim_mask_rect = wait(h);
+% close(cropfig)
+% stim_mask = poly2mask([stim_mask_rect(1) stim_mask_rect(1)                   stim_mask_rect(1)+stim_mask_rect(3) stim_mask_rect(1)+stim_mask_rect(3) stim_mask_rect(1)],...
+%                       [stim_mask_rect(2) stim_mask_rect(2)+stim_mask_rect(4) stim_mask_rect(2)+stim_mask_rect(4) stim_mask_rect(2)                   stim_mask_rect(2)],...
+%                       size(colorcoded_im,1), size(colorcoded_im,2));
+% 
+% cropfig = figure(1); 
+% imagesc( uint8(colorcoded_im) ); axis image; title('Select the crop region for the CONTROL cones');
+% h=imrect(gca, croprect);
+% control_mask_rect = wait(h);
+% close(cropfig)
+% control_mask = poly2mask([control_mask_rect(1) control_mask_rect(1)                      control_mask_rect(1)+control_mask_rect(3) control_mask_rect(1)+control_mask_rect(3) control_mask_rect(1)],...
+%                          [control_mask_rect(2) control_mask_rect(2)+control_mask_rect(4) control_mask_rect(2)+control_mask_rect(4) control_mask_rect(2)                      control_mask_rect(2)],...
+%                          size(colorcoded_im,1), size(colorcoded_im,2));
 
 %% Extract the raw reflectance of each cell.
 
@@ -301,6 +304,8 @@ if ~ishandle(wbh)
     wbh = waitbar(0, 'Creating reflectance profile for cell: 0');
 end
 
+usefulmask = stim_mask+control_mask;
+
 for i=1:length(cellseg_inds)
     waitbar(i/length(cellseg_inds),wbh, ['Creating reflectance profile for cell: ' num2str(i)]);
 
@@ -310,29 +315,61 @@ for i=1:length(cellseg_inds)
     stim_cell_reflectance{i}    = zeros(1, size(temporal_stack,3));
     control_cell_reflectance{i} = zeros(1, size(temporal_stack,3));
     
-    j=1;
-    for t=1:size(temporal_stack,3)
+    if any( capillary_mask(cellseg_inds{i}) ~= 1 ) || any( usefulmask(cellseg_inds{i}) ~= 1 )
+        stim_cell_reflectance{i} = nan(1,size(temporal_stack,3));
+        control_cell_reflectance{i} = nan(1,size(temporal_stack,3));
+    else
+        
+        if all( stim_mask(cellseg_inds{i}) == 1 )
+            control_cell_reflectance{i} = nan(1,size(temporal_stack,3));
             
-        stim_masked_timepoint = stim_mask.*temporal_stack(:,:,t);
+            for t=1:size(temporal_stack,3)
+                stim_masked_timepoint = temporal_stack(:,:,t); %.*stim_mask;
 
-        control_masked_timepoint = control_mask.*temporal_stack(:,:,t);
-        
-        if all( stim_masked_timepoint(cellseg_inds{i}) ~= 0 )
-            % Store if a cell is a stimulus-region cell, or if it is a
-            % control region cell?
-            stim_cell_reflectance{i}(t) = mean( stim_masked_timepoint(cellseg_inds{i}));% ./  mean(stim_norm_timepoint(cellseg_inds{i}) );            
-        else
-            stim_cell_reflectance{i}(t) = NaN;            
+                if all( stim_masked_timepoint(cellseg_inds{i}) ~= 0 )
+                    % Store if a cell is a stimulus-region cell, or if it is a
+                    % control region cell?
+                    stim_cell_reflectance{i}(t) = mean( stim_masked_timepoint(cellseg_inds{i}));% ./  mean(stim_norm_timepoint(cellseg_inds{i}) );            
+                else
+                    stim_cell_reflectance{i}(t) = NaN;            
+                end
+            end            
         end
         
-        if all( control_masked_timepoint(cellseg_inds{i}) ~= 0 )
-            control_cell_reflectance{i}(t) = mean( control_masked_timepoint(cellseg_inds{i}));% ./  mean(control_masked_norm_timepoint(cellseg_inds{i}) );
-        else            
-            control_cell_reflectance{i}(t) =  NaN;
+        if all( control_mask(cellseg_inds{i}) == 1 )
+            stim_cell_reflectance{i} = nan(1,size(temporal_stack,3));
+            for t=1:size(temporal_stack,3)
+                control_masked_timepoint = temporal_stack(:,:,t); %.*control_mask;
+                if all( control_masked_timepoint(cellseg_inds{i}) ~= 0 )
+                    control_cell_reflectance{i}(t) = mean( control_masked_timepoint(cellseg_inds{i}));% ./  mean(control_masked_norm_timepoint(cellseg_inds{i}) );
+                else            
+                    control_cell_reflectance{i}(t) =  NaN;
+                end
+            end            
         end
-
+            
+%         for t=1:size(temporal_stack,3)
+% 
+%             stim_masked_timepoint = stim_mask.*temporal_stack(:,:,t);
+% 
+%             control_masked_timepoint = control_mask.*temporal_stack(:,:,t);
+% 
+%             if all( stim_masked_timepoint(cellseg_inds{i}) ~= 0 )
+%                 % Store if a cell is a stimulus-region cell, or if it is a
+%                 % control region cell?
+%                 stim_cell_reflectance{i}(t) = mean( stim_masked_timepoint(cellseg_inds{i}));% ./  mean(stim_norm_timepoint(cellseg_inds{i}) );            
+%             else
+%                 stim_cell_reflectance{i}(t) = NaN;            
+%             end
+% 
+%             if all( control_masked_timepoint(cellseg_inds{i}) ~= 0 )
+%                 control_cell_reflectance{i}(t) = mean( control_masked_timepoint(cellseg_inds{i}));% ./  mean(control_masked_norm_timepoint(cellseg_inds{i}) );
+%             else            
+%                 control_cell_reflectance{i}(t) =  NaN;
+%             end
+% 
+%         end
     end
-
 end
 close(wbh);
 
@@ -694,7 +731,7 @@ plot( ref_times/hz,ref_stddev_control,'b'); hold on;
 legend('Stimulus cones','Control cones');
 plot(stim_locs/hz, max([ref_stddev_stim; ref_stddev_control])*ones(size(stim_locs)),'r*'); hold off;
 ylabel('Standard deviation'); xlabel('Time (s)'); title( strrep( [ref_image_fname(1:end - length('_AVG.tif') ) '_' profile_method '_stddev_ref_plot' ], '_',' ' ) );
-axis([0 15 -1 2])
+axis([0 15 -1 3])
 % hold on; plot(ref_times/hz, (s_ref_mean./c_ref_mean)-1, 'g'); hold off;
 
 %% Mean to starting value correlation
@@ -704,7 +741,7 @@ mean_ratio = s_ref_mean./c_ref_mean;
 if ~exist( fullfile(mov_path, 'Std_Dev_Plots'), 'dir' )
     mkdir(fullfile(mov_path, 'Std_Dev_Plots'))
 end
-saveas(gcf, fullfile(mov_path, 'Std_Dev_Plots' , [ref_image_fname(1:end - length('_AVG.tif') ) '_' profile_method '_cutoff_' norm_type '_' num2str(cutoff*100) '_stddev_ref_plot.png' ] ) );
+saveas(gcf, fullfile(mov_path, 'Std_Dev_Plots' , [ref_image_fname(1:end - length('_AVG.tif') ) '_' profile_method '_cutoff_' norm_type '_stddev.png' ] ) );
 % saveas(gcf, fullfile(mov_path, 'Std_Dev_Plots' , [ref_image_fname(1:end - length('_AVG.tif') ) '_' profile_method '_cutoff_' norm_type '_' num2str(cropsize) '_stddev_ref_plot.png' ] ) );
 
 if ~exist( fullfile(mov_path, 'Mat_Profile_Data'), 'dir' )

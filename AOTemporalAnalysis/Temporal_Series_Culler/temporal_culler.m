@@ -36,7 +36,7 @@ while ~isempty(remain)
 
     if i==4
         confocal_fname_out = comb_str;
-    elseif i==8
+    elseif i==10
         acceptable_frame_fname = comb_str;
         break;
     end
