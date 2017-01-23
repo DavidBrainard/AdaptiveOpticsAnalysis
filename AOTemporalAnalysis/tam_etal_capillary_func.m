@@ -110,7 +110,7 @@ sdImagestretched = 255*sdImageminsub./max(sdImageminsub(:));
 
 figure(1); imagesc( sdImagestretched ); colormap gray; axis image; title('SD Image');
 
-imwrite(uint8(sdImagestretched),parula(256),'NC_11049_20160209_OD_confocal_0003_ref_65_affine_crop_TAM_capillaries.tif');
+% imwrite(uint8(sdImagestretched),parula(256),'NC_11049_20160209_OD_confocal_0003_ref_65_affine_crop_TAM_capillaries.tif');
 
 threshold = mean(sdImagestretched(:))  + std(sdImagestretched(:))/3;
 figure(2); imagesc( sdImagestretched > threshold ); colormap gray; axis image; title('Vessel Mask');

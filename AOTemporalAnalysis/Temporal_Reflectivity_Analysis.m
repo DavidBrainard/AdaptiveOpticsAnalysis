@@ -78,11 +78,13 @@ vis_masks = zeros(size(visible_stack,1), size(visible_stack,2), size(stim_locs,1
 for i=1:length(stim_locs)
     
     vis_frm = visible_stack(:,:,stim_times(i));        
-%     figure(1); imagesc(vis_frm); colormap gray; axis image;pause(.2)
+    
 
-    vis_frm = vis_frm-min(vis_frm(:));
+%     vis_frm = vis_frm-min(vis_frm(:));
+    
     vis_frm( vis_frm<=2*noise_floor ) = 0;
     vis_frm( vis_frm>2*noise_floor )  = 1;
+%     figure(1); imagesc(vis_frm); colormap gray; axis image;pause(.2)
     vis_masks(:,:,i+1) = imclose(vis_frm, strel('disk',13) );
     vis_masks(:,:,i+1) = imopen(vis_masks(:,:,i+1), strel('disk',9) );
 %     figure(2); imagesc(vis_masks(:,:,i)); colormap gray; axis image; pause(.1)
@@ -120,8 +122,11 @@ control_mask = imerode(control_mask, ones(100));
 
 
 %% Create the capillary mask- only use the data before the stimulus fires to do so.
-
-capillary_mask = double(~tam_etal_capillary_func( temporal_stack(:,:,1:stim_times(1)-1) ));
+if ~isempty(stim_times)
+    capillary_mask = double(~tam_etal_capillary_func( temporal_stack(:,:,1:stim_times(1)-1) ));
+else
+    capillary_mask = double(~tam_etal_capillary_func( temporal_stack(:,:,1:66) ));
+end
 
 if ~exist( fullfile(mov_path, 'Capillary_Maps'), 'dir' )
     mkdir(fullfile(mov_path, 'Capillary_Maps'))
@@ -265,26 +270,26 @@ end
 imwrite(uint8(colorcoded_im), fullfile(mov_path, 'Stim_Maps' ,[ref_image_fname(1:end - length('_AVG.svg') ) '_stim_map.png' ] ) );
 
 %% Crop each area to a certain size
-% cropsize = 225;
-% croprect = [0 0 cropsize cropsize];
-% 
-% figure(cropfig); 
-% title('Select the crop region for the STIMULUS cones');
-% h=imrect(gca, croprect);
-% stim_mask_rect = wait(h);
-% close(cropfig)
-% stim_mask = poly2mask([stim_mask_rect(1) stim_mask_rect(1)                   stim_mask_rect(1)+stim_mask_rect(3) stim_mask_rect(1)+stim_mask_rect(3) stim_mask_rect(1)],...
-%                       [stim_mask_rect(2) stim_mask_rect(2)+stim_mask_rect(4) stim_mask_rect(2)+stim_mask_rect(4) stim_mask_rect(2)                   stim_mask_rect(2)],...
-%                       size(colorcoded_im,1), size(colorcoded_im,2));
-% 
-% cropfig = figure(1); 
-% imagesc( uint8(colorcoded_im) ); axis image; title('Select the crop region for the CONTROL cones');
-% h=imrect(gca, croprect);
-% control_mask_rect = wait(h);
-% close(cropfig)
-% control_mask = poly2mask([control_mask_rect(1) control_mask_rect(1)                      control_mask_rect(1)+control_mask_rect(3) control_mask_rect(1)+control_mask_rect(3) control_mask_rect(1)],...
-%                          [control_mask_rect(2) control_mask_rect(2)+control_mask_rect(4) control_mask_rect(2)+control_mask_rect(4) control_mask_rect(2)                      control_mask_rect(2)],...
-%                          size(colorcoded_im,1), size(colorcoded_im,2));
+cropsize = 7.5;
+croprect = [0 0 cropsize/.4678 cropsize/.4678];
+
+figure(cropfig); 
+title('Select the crop region for the STIMULUS cones');
+h=imrect(gca, croprect);
+stim_mask_rect = wait(h);
+close(cropfig)
+stim_mask = poly2mask([stim_mask_rect(1) stim_mask_rect(1)                   stim_mask_rect(1)+stim_mask_rect(3) stim_mask_rect(1)+stim_mask_rect(3) stim_mask_rect(1)],...
+                      [stim_mask_rect(2) stim_mask_rect(2)+stim_mask_rect(4) stim_mask_rect(2)+stim_mask_rect(4) stim_mask_rect(2)                   stim_mask_rect(2)],...
+                      size(colorcoded_im,1), size(colorcoded_im,2));
+
+cropfig = figure(1); 
+imagesc( uint8(colorcoded_im) ); axis image; title('Select the crop region for the CONTROL cones');
+h=imrect(gca, croprect);
+control_mask_rect = wait(h);
+close(cropfig)
+control_mask = poly2mask([control_mask_rect(1) control_mask_rect(1)                      control_mask_rect(1)+control_mask_rect(3) control_mask_rect(1)+control_mask_rect(3) control_mask_rect(1)],...
+                         [control_mask_rect(2) control_mask_rect(2)+control_mask_rect(4) control_mask_rect(2)+control_mask_rect(4) control_mask_rect(2)                      control_mask_rect(2)],...
+                         size(colorcoded_im,1), size(colorcoded_im,2));
 
 %% Extract the raw reflectance of each cell.
 
@@ -683,51 +688,88 @@ thatcontrolmax = max( cellfun(@max, control_cell_times( ~cellfun(@isempty,contro
 
 ref_times = [];
 
-i=1;
-while i<= length( ref_control_times )
-        
-    % Remove times from both stim and control that are NaN
-    if isnan(ref_stim_times(i)) || isnan(ref_control_times(i))
-        
-        ref_stim_times(i) = [];
-        ref_control_times(i) = [];
-        
-        ref_stddev_stim(i) = [];
-        ref_stddev_control(i) = [];        
-    else
-        ref_times = [ref_times; ref_stim_times(i)];
-        i = i+1;
+if ~isempty(ref_stim_times) && ~isempty(ref_control_times)
+    i=1;
+    while i<= length( ref_control_times )
+
+        % Remove times from both stim and control that are NaN
+        if isnan(ref_stim_times(i)) || isnan(ref_control_times(i))
+
+            ref_stim_times(i) = [];
+            ref_control_times(i) = [];
+
+            ref_stddev_stim(i) = [];
+            ref_stddev_control(i) = [];        
+        else
+            ref_times = [ref_times; ref_stim_times(i)];
+            i = i+1;
+        end
+
+    end
+    
+elseif ~isempty(ref_stim_times)
+    i=1;
+    while i<= length( ref_stim_times )
+
+        % Remove times from both stim and control that are NaN
+        if isnan(ref_stim_times(i))
+
+            ref_stim_times(i) = [];
+
+            ref_stddev_stim(i) = [];      
+        else
+            ref_times = [ref_times; ref_stim_times(i)];
+            i = i+1;
+        end
+
+    end
+    
+elseif ~isempty(ref_control_times)
+    i=1;
+    while i<= length( ref_control_times )
+
+        % Remove times from both stim and control that are NaN
+        if isnan(ref_control_times(i))
+
+            ref_control_times(i) = [];
+
+            ref_stddev_control(i) = [];      
+        else
+            ref_times = [ref_times; ref_control_times(i)];
+            i = i+1;
+        end
+
     end
     
 end
 
-
+%%
 % If its in the normalization, subtract the control value from the stimulus
 % value
 if ~isempty( strfind(norm_type, 'sub') )
-        
+    if ~isempty(ref_stddev_stim)
         ref_stddev_stim    = ref_stddev_stim-ref_stddev_control;
+    end
+    if ~isempty(ref_stddev_control)
         ref_stddev_control = ref_stddev_control-ref_stddev_control;
-    
+    end
 end
-% if ~isempty( strfind(norm_type, 'div') )
-%         
-%         ref_stddev_stim    = ref_stddev_stim./ref_stddev_control;
-%         ref_stddev_control = ref_stddev_control./ref_stddev_control;
-%     
-% end
 
 hz=16.6;
 
-times = ref_times/hz;
-prestim_times = times(times<=3.96);
-prestim_mean = mean(ref_stddev_stim(times<=3.96))
+% times = ref_times/hz;
+% prestim_times = times(times<=3.96);
+% prestim_mean = mean(ref_stddev_stim(times<=3.96))
 
 
 figure(10); hold off;
+if ~isempty(ref_stddev_stim)
+    plot( ref_times/hz,ref_stddev_stim,'r'); hold on;
+end
 
-plot( ref_times/hz,ref_stddev_stim,'r'); hold on;
-plot( ref_times/hz,ref_stddev_control,'b'); hold on;
+if ~isempty(ref_stddev_control)
+    plot( ref_times/hz,ref_stddev_control,'b'); hold on;
+end
 legend('Stimulus cones','Control cones');
 plot(stim_locs/hz, max([ref_stddev_stim; ref_stddev_control])*ones(size(stim_locs)),'r*'); hold off;
 ylabel('Standard deviation'); xlabel('Time (s)'); title( strrep( [ref_image_fname(1:end - length('_AVG.tif') ) '_' profile_method '_stddev_ref_plot' ], '_',' ' ) );
@@ -741,19 +783,25 @@ mean_ratio = s_ref_mean./c_ref_mean;
 if ~exist( fullfile(mov_path, 'Std_Dev_Plots'), 'dir' )
     mkdir(fullfile(mov_path, 'Std_Dev_Plots'))
 end
-saveas(gcf, fullfile(mov_path, 'Std_Dev_Plots' , [ref_image_fname(1:end - length('_AVG.tif') ) '_' profile_method '_cutoff_' norm_type '_stddev.png' ] ) );
-% saveas(gcf, fullfile(mov_path, 'Std_Dev_Plots' , [ref_image_fname(1:end - length('_AVG.tif') ) '_' profile_method '_cutoff_' norm_type '_' num2str(cropsize) '_stddev_ref_plot.png' ] ) );
+% saveas(gcf, fullfile(mov_path, 'Std_Dev_Plots' , [ref_image_fname(1:end - length('_AVG.tif') ) '_' profile_method '_cutoff_' norm_type '_stddev.png' ] ) );
+saveas(gcf, fullfile(mov_path, 'Std_Dev_Plots' , [ref_image_fname(1:end - length('_AVG.tif') ) '_' profile_method '_cutoff_' norm_type '_' num2str(cropsize) '_stddev.svg' ] ) );
 
 if ~exist( fullfile(mov_path, 'Mat_Profile_Data'), 'dir' )
     mkdir(fullfile(mov_path, 'Mat_Profile_Data'))
 end
 
-prestim_ref = ref_stddev_stim(ref_times<stim_locs(1) & ~isnan( ref_stddev_stim ));
-prestim_ratio = mean_ratio( ref_times<stim_locs(1) & ~isnan(ref_stddev_stim) )-1;
-
-save(fullfile(mov_path, 'Mat_Profile_Data' ,[ref_image_fname(1:end - length('_AVG.tif') ) '_' profile_method '_cutoff_' norm_type '_' num2str(cutoff*100) '_profiledata.mat']), 'stim_cell_times', 'norm_stim_cell_reflectance', ...
+if ~isempty(stim_times)
+    prestim_ref = ref_stddev_stim(ref_times<stim_locs(1) & ~isnan( ref_stddev_stim ));
+    prestim_ratio = mean_ratio( ref_times<stim_locs(1) & ~isnan(ref_stddev_stim) )-1;
+    save(fullfile(mov_path, 'Mat_Profile_Data' ,[ref_image_fname(1:end - length('_AVG.tif') ) '_' profile_method '_cutoff_' norm_type '_' num2str(cutoff*100) '_profiledata.mat']), 'stim_cell_times', 'norm_stim_cell_reflectance', ...
       'control_cell_times', 'norm_control_cell_reflectance','stimcellinds','contcellinds','mean_ratio','prestim_ref','prestim_ratio','c_ref_mean','s_ref_mean' );
+else
+    save(fullfile(mov_path, 'Mat_Profile_Data' ,[ref_image_fname(1:end - length('_AVG.tif') ) '_' profile_method '_cutoff_' norm_type '_' num2str(cutoff*100) '_profiledata.mat']), 'stim_cell_times', 'norm_stim_cell_reflectance', ...
+      'control_cell_times', 'norm_control_cell_reflectance','stimcellinds','contcellinds','mean_ratio','c_ref_mean','s_ref_mean' );
+end
 
+
+  
 %% Remove the empty control cells
 norm_control_cell_reflectance = norm_control_cell_reflectance( ~cellfun(@isempty,norm_control_cell_reflectance)  );
 control_cell_times            = control_cell_times( ~cellfun(@isempty,control_cell_times) );
@@ -763,15 +811,18 @@ control_cell_times            = control_cell_times( ~cellfun(@isempty,control_ce
 % stim_coords_used           = stim_coords_used( ~cellfun(@isempty,stim_cell_times),:);
 % control_coords_used        = control_coords_used(~cellfun(@isempty,control_cell_times),:);
 
+
 figure(11);
-for i=1:length(norm_control_cell_reflectance) % Plot raw
-%     i
-    plot(control_cell_times{i}, norm_control_cell_reflectance{i},'b' ); hold on;
-%     axis([0 250 -15 15]);
-%     plot([0 length(cell_times{i})], [1+2*pstddev 1+2*pstddev],'r');
-%     plot([0 length(cell_times{i})], [1-2*pstddev 1-2*pstddev],'r');
-%     plot(stim_locs, 2*ones(size(stim_locs)),'r*'); hold off;
-%     pause;
+if ~isempty(ref_stddev_control)
+    for i=1:length(norm_control_cell_reflectance) % Plot raw
+    %     i
+        plot(control_cell_times{i}, norm_control_cell_reflectance{i},'b' ); hold on;
+    %     axis([0 250 -15 15]);
+    %     plot([0 length(cell_times{i})], [1+2*pstddev 1+2*pstddev],'r');
+    %     plot([0 length(cell_times{i})], [1-2*pstddev 1-2*pstddev],'r');
+    %     plot(stim_locs, 2*ones(size(stim_locs)),'r*'); hold off;
+    %     pause;
+    end
 end
 
 %% Remove the empty stim cells
@@ -781,21 +832,21 @@ norm_stim_cell_reflectance = norm_stim_cell_reflectance( ~cellfun(@isempty,norm_
 stim_cell_times            = stim_cell_times(  ~cellfun(@isempty,stim_cell_times) );
 
 
+if ~isempty(ref_stddev_stim)
+    for i=1:length(norm_stim_cell_reflectance) % Plot raw
+    %     i
+    %     plot(stim_cell_times{i}, norm_controlstim_cell_reflectance{i},'b' ); hold on;
+    %     axis([0 250 -15 15]);
 
-for i=1:length(norm_stim_cell_reflectance) % Plot raw
-%     i
-%     plot(stim_cell_times{i}, norm_controlstim_cell_reflectance{i},'b' ); hold on;
-%     axis([0 250 -15 15]);
-    
-%     temporal_stack( stim_coords_used(45-4:45-4,1), stim_coords_used(45-4:45-4,2),:)
-    plot(stim_cell_times{i}, norm_stim_cell_reflectance{i},'r' ); hold on;
-%     plot(control_cell_times{i}, control_cell_reflectance{i},'b' ); hold on;
-%     plot([0 length(cell_times{i})], [1+2*pstddev 1+2*pstddev],'r');
-%     plot([0 length(cell_times{i})], [1-2*pstddev 1-2*pstddev],'r');
-%     plot(stim_locs, 2*ones(size(stim_ locs)),'r*'); hold off;
-%     pause;
+    %     temporal_stack( stim_coords_used(45-4:45-4,1), stim_coords_used(45-4:45-4,2),:)
+        plot(stim_cell_times{i}, norm_stim_cell_reflectance{i},'r' ); hold on;
+    %     plot(control_cell_times{i}, control_cell_reflectance{i},'b' ); hold on;
+    %     plot([0 length(cell_times{i})], [1+2*pstddev 1+2*pstddev],'r');
+    %     plot([0 length(cell_times{i})], [1-2*pstddev 1-2*pstddev],'r');
+    %     plot(stim_locs, 2*ones(size(stim_ locs)),'r*'); hold off;
+    %     pause;
+    end
 end
-
 % hold off;
 
 %% Save the plots

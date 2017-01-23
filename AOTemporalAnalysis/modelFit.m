@@ -50,7 +50,7 @@ drawnow;
 %% Set up initial guess for fit parameters
 
 % These are known
-fitParams0.type = 'gammapdfexp';
+fitParams0.type = '2xgammapdf';
 
 fitParams0.stimOnsetTime = 3.96;
 
@@ -58,7 +58,7 @@ fitParams0.stimOnsetTime = 3.96;
 maskout = ~isnan(pooled_std_stim);
 
 pooled_std_stim = pooled_std_stim(maskout);
-timeBase = timeBase(maskout);
+timeBase = timeBase(maskout)';
 
 fitParams0.preStimValue = mean( pooled_std_stim( timeBase < fitParams0.stimOnsetTime ) );
 
@@ -87,19 +87,18 @@ if ~isempty( strfind( fitParams0.type, 'gammapdf') )
         fitParams0.scale1 = 1;
         fitParams0.gammaA1 = 1.5;
         fitParams0.gammaB1 = (fitParams0.gammaA1-1)/(maxTime - fitParams0.stimOnsetTime);
-        if (fitParams0.gammaB1 <= .5)
-           fitParams0.gammaB1 = .5;
+        if (fitParams0.gammaB1 <= 1)
+           fitParams0.gammaB1 = 1;
         end
         peaked = true;
     else
         peaked = false;
         
-        fitParams0.gammaA1 = 0.01;
-        fitParams0.gammaB1 = 0.01;
+%         fitParams0.gammaA1 = 0.01;
+%         fitParams0.gammaB1 = 0.01;
         fitParams0.scale1 = 0;
     end
         
-
         fitParams0.responseDelay1 = .15;
     
     if strcmp( fitParams0.type, '2xgammapdf')
@@ -107,11 +106,12 @@ if ~isempty( strfind( fitParams0.type, 'gammapdf') )
         fitParams0.gammaA2 = 2;
         
         fitParams0.gammaB2 = (fitParams0.gammaA2-1)/(fitParams0.responseDelay2 - fitParams0.stimOnsetTime);
-        if (fitParams0.gammaB2 <= 1)
-           fitParams0.gammaB2 = 0.5;
+        if (fitParams0.gammaB2 <= 2)
+           fitParams0.gammaB2 = 2;
         end
+        
         fitParams0.scale2 = 1;
-        fitParams0.offset = min(pooled_std_stim);
+        fitParams0.offset = 0; %min(pooled_std_stim);
     end
     
     if strcmp( fitParams0.type, 'gammapdfexp')
@@ -127,16 +127,24 @@ if ~isempty( strfind( fitParams0.type, 'gammapdf') )
         fitParams0.scale1 = maxResp/tempMax;
     end
     
-    if strcmp( fitParams0.type, '2xgammapdf')        
-        fitParams0.scale2 = maxResp/(tempMax*2);    
+    if strcmp( fitParams0.type, '2xgammapdf')
+%         poststimind = find(timeBase>fitParams0.stimOnsetTime);
+%         [minval, minind] = min(pooled_std_stim(poststimind(10:end)));
+%         minind = minind+ poststimind(10)-1;
+%         if minval > 0            
+            fitParams0.scale2 = maxResp/(tempMax*2);
+%         else
+%             fitParams0.responseDelay2 = timeBase(minind)-fitParams0.stimOnsetTime;
+%             fitParams0.scale2 = -maxResp/(tempMax*2);
+%         end
     end
 
 end
     
-
+fitParams0
 % Add initial guess to the plot
 predictions0 = ComputeModelPreds(fitParams0,timeBase);
-% figure(thePlot); plot(timeBase,predictions0,'k:','LineWidth',2);
+figure(thePlot); hold on; plot(timeBase,predictions0,'k:','LineWidth',2); hold off;
 
 %% Fit
 
@@ -153,8 +161,8 @@ switch fitParams0.type
         vlb = [x0(1) 0.01 x0(3) 0.01];
         vub = [x0(1) 100 x0(3) 100];     
     case '2xgammapdf'
-        vlb = [x0(1) 0.01 x0(3) 0.01 x0(5) 0.01 x0(7) 0.01 x0(9)];
-        vub = [x0(1) 100 x0(3) 100 x0(5) 100 x0(7) 100 x0(9)];
+        vlb = [x0(1) 0.01 x0(3) 0.01 x0(5) 0.01 x0(7) -6 0];%x0(9)];
+        vub = [x0(1) 10   x0(3) 10   x0(5) 10   x0(7) 6   0];%x0(9)];
     case 'gammapdfexp'
         if peaked
             vlb = [x0(1) 0.01 x0(3) 0.001 0 0];
@@ -175,8 +183,8 @@ switch fitParams0.type
         vlb = [-1 0.01 0.01 0.1];
         vub = [10 100 100 1000];        
     case '2xgammapdf'
-        vlb = [-1 0.01 0.01 0.1 .5 0.01 0.01 0.1 -2];
-        vub = [2 100 100 1000 100 100 100 1000 2];
+        vlb = [-2 0.01 0.01 0.001  0  1    1  -6   0];
+        vub = [ 1 10    10    10   2  10   10  6   0];
     case 'gammapdfexp'
         if peaked
             vlb = [-1 0.01 0.01 0.001  0.01  0];
@@ -229,7 +237,38 @@ fitCharacteristics.time_to_peak  = timeBase(max_ind) - fitParams0.stimOnsetTime;
 
 fitCharacteristics.decay_initval = fitParams.offset;
 
-fitCharacteristics.decay_constant = fitParams.decay;
+if exist('fitParams.decay','var')
+    fitCharacteristics.decay_constant = fitParams.decay;
+end
+
+if strcmp( fitParams0.type, '2xgammapdf') 
+    
+    tmpparam1.responseDelay1 = fitParams.responseDelay1;
+    tmpparam1.gammaA1 = fitParams.gammaA1;
+    tmpparam1.gammaB1 = fitParams.gammaB1;
+    tmpparam1.scale1 = fitParams.scale1;
+    tmpparam1.type = 'gammapdf';
+    tmpparam1.preStimValue = fitParams0.preStimValue;
+    tmpparam1.stimOnsetTime = fitParams0.stimOnsetTime;
+
+    tmpparam2.responseDelay1 = fitParams.responseDelay2;
+    tmpparam2.gammaA1 = fitParams.gammaA2;
+    tmpparam2.gammaB1 = fitParams.gammaB2;
+    tmpparam2.scale1 = fitParams.scale2;
+    tmpparam2.type = 'gammapdf';
+    tmpparam2.preStimValue = fitParams0.preStimValue;
+    tmpparam2.stimOnsetTime = fitParams0.stimOnsetTime;
+    
+    gamma1preds = ComputeModelPreds(tmpparam1, timeBase);
+    gamma2preds = fitParams.offset + ComputeModelPreds(tmpparam2, timeBase);
+    
+    [pks loc1]=findpeaks(gamma1preds,timeBase);
+    [pks loc2]=findpeaks(gamma2preds,timeBase);
+    
+    figure(thePlot); hold on; plot(timeBase,gamma1preds,'k', timeBase,gamma2preds,'b'); hold off;
+    fitParams
+    fitCharacteristics.gamma_separation = abs(loc1-loc2);
+end
 
 % afterPIval
 % threeQind
@@ -237,7 +276,7 @@ fitCharacteristics.decay_constant = fitParams.decay;
 % if threeQind ~= afterPIval
 %     fitCharacteristics.max_slope = (threeQval-predictions(afterPIval))/(timeBase(threeQind)-timeBase(afterPIval))
 % else
-    fitCharacteristics.max_slope = max(diff(predictions))/(timeBase(2)-timeBase(1))
+    fitCharacteristics.max_slope = max(diff(predictions))/(timeBase(2)-timeBase(1));
 % end
 
 % figure(thePlot); hold on; 
@@ -333,6 +372,7 @@ switch (params.type)
         index = find(firstDelayZeroedTime >= 0);
         
         preds(index) = preds(index)+params.scale1*gampdf(firstDelayZeroedTime(index),params.gammaA1,params.gammaB1);
+
     case '2xgammapdf'
         preds = params.preStimValue*ones(size(timeBase));
         
@@ -344,7 +384,11 @@ switch (params.type)
         index2 = find(secondDelayZeroedTime >= 0);
         
         preds(index1) = preds(index1) + params.scale1*gampdf(firstDelayZeroedTime(index1),params.gammaA1,params.gammaB1);
-        preds(index2) = preds(index2) + params.offset + params.scale2*gampdf(secondDelayZeroedTime(index2),params.gammaA2,params.gammaB2);
+        
+        preds(index2) = preds(index2)+ params.offset + params.scale2*gampdf(secondDelayZeroedTime(index2),params.gammaA2,params.gammaB2);
+        
+        % Clamp the pre-stim region to the prestim value.
+%         preds(find(firstDelayZeroedTime <= 0)) = params.preStimValue;
     case 'gammapdfexp'
         preds = params.preStimValue*ones(size(timeBase));
         stimZeroedTime = timeBase-params.stimOnsetTime;

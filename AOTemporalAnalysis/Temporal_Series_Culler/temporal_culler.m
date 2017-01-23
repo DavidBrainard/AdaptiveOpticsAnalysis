@@ -9,16 +9,22 @@ close all force
 clc
 
 %% Filename determination and handling
-[confocal_fname, pathname] = uigetfile('*.avi', 'Select the confocal temporal video');
+[confocal_fname, pathname] = uigetfile('*.avi', 'Select the confocal temporal video', 'MultiSelect','on');
 
-confind = strfind(confocal_fname,'confocal');
+if ~iscell(confocal_fname)
+    confocal_fname={confocal_fname};
+end
+
+for f=1:length(confocal_fname)
+    
+confind = strfind(confocal_fname{f},'confocal');
 
 if isempty(confind)
    error('Could not find confocal in the filename. Needed for proper function of this script!'); 
 end
 
-visible_fname = strrep(confocal_fname, 'confocal', 'visible');
-split_fname = strrep(confocal_fname, 'confocal', 'split_det');
+visible_fname = strrep(confocal_fname{f}, 'confocal', 'visible');
+split_fname = strrep(confocal_fname{f}, 'confocal', 'split_det');
 
 if exist(fullfile(pathname,split_fname),'file')
    loadsplit = 1;
@@ -29,14 +35,14 @@ end
 % Find where the filename should be cut off in the confocal videos, and
 % determine our acceptable frame filename.
 i=1;
-[comb_str remain] = strtok(confocal_fname(confind:end), '_');
+[comb_str remain] = strtok(confocal_fname{f}(confind:end), '_');
 acceptable_frame_fname = [];
 while ~isempty(remain)
     [tok remain] = strtok( remain, '_');
 
     if i==4
         confocal_fname_out = comb_str;
-    elseif i==10
+    elseif i==8
         acceptable_frame_fname = comb_str;
         break;
     end
@@ -46,7 +52,7 @@ while ~isempty(remain)
     i=i+1;
 end
 % Create our expected acceptable frame filenames
-acceptable_frame_fname = [confocal_fname(1:confind-1) acceptable_frame_fname '_acceptable_frames.csv'];
+acceptable_frame_fname = [confocal_fname{f}(1:confind-1) acceptable_frame_fname '_acceptable_frames.csv'];
 
 if ~exist(fullfile(pathname, acceptable_frame_fname),'file')
     reply = input('Unable to find acceptable frames csv! Search for it? Y/N [Y]:','s');
@@ -61,22 +67,22 @@ if ~exist(fullfile(pathname, acceptable_frame_fname),'file')
     end
 end
 
-acceptable_frame_fname_out = [confocal_fname(1:confind-1) confocal_fname_out '_crop_affine_acceptable_frames.csv'];
+acceptable_frame_fname_out = [confocal_fname{f}(1:confind-1) confocal_fname_out '_crop_affine_acceptable_frames.csv'];
 
 % Create our visible output filename
-visible_fname_out = [confocal_fname(1:confind-1) confocal_fname_out '_crop_affine.avi'];
+visible_fname_out = [confocal_fname{f}(1:confind-1) confocal_fname_out '_crop_affine.avi'];
 visible_fname_out = strrep(visible_fname_out, 'confocal', 'visible');
 
 if loadsplit
-    split_fname_out = [confocal_fname(1:confind-1) confocal_fname_out '_crop.avi'];
+    split_fname_out = [confocal_fname{f}(1:confind-1) confocal_fname_out '_crop.avi'];
     split_fname_out = strrep(split_fname_out, 'confocal', 'split_det');
 end
 
 % Create our confocal output filename - affine will need to be done outside
 % MATLAB.
-confocal_fname_out = [confocal_fname(1:confind-1) confocal_fname_out '_crop.avi'];
+confocal_fname_out = [confocal_fname{f}(1:confind-1) confocal_fname_out '_crop.avi'];
 
-confocal_vidobj = VideoReader( fullfile(pathname, confocal_fname) );
+confocal_vidobj = VideoReader( fullfile(pathname, confocal_fname{f}) );
 visible_vidobj = VideoReader( fullfile(pathname, visible_fname) );
 
 if loadsplit
@@ -108,15 +114,16 @@ acc_frame_list = dlmread( fullfile(pathname, acceptable_frame_fname) );
 
 acc_frame_list = sort(acc_frame_list);
 
-if length(acc_frame_list) ~= length(confocal_vid)
+if length(acc_frame_list) < length(confocal_vid)
    error(['Acceptable frames and confocal video list lengths do not match! (' num2str(length(acc_frame_list)) ' vs ' num2str(length(confocal_vid)) ')']);
+elseif length(acc_frame_list) > length(confocal_vid)
+    acc_frame_list = acc_frame_list(1:length(confocal_vid));
 end
 
 [selected, cropregion] = linkedImageFrameSingle(confocal_vid, frame_nums);
 
+
 close all;
-
-
 
 % Remove the frames that weren't in the list
 confocal_vid = confocal_vid(selected);
@@ -167,3 +174,5 @@ if loadsplit
     close(split_vidobj);
 end
 
+close all;
+end

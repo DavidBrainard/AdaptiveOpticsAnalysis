@@ -86,8 +86,9 @@ for j=1:length(profileDataNames)
 
     end
     
-%     figure(8); plot(ref_stim_times{j}, sqrt(ref_variance_stim{j})-sqrt(ref_variance_stim{j}(1)) ); hold on; drawnow;
-    
+    figure(8); plot(ref_stim_times{j}, sqrt(ref_variance_stim{j})-sqrt(ref_variance_stim{j}(1)) ); hold on; drawnow;
+    figure(9); plot(ref_control_times{j}, sqrt(ref_variance_control{j})-sqrt(ref_variance_control{j}(1)) ); hold on; drawnow;
+      
     for i=1 : length(norm_control_cell_reflectance)
         for k=1 : length( norm_control_cell_reflectance{i} )
 
@@ -100,11 +101,11 @@ for j=1:length(profileDataNames)
             end
         end
     end
-    
+      
 
 end
-% hold off;
-
+figure(8); hold off;
+figure(9); hold off;
 
 pooled_variance_stim = zeros(allmax,1);
 pooled_variance_stim_count = zeros(allmax,1);
@@ -133,12 +134,15 @@ for j=1:length(profileDataNames)
     end
 end
 
-for i=1:length(pooled_variance_stim)    
+for i=1:length(pooled_variance_stim)
     pooled_variance_stim(i) = pooled_variance_stim(i)/pooled_variance_stim_count(i);
 end
-for i=1:length(pooled_variance_control)    
+for i=1:length(pooled_variance_control)
     pooled_variance_control(i) = pooled_variance_control(i)/pooled_variance_control_count(i);
 end
+
+
+
 
 % If its in the normalization, subtract the control value from the stimulus
 % value
@@ -156,24 +160,64 @@ end
 outFname = [id '_' stimwave '_' stim_intensity '_' stim_time '_aggregate_' num2str(length(profileDataNames)) '_signals'];
 
 hz=16.66666666;
-timeBase = (1:allmax)/hz;
+timeBase = ((1:allmax)/hz)';
 
-dlmwrite(fullfile(pwd, [outFname '.csv']), [timeBase' sqrt(pooled_variance_stim) sqrt(pooled_variance_control)], ',' );
+%% Fitting an exp to the curve
+% options = optimset('fmincon');
+% options = optimset(options,'Diagnostics','off','Display','off','LargeScale','off','Algorithm','interior-point');
+% 
+% std_control = sqrt(pooled_variance_control);
+% 
+% timeBase = timeBase(~isnan(std_control) );
+% std_control = std_control(~isnan(std_control));
+% 
+% % Exponential
+% % parameters(1) = std_control(1);
+% % parameters(2) = 1/(max(std_control) - min(std_control));
+% % parameters(3) = 2;
+% % parameters(4) = 1;
+% 
+% %Logistic
+% parameters(1) = mean(std_control(1:66));
+% parameters(2) = max(std_control) - min(std_control);
+% parameters(3) = 1;
+% parameters(4) = timeBase(124);
+% 
+% vlb = [-1 0               0 0];
+% vub = [ 1 max(std_control) 2 15];
+% 
+% cutoutTime = timeBase([find(timeBase<66) find(timeBase>150)]);
+% cutoutControl = std_control([find(timeBase<66) find(timeBase>150)]);
+% 
+% out_params = fmincon(@(parameters)control_fit(parameters, cutoutControl, cutoutTime), parameters,[],[],[],[],vlb,vub,[],options);
+% out_params
+% % prediction = out_params(1) + out_params(2)*out_params(3).^( out_params(4) * timeBase );
+% prediction = out_params(1) + ( out_params(2) ./ ( 1+exp(-out_params(3).*(timeBase-out_params(4)) ) ) );
+% 
+% plot(cutoutTime, cutoutControl, timeBase, prediction );
+
+
+%%
+dlmwrite(fullfile(pwd, [outFname '.csv']), [timeBase sqrt(pooled_variance_stim) sqrt(pooled_variance_control)], ',' );
 
 
 pooled_std_stim    = sqrt(pooled_variance_stim)-sqrt(pooled_variance_control);
-pooled_std_control = sqrt(pooled_variance_control)-sqrt(pooled_variance_control);
-    
-% end
+
+% Stim train
+stimlen = str2double( strrep(stim_time(1:3),'p','.') );
+
+%% Manual marking
+figure(9); plot(timeBase, sqrt(pooled_variance_stim),'r'); hold on;
+trainlocs = 68/hz:1/hz:(68/hz+stimlen);
+plot(timeBase, sqrt(pooled_variance_control),'b');
+plot(trainlocs, max(pooled_std_stim)*ones(size(trainlocs)),'r*'); hold off;
+[timepts, heightpts]=ginput(2);
 
 
 figure(10); 
 plot( timeBase,pooled_std_stim,'r'); hold on;
 % plot( timeBase,pooled_std_control,'b');
 % legend('Stimulus cones','Control cones');
-
-% Stim train
-stimlen = str2double( strrep(stim_time(1:3),'p','.') );
 
 trainlocs = 66/hz:1/hz:(66/hz+stimlen);
 plot(trainlocs, max(pooled_std_stim)*ones(size(trainlocs)),'r*'); hold off;
@@ -187,7 +231,7 @@ saveas(gcf, fullfile(pwd, [outFname '.png']), 'png' );
 
 % save( fullfile(pwd,['pooled_var_aggregate_' num2str(length(profileDataNames)) '_signals.mat' ] ), 'pooled_std_stim', 'timeBase' );
 
-dlmwrite(fullfile(pwd, [date '_all_plots.csv']), [ [str2double(id(4:end)), str2double(stim_intensity(1:3)), stimlen] ;[ timeBase' sqrt(pooled_variance_stim) sqrt(pooled_variance_control) ] ]',...
+dlmwrite(fullfile(pwd, [date '_all_plots.csv']), [ [str2double(id(4:end)), str2double(stim_intensity(1:3)), stimlen] ;[ timeBase sqrt(pooled_variance_stim) sqrt(pooled_variance_control) ] ]',...
          '-append', 'delimiter', ',', 'roffset',1);
 
 % save thisshit.mat
@@ -196,11 +240,13 @@ figure(2); hold on;
 plot(trainlocs, (.2+max(pooled_std_stim))*ones(size(trainlocs)),'y*'); hold off;
 
 saveas(gcf, fullfile(pwd, [outFname '_wfit.png']) );
+saveas(gcf, fullfile(pwd, [outFname '_wfit.fig']) );
 % saveas(gcf, fullfile(pwd, [outFname '_wfit.svg']), 'svg' );
 % figure(1);
 % saveas(gcf, fullfile(pwd, [outFname '_meanratio.svg']), 'svg' );
 % close(8);
 
+fitCharacteristics.absolute_height = abs(heightpts(2)-heightpts(1))
 fitCharacteristics.min_cones = min_cones;
 fitCharacteristics.max_cones = max_cones;
 fitCharacteristics.avg_num_cones = num_cones/length(profileDataNames);
