@@ -64,6 +64,30 @@ v0 = ParamsToVector(fitParams);
 
 finalParams = fmincon(@(v)FitModelErrorFunction(v,log_irr,amplitudes),v0,[],[],[],[],vlb,vub,[],options);
 
+%% Lock the parameters, then shift the curves up and down to fit the CIE
+
+rel_shifts = 1./( exp(finalParams(3:end))./exp(finalParams(5)) );
+
+% Load CIE data
+ciefunc = dlmread('/local_data/Projects/AdaptiveOpticsAnalysis/AOTemporalAnalysis/linCIE2008v2e_5.csv');
+
+cierow = [];
+for w=1:length(wavelengths)    
+    cierow = [cierow find(ciefunc(:,1) == wavelengths(w))];
+end
+
+cievals = ciefunc(cierow,2)';
+
+vub = 0.6;
+vlb = min(rel_shifts)-0.02 % Can't shift below what is possible, nor can it be 0!
+
+v0 = cievals(3)-1;
+    
+finalShifts = fmincon(@(v)FitCIEErrorFunction(v,cievals,rel_shifts),v0,[],[],[],[],vlb,vub,[],options);
+
+finalShifts
+rel_shifts= finalShifts+rel_shifts;
+
 hold on;
 for i=1:size(amplitudes,2)
    
@@ -71,7 +95,22 @@ for i=1:size(amplitudes,2)
 end
 hold off;
 
-rel_shifts = exp(finalParams(3:end))./exp(finalParams(5));
+
+end
+
+function f = FitCIEErrorFunction(v, cie, shifts)
+
+    preds = ComputeCIEModel(v,shifts);
+    
+    diff = (preds-cie).^2;
+
+    f = 100*sqrt(sum(diff)/length(diff));
+end
+
+function values = ComputeCIEModel(v, shifts)
+
+values = shifts+v;
+
 end
 
 function f = FitModelErrorFunction(v, irradiances, amplitudes)
@@ -87,7 +126,6 @@ function f = FitModelErrorFunction(v, irradiances, amplitudes)
     end
     
     f = 100*sqrt(sum(diff)/length(diff));
-
 end
 
 

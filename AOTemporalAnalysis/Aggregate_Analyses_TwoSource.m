@@ -174,7 +174,7 @@ figure(9); axis([0 249 -10 25]); title('All stimulus signals'); xlabel('Frame #'
 saveas(gcf, fullfile(pwd, [outFname '_allstim.png']), 'png' );
 
 hz=16.66666666;
-timeBase = (1:allmax)/hz;
+timeBase = ((1:allmax)/hz)';
 
 dlmwrite(fullfile(pwd, [outFname '.csv']), [timeBase' sqrt(pooled_variance_stim) sqrt(pooled_variance_control)], ',' );
 
@@ -225,6 +225,7 @@ fitCharacteristics.subject = id;
 fitCharacteristics.stim_intensity = stim_intensity;
 fitCharacteristics.stim_length = stimlen;
 fitCharacteristics.stim_wavelength = stimwave;
+fitCharacteristics
 
 %% Mean ratio analyses
 % if exist('mean_ratio','var') && length(profileDataNames) == length(all_ratio_times)

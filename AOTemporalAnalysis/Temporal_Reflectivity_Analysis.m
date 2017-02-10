@@ -270,26 +270,26 @@ end
 imwrite(uint8(colorcoded_im), fullfile(mov_path, 'Stim_Maps' ,[ref_image_fname(1:end - length('_AVG.svg') ) '_stim_map.png' ] ) );
 
 %% Crop each area to a certain size
-cropsize = 7.5;
-croprect = [0 0 cropsize/.4678 cropsize/.4678];
-
-figure(cropfig); 
-title('Select the crop region for the STIMULUS cones');
-h=imrect(gca, croprect);
-stim_mask_rect = wait(h);
-close(cropfig)
-stim_mask = poly2mask([stim_mask_rect(1) stim_mask_rect(1)                   stim_mask_rect(1)+stim_mask_rect(3) stim_mask_rect(1)+stim_mask_rect(3) stim_mask_rect(1)],...
-                      [stim_mask_rect(2) stim_mask_rect(2)+stim_mask_rect(4) stim_mask_rect(2)+stim_mask_rect(4) stim_mask_rect(2)                   stim_mask_rect(2)],...
-                      size(colorcoded_im,1), size(colorcoded_im,2));
-
-cropfig = figure(1); 
-imagesc( uint8(colorcoded_im) ); axis image; title('Select the crop region for the CONTROL cones');
-h=imrect(gca, croprect);
-control_mask_rect = wait(h);
-close(cropfig)
-control_mask = poly2mask([control_mask_rect(1) control_mask_rect(1)                      control_mask_rect(1)+control_mask_rect(3) control_mask_rect(1)+control_mask_rect(3) control_mask_rect(1)],...
-                         [control_mask_rect(2) control_mask_rect(2)+control_mask_rect(4) control_mask_rect(2)+control_mask_rect(4) control_mask_rect(2)                      control_mask_rect(2)],...
-                         size(colorcoded_im,1), size(colorcoded_im,2));
+% cropsize = 7.5;
+% croprect = [0 0 cropsize/.4678 cropsize/.4678];
+% 
+% figure(cropfig); 
+% title('Select the crop region for the STIMULUS cones');
+% h=imrect(gca, croprect);
+% stim_mask_rect = wait(h);
+% close(cropfig)
+% stim_mask = poly2mask([stim_mask_rect(1) stim_mask_rect(1)                   stim_mask_rect(1)+stim_mask_rect(3) stim_mask_rect(1)+stim_mask_rect(3) stim_mask_rect(1)],...
+%                       [stim_mask_rect(2) stim_mask_rect(2)+stim_mask_rect(4) stim_mask_rect(2)+stim_mask_rect(4) stim_mask_rect(2)                   stim_mask_rect(2)],...
+%                       size(colorcoded_im,1), size(colorcoded_im,2));
+% 
+% cropfig = figure(1); 
+% imagesc( uint8(colorcoded_im) ); axis image; title('Select the crop region for the CONTROL cones');
+% h=imrect(gca, croprect);
+% control_mask_rect = wait(h);
+% close(cropfig)
+% control_mask = poly2mask([control_mask_rect(1) control_mask_rect(1)                      control_mask_rect(1)+control_mask_rect(3) control_mask_rect(1)+control_mask_rect(3) control_mask_rect(1)],...
+%                          [control_mask_rect(2) control_mask_rect(2)+control_mask_rect(4) control_mask_rect(2)+control_mask_rect(4) control_mask_rect(2)                      control_mask_rect(2)],...
+%                          size(colorcoded_im,1), size(colorcoded_im,2));
 
 %% Extract the raw reflectance of each cell.
 
@@ -783,8 +783,8 @@ mean_ratio = s_ref_mean./c_ref_mean;
 if ~exist( fullfile(mov_path, 'Std_Dev_Plots'), 'dir' )
     mkdir(fullfile(mov_path, 'Std_Dev_Plots'))
 end
-% saveas(gcf, fullfile(mov_path, 'Std_Dev_Plots' , [ref_image_fname(1:end - length('_AVG.tif') ) '_' profile_method '_cutoff_' norm_type '_stddev.png' ] ) );
-saveas(gcf, fullfile(mov_path, 'Std_Dev_Plots' , [ref_image_fname(1:end - length('_AVG.tif') ) '_' profile_method '_cutoff_' norm_type '_' num2str(cropsize) '_stddev.svg' ] ) );
+saveas(gcf, fullfile(mov_path, 'Std_Dev_Plots' , [ref_image_fname(1:end - length('_AVG.tif') ) '_' profile_method '_cutoff_' norm_type '_stddev.png' ] ) );
+% saveas(gcf, fullfile(mov_path, 'Std_Dev_Plots' , [ref_image_fname(1:end - length('_AVG.tif') ) '_' profile_method '_cutoff_' norm_type '_' num2str(cropsize) '_stddev.svg' ] ) );
 
 if ~exist( fullfile(mov_path, 'Mat_Profile_Data'), 'dir' )
     mkdir(fullfile(mov_path, 'Mat_Profile_Data'))

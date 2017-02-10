@@ -207,11 +207,11 @@ pooled_std_stim    = sqrt(pooled_variance_stim)-sqrt(pooled_variance_control);
 stimlen = str2double( strrep(stim_time(1:3),'p','.') );
 
 %% Manual marking
-figure(9); plot(timeBase, sqrt(pooled_variance_stim),'r'); hold on;
+% figure(7); plot(timeBase, sqrt(pooled_variance_stim),'r'); hold on;
 trainlocs = 68/hz:1/hz:(68/hz+stimlen);
-plot(timeBase, sqrt(pooled_variance_control),'b');
-plot(trainlocs, max(pooled_std_stim)*ones(size(trainlocs)),'r*'); hold off;
-[timepts, heightpts]=ginput(2);
+% plot(timeBase, sqrt(pooled_variance_control),'b');
+% plot(trainlocs, max(pooled_std_stim)*ones(size(trainlocs)),'r*'); hold off;
+% [timepts, heightpts]=ginput(2);
 
 
 figure(10); 
@@ -245,8 +245,10 @@ saveas(gcf, fullfile(pwd, [outFname '_wfit.fig']) );
 % figure(1);
 % saveas(gcf, fullfile(pwd, [outFname '_meanratio.svg']), 'svg' );
 % close(8);
+if exist('heightpts','file')
+    fitCharacteristics.absolute_height = abs(heightpts(2)-heightpts(1));
+end
 
-fitCharacteristics.absolute_height = abs(heightpts(2)-heightpts(1))
 fitCharacteristics.min_cones = min_cones;
 fitCharacteristics.max_cones = max_cones;
 fitCharacteristics.avg_num_cones = num_cones/length(profileDataNames);

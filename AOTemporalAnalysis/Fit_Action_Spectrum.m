@@ -36,10 +36,6 @@ for i=2:2:size(a510,2)
     rel_shifts(i/2,:) = action_spect_fit(wavelengths, irradiances, amplitudes);
 end
 
-
-
-rel_shifts = 1./rel_shifts;
-
 figure; hold on;
 for i=1:length(rel_shifts)
     semilogy(wavelengths,rel_shifts(i,:));
@@ -48,7 +44,7 @@ semilogy(ciefunc(:,1), ciefunc(:,2),'k')
 hold off;
 
 figure; errorbar(wavelengths, mean(rel_shifts), std(rel_shifts)); hold on;
-title('Mean Wavelength vs Normalized Irradiance'); xlabel('Wavelength'); ylabel('Normalized Irradiance');
+title('Mean Wavelength vs Normalized Irradiance'); xlabel('Wavelength'); ylabel('Action (relative)');
 plot(ciefunc(:,1), ciefunc(:,2),'k')
 set(gca,'yscale','log')
 axis([450 700 10^-3 10^1]);

@@ -50,7 +50,7 @@ drawnow;
 %% Set up initial guess for fit parameters
 
 % These are known
-fitParams0.type = '2xgammapdf';
+fitParams0.type = 'gammapdfexp';
 
 fitParams0.stimOnsetTime = 3.96;
 
@@ -58,7 +58,7 @@ fitParams0.stimOnsetTime = 3.96;
 maskout = ~isnan(pooled_std_stim);
 
 pooled_std_stim = pooled_std_stim(maskout);
-timeBase = timeBase(maskout)';
+timeBase = timeBase(maskout);
 
 fitParams0.preStimValue = mean( pooled_std_stim( timeBase < fitParams0.stimOnsetTime ) );
 
@@ -203,7 +203,7 @@ fitParams = XToParams(x,fitParams0);
 % Add final fit to plot
 predictions = ComputeModelPreds(fitParams,timeBase);
 
-residuals = [pooled_std_stim'-predictions; timeBase];
+residuals = [pooled_std_stim-predictions; timeBase];
 
 figure(thePlot); hold on; plot(timeBase,predictions,'g','LineWidth',2); 
 % figure(thePlot); plot(timeBase, residuals(1,:),'b','LineWidth',1);
@@ -296,7 +296,7 @@ function f = FitModelErrorFunction(x,timeBase,theResponse,fitParams)
 fitParams = XToParams(x,fitParams);
 
 % Make predictions
-preds = ComputeModelPreds(fitParams,timeBase)';
+preds = ComputeModelPreds(fitParams,timeBase);
 
 % Compute fit error as RMSE
 nPoints = length(theResponse);

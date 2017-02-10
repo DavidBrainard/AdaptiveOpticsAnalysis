@@ -3,8 +3,11 @@ clear;
 close all force;
 
 
-baseDir = pwd; %uigetdir(pwd);
-profileDataNames = read_folder_contents(baseDir ,'mat');
+controlBaseDir = fullfile(pwd,'control'); %uigetdir(pwd);
+stimBaseDir = fullfile(pwd,'stim');
+
+controlDataNames = read_folder_contents(controlBaseDir ,'mat');
+stimDataNames = read_folder_contents(stimBaseDir ,'mat');
 
 wavelet = 'gaus3';
 
@@ -25,18 +28,15 @@ stimdlabels=[];
 mintime = 10;
 maxtime = 201;
 
-for j=1:length(profileDataNames)
+cutoff=0;
+for j=1:length(controlDataNames)
 
-    load(fullfile(baseDir, profileDataNames{j}));
+    load(fullfile(controlBaseDir, controlDataNames{j}));
     
     % Remove the empty cells
-    norm_stim_cell_reflectance = norm_stim_cell_reflectance( ~cellfun(@isempty,norm_stim_cell_reflectance) );
-    stim_cell_times            = stim_cell_times(  ~cellfun(@isempty,stim_cell_times) );
     norm_control_cell_reflectance = norm_control_cell_reflectance( ~cellfun(@isempty,norm_control_cell_reflectance)  );
     control_cell_times            = control_cell_times( ~cellfun(@isempty,control_cell_times) );
     
-    all_spect = zeros(length(norm_stim_cell_reflectance), 256);
-    cutoff = 0;
     for i=1:length(norm_control_cell_reflectance)
         
         times = control_cell_times{i};
@@ -44,59 +44,55 @@ for j=1:length(profileDataNames)
         times = times(times>=cutoff);        
 
         interptimes = mintime:maxtime;
-        interpsignal = interp1(times,signal,interptimes,'linear');
+        interpsignal = interp1(times,signal,interptimes,'pchip');
         
-%         figure(10);
-%         plot(times, signal,1:249,interpsignal); %hold on;
-%         plot(66:98,ones(33,1)*max(signal), 'r*'); hold off;
-        
-        %Continuous 8,16,32,64
-%         D5 = cwt(interpsignal,16,wavelet);
-        
-%         if length(D5) >= 190
-
-        %Discrete
-%         [C, L] = wavedec(signal,5,wavelet);
-%         [cD1,cD2,cD3,cD4,cD5] = detcoef(C,L,1:5);
-% 
-%         D4 = wrcoef('d',C,L,wavelet,4);
-%         D5 = wrcoef('d',C,L,wavelet,5);
-
-%         subplot(5,1,1); plot(D1);
-%         subplot(5,1,2); plot(D2);
-%         subplot(5,1,3); plot(D3);
-%         subplot(5,1,4); plot(D4);
-%         subplot(5,1,5);
-%          plot(D5(1,1:maxtime));
-        
-%          figure(100);
-%          plot([signal' D5'])
-         
-%         D5 = D5(1:maxtime);
-        D5 = wden(interpsignal,'sqtwolog','h','one',5,'sym7');
+        D5 = wden(interpsignal,'sqtwolog','s','one',5,'bior3.5');
 
         before = ( D5( interptimes>10 & interptimes<=66 ) );
         during = ( D5( interptimes>66 & interptimes<=99 ));
         after = ( D5( interptimes>99 ) );
-         
-        controlcoeffs = [controlcoeffs; std(before) std(during) ];
+        
+%         deriv5 = diff(D5);
+        % Determine distance from max response to stim?
+        [~,maxind]=max(abs(D5));
+        
+        controlcoeffs = [controlcoeffs; std(during) maxind-66 ];
         
         controllabels = [controllabels; {'control'}];
         
-        figure(1); title('Control cones');  
-        plot(D5);hold on;
-        plot(interpsignal); axis([0 250 -10 10]); hold off;
-        
+%         figure(1); title('Control cones'); 
+%         plot(D5); hold on; 
+%         plot(interpsignal);
+%         axis([0 250 -10 10]); hold off;
+%         
+%         Nx=length(D5);
+%         stationarylen=60;
+%         overlap=.5;
+%         wind = hamming(stationarylen);
 
+%         figure(2);
+%         spectrogram(D5,wind,overlap*stationarylen);
+
+        
+%         pause(1);
         controlreconst(i,:) = D5;
 %         end
 
     end
     
-    simplethreshold = 3*std(controlreconst);
+
+end
+
+stimless=[];
+stimd=[];
+for j=1:length(stimDataNames)
     
-    stimless=[];
-    stimd=[];
+    load(fullfile(stimBaseDir, stimDataNames{j}));
+    
+    % Remove the empty cells
+    norm_stim_cell_reflectance = norm_stim_cell_reflectance( ~cellfun(@isempty,norm_stim_cell_reflectance) );
+    stim_cell_times            = stim_cell_times(  ~cellfun(@isempty,stim_cell_times) );
+    
     
     for i=1:length(norm_stim_cell_reflectance)
         times  = stim_cell_times{i};
@@ -104,50 +100,36 @@ for j=1:length(profileDataNames)
         times = times(times>=cutoff);
         
         interptimes = mintime:maxtime;
-        interpsignal = interp1(times,signal,interptimes,'linear');
+        interpsignal = interp1(times,signal,interptimes,'pchip');
+
+        D5 = wden(interpsignal,'sqtwolog','s','one',5,'bior3.5');
+
+        deriv5 = diff(D5);
         
-%         figure(10);
-%         plot(times, signal); hold on;
-%         plot(66:98,ones(33,1)*max(signal), 'r*'); hold off;
-
-        %Continuous
-%         D5 = cwt(signal,16,wavelet);
-        
-%         if length(D5) >= 190
-%             
-
-            %Discrete
-%             [C, L] = wavedec(signal,5,wavelet);
-%             [cD1,cD2,cD3,cD4,cD5] = detcoef(C,L,1:5);
-            
-%             D4 = wrcoef('d',C,L,wavelet,4);
-%             D5 = wrcoef('d',C,L,wavelet,5);
-
-%         D5 = D5(1:maxtime);
-        D5 = wden(interpsignal,'sqtwolog','h','one',5,'sym7');
-
         before = ( D5( interptimes>10 & interptimes<=66 ) );
         during = ( D5( interptimes>66 & interptimes<=99 ));
         after = ( D5( interptimes>99 ) );
 
-            if all(D5<simplethreshold & D5>-simplethreshold)
-                stimless = [stimless i];
-% 
-%                 figure(3);  title('StimLESS cones'); hold on;
-%                 plot(D5(1:maxtime)); 
-%                 axis([0 250 -10 10])
-            else            
-                stimd = [stimd i];
+        [~,maxind]=max(abs(D5));
 
-                stimdcoeffs = [stimdcoeffs; std(before) std(during) ];
-                stimdlabels = [stimdlabels; {'stimulus'}];
-                
-                figure(2);  title('Stim cones'); hold on;
-                plot(D5); 
-                axis([0 250 -10 10])
-                
-            end
-%         end
+        stimd = [stimd i];
+
+        stimdcoeffs = [stimdcoeffs; std(during) maxind-66 ];
+        stimdlabels = [stimdlabels; {'stimulus'}];
+
+        figure(3);  title(['Stim cones: ' num2str(max(D5)-min(D5)) ]); %hold on; 
+        plot(D5); hold on; plot(interpsignal); 
+        axis([0 250 -10 10]); hold off;
+
+        Nx=length(D5);
+        stationarylen=40;
+        overlap=.5;
+        wind = hamming(stationarylen);
+
+        figure(4);
+        spectrogram(interpsignal,wind,overlap*stationarylen);
+        caxis([-80 30]);
+        pause(1);
     end
     
 
@@ -177,7 +159,7 @@ h(3) = plot(allcoeffs(SVMModel.IsSupportVector,1),...
 contour(x1Grid, x2Grid, reshape(scores1(:,2), size(x1Grid)),[0 0],'k');
     % Decision boundary
 title('Scatter Diagram with the Decision Boundary')
-legend({'-1','1','Support Vectors'},'Location','Best');
+legend({SVMModel.ClassNames{1},SVMModel.ClassNames{2},'Support Vectors'},'Location','Best');
 hold off
 
 
