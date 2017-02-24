@@ -1,5 +1,5 @@
 
-clear;
+% clear;
 close all force;
 
 
@@ -33,7 +33,7 @@ allsigs=[];
 clipind = 11; % Need to clip ends due to artifacts after filtering
 stimind = 66;
 maxind = 240;
-
+numpcacoeff=15;
 
 affinitycurve = normpdf(0:maxind-stimind-1,16,33);
 affinitycurve = affinitycurve./max(affinitycurve);
@@ -68,45 +68,24 @@ for j=1:1%length(controlDataNames)
         during = D5( 1:33 );
         after = D5( 34:end-clipind );
 
-        % Determine distance from max response to stim?
-        [maxrespval,maxrespind]=max( abs( diff([during after])) );
+        derivduraft = diff([during after]);
         
-        stim_affinity = affinitycurve(maxrespind)*maxrespval;
-        
-        derivduring = diff(during);
-        derivafter = diff(after);
-        
-        % Put together the feature lists
-        controlcoeffs = [controlcoeffs; stim_affinity max(derivduring)-min(derivduring) ];
-        
-        controllabels = [controllabels; {'control'}];
-        
-        
-        figure(1); title('Control cones'); hold on;
-%         plot(D5);
-%         hold on; 
-        plot( diff([during after]) );
-        axis([0 249 -1 1]);
-%         axis([0 250 -10 10]);
-        hold off;
-        
-        
-%         N = length(D5);
-%         xdft = fft(D5);
-%         xdft = xdft(1:N/2+1);
-%         psdx = (1/(2*pi*N)) * abs(xdft).^2;
-%         psdx(2:end-1) = 2*psdx(2:end-1);
-%         freq = 0:(2*pi)/N:pi;
+        if exist('pcacoeffs','var')
+            transderv = derivduraft*pcacoeffs;
 
-%         figure(2);
-%         plot(freq/pi,10*log10(psdx))
-%         grid on
-%         title('Periodogram Using FFT')
-%         xlabel('Normalized Frequency (\times\pi rad/sample)')
-%         ylabel('Power/Frequency (dB/rad/sample)')
-
-        controlsig(i,:) = diff([during after]);
-
+            controlcoeffs = [controlcoeffs; transderv(1:numpcacoeff)];
+            controllabels = [controllabels; {'control'}];
+        end
+        
+%         figure(1); title('Control cones'); hold on;
+% %         plot(D5);
+% %         hold on; 
+%         plot( diff([during after]) );
+%         axis([0 249 -1 1]);
+% %         axis([0 250 -10 10]);
+%         hold off;
+%         
+        controlsig(i,:) = derivduraft;
 
     end
 end
@@ -142,100 +121,49 @@ for j=1:1%length(stimDataNames)
         during = D5( 1:33 );
         after = D5( 34:end-clipind );
 
-        % Determine distance from max response to stim?
-        [maxrespval,maxrespind]=max( abs( diff([during after])) );
-        
-        stim_affinity = affinitycurve(maxrespind)*maxrespval;
-        
-        derivduring = diff(during);
-        derivafter = diff(after);
-        
-        stimd = [stimd i];
-        
-        stimdcoeffs = [stimdcoeffs; stim_affinity max(derivduring)-min(derivduring)  ];
-        stimdlabels = [stimdlabels; {'stimulus'}];
+        derivduraft = diff([during after]);
+                
+        if exist('pcacoeffs','var')
+            transderv = derivduraft*pcacoeffs;        
         
 
-        figure(3); title(['Stim cones']); hold on; 
-% %         plot(D5); 
-% %         hold on; 
-        plot( diff([during after]) );
-%         axis([0 length([during after]) -1 1]);
-%         %plot(interpsignal); 
-% %         axis([0 250 -10 10]);
-        axis([0 250 -1 1]);
-        hold off;
+            stimdcoeffs = [stimdcoeffs; transderv(1:numpcacoeff)];
+            stimdlabels = [stimdlabels; {'stimulus'}];
+        end
+%         figure(3); title(['Stim cones']); hold on; 
+% % %         plot(D5); 
+% % %         hold on; 
+%         plot( diff([during after]) );
+% %         axis([0 length([during after]) -1 1]);
+% %         %plot(interpsignal); 
+% % %         axis([0 250 -10 10]);
+%         axis([0 250 -1 1]);
+%         hold off;
         
-        
-%         N = length(D5);
-%         xdft = fft(D5);
-%         xdft = xdft(1:N/2+1);
-%         psdx = (1/(2*pi*N)) * abs(xdft).^2;
-%         psdx(2:end-1) = 2*psdx(2:end-1);
-%         freq = 0:(2*pi)/N:pi;
-% 
-%         figure(4);
-%         plot(freq/pi,10*log10(psdx))
-%         grid on
-%         title('Periodogram Using FFT')
-%         xlabel('Normalized Frequency (\times\pi rad/sample)')
-%         ylabel('Power/Frequency (dB/rad/sample)')
-        stimsig(i,:) = diff([during after]);
+        stimsig(i,:) = derivduraft;
     end
 end
+
+
+[pcacoeffs, pcascore, latent, ~, explained] = pca( [controlsig; stimsig] );
+explained
 
 alllabels = [controllabels; stimdlabels];
 allcoeffs = [controlcoeffs; stimdcoeffs];
 
-% allcoeffs = allcoeffs( [1:3769 3771:end],: );
-% alllabels = alllabels( [1:3769 3771:end],: );
-
-[pcacoeffs, pcascore, ~, ~, explained] = pca( allcoeffs );
-explained
-
-[pcacoeffs, pcascore, controllatent, ~, explained] = pca( controlsig );
-[pcacoeffs, pcascore, stimlatent, ~, explained] = pca( stimsig );
-
-
-allcoeffs = [controllatent(1:10); stimlatent(1:10)];
-alllabels = [controllabels(1:10); stimdlabels(1:10)];
-
-
+% dataSetInds = randperm(length(allcoeffs));
+% dataSetInds(1)
 SVMModel = fitcsvm(allcoeffs,alllabels,'KernelFunction','linear',...
-                                       'KernelScale','auto',...
-                                       'Standardize',true,...
-                                       'BoxConstraint',10,'OutlierFraction',0.1);
-sv = SVMModel.SupportVectors;
+                                             'KernelScale','auto',...
+                                             'Standardize',true,...
+                                             'BoxConstraint',10,...%'CrossVal','on','KFold',10,
+                                             'OutlierFraction',0.1);
 
-d = 0.02; % Step size of the grid
-[x1Grid,x2Grid] = meshgrid( min(allcoeffs(:,1)):d:max(allcoeffs(:,1)),...
-                            min(allcoeffs(:,2)):d:max(allcoeffs(:,2)) );
-xGrid = [x1Grid(:),x2Grid(:)];        % The grid
-[~,scores1] = predict(SVMModel,xGrid); % The scores
+% kfoldPercentModelLoss = 100*kfoldLoss(SVMModel)
 
-figure;
-h(1:2) = gscatter(allcoeffs(:,1), allcoeffs(:,2), alllabels);
-hold on
-h(3) = plot(allcoeffs(SVMModel.IsSupportVector,1),...
-            allcoeffs(SVMModel.IsSupportVector,2),'ko','MarkerSize',10);
-    % Support vectors
-contour(x1Grid, x2Grid, reshape(scores1(:,2), size(x1Grid)),[0 0],'k');
-    % Decision boundary
-title('Scatter Diagram with the Decision Boundary')
-legend({SVMModel.ClassNames{1},SVMModel.ClassNames{2},'Support Vectors'},'Location','Best');
-hold off
+beta = SVMModel.Beta;
+hyperplane = null(beta');
+transformedTestData = normc([beta hyperplane])' * allcoeffs';
+transformedTestData = transformedTestData';
 
-
-% d = 0.02; % Step size of the grid
-% [x1Grid,x2Grid,x3Grid] = meshgrid( min(allcoeffs(:,1)):d:max(allcoeffs(:,1)),...
-%                                    min(allcoeffs(:,2)):d:max(allcoeffs(:,2)),...
-%                                    min(allcoeffs(:,3)):d:max(allcoeffs(:,3)) );
-% xGrid = [x1Grid(:),x2Grid(:),x3Grid(:)]; % The grid
-% [~,scores1] = predict(SVMModel,xGrid); % The scores
-% 
-% figure;
-% h(1:2) = scatter3(allcoeffs(:,1), allcoeffs(:,2), allcoeffs(:,3));
-% hold on
-% h(3) = plot3(allcoeffs(SVMModel.IsSupportVector,1),...
-%              allcoeffs(SVMModel.IsSupportVector,2),...
-%              allcoeffs(SVMModel.IsSupportVector,3),'ko','MarkerSize',10);
+plot(transformedTestData');

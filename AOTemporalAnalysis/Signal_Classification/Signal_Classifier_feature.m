@@ -23,10 +23,8 @@ x92ind =[];
 x04=[];
 x04ind =[];
 
-controlcoeffs=[];
-controllabels=[];
-stimdcoeffs=[];
-stimdlabels=[];
+
+
 
 allsigs=[];
 
@@ -39,13 +37,19 @@ affinitycurve = normpdf(0:maxind-stimind-1,16,33);
 affinitycurve = affinitycurve./max(affinitycurve);
 
 cutoff=0;
-for j=1:1%length(controlDataNames)
+for j=1:length(controlDataNames)
 
     load(fullfile(controlBaseDir, controlDataNames{j}));
     
     % Remove the empty cells
     norm_control_cell_reflectance = norm_control_cell_reflectance( ~cellfun(@isempty,norm_control_cell_reflectance)  );
     control_cell_times            = control_cell_times( ~cellfun(@isempty,control_cell_times) );
+    
+    controlcoeffs=[];
+    controllabels=[];
+    
+    alllabels{j} = [];
+    allcoeffs{j} = [];
     
     for i=1:length(norm_control_cell_reflectance)
         
@@ -76,51 +80,59 @@ for j=1:1%length(controlDataNames)
         derivduring = diff(during);
         derivafter = diff(after);
         
-        % Put together the feature lists
-        controlcoeffs = [controlcoeffs; stim_affinity max(derivduring)-min(derivduring) ];
+        [peakvals, peaks] = findpeaks([derivduring derivafter]);
+        [troughvals, troughs] = findpeaks(-[derivduring derivafter]);
         
+        if peaks(1) < troughs(1)
+           listlen = length(peaks);
+        else
+           listlen = length(troughs);
+        end
+        
+        for p=1:listlen
+           if p > length(peaks) || p > length(troughs)
+              break; 
+           end
+               
+            pk_pk(p) = peakvals(p)+troughvals(p);
+        end
+        
+        
+        % Put together the feature lists
+        controlcoeffs = [controlcoeffs; stim_affinity std(pk_pk) max(derivduring)-min(derivduring) ];        
         controllabels = [controllabels; {'control'}];
         
         
-        figure(1); title('Control cones'); hold on;
-%         plot(D5);
-%         hold on; 
-        plot( diff([during after]) );
-        axis([0 249 -1 1]);
-%         axis([0 250 -10 10]);
-        hold off;
+%         figure(1); title('Control cones'); hold on;
+% %         plot(D5);
+% %         hold on; 
+%         plot( diff([during after]) );
+%         axis([0 249 -1 1]);
+% %         axis([0 250 -10 10]);
+%         hold off;
         
-        
-%         N = length(D5);
-%         xdft = fft(D5);
-%         xdft = xdft(1:N/2+1);
-%         psdx = (1/(2*pi*N)) * abs(xdft).^2;
-%         psdx(2:end-1) = 2*psdx(2:end-1);
-%         freq = 0:(2*pi)/N:pi;
-
-%         figure(2);
-%         plot(freq/pi,10*log10(psdx))
-%         grid on
-%         title('Periodogram Using FFT')
-%         xlabel('Normalized Frequency (\times\pi rad/sample)')
-%         ylabel('Power/Frequency (dB/rad/sample)')
-
         controlreconst(i,:) = D5;
 
 
     end
+    alllabels{j} = [alllabels{j}; controllabels];
+    allcoeffs{j} = [allcoeffs{j}; controlcoeffs];
 end
+
+
+
 
 stimless=[];
 stimd=[];
-for j=1:1%length(stimDataNames)
+for j=1:length(controlDataNames)
     
     load(fullfile(stimBaseDir, stimDataNames{j}));
     
     % Remove the empty cells
     norm_stim_cell_reflectance = norm_stim_cell_reflectance( ~cellfun(@isempty,norm_stim_cell_reflectance) );
     stim_cell_times            = stim_cell_times(  ~cellfun(@isempty,stim_cell_times) );
-    
+    stimdlabels=[];
+    stimdcoeffs=[];
     
     for i=1:length(norm_stim_cell_reflectance)
         times  = stim_cell_times{i};
@@ -150,92 +162,84 @@ for j=1:1%length(stimDataNames)
         derivduring = diff(during);
         derivafter = diff(after);
         
+        [peakvals, peaks] = findpeaks([derivduring derivafter]);
+        [troughvals, troughs] = findpeaks(-[derivduring derivafter]);
+        
+        if peaks(1) < troughs(1)
+           listlen = length(peaks);
+        else
+           listlen = length(troughs);
+        end
+        
+        for p=1:listlen
+           if p > length(peaks) || p > length(troughs)
+              break; 
+           end
+               
+            pk_pk(p) = peakvals(p)+troughvals(p);
+        end
+        
+        
         stimd = [stimd i];
 
         if( stim_affinity > .05)
-            stimdcoeffs = [stimdcoeffs; stim_affinity max(derivduring)-min(derivduring)  ];
+            stimdcoeffs = [stimdcoeffs; stim_affinity std(pk_pk) max(derivduring)-min(derivduring)  ];
             stimdlabels = [stimdlabels; {'stimulus'}];
         end
 
-        figure(3); title(['Stim cones']); hold on; 
-% %         plot(D5); 
-% %         hold on; 
-        plot( diff([during after]) );
-%         axis([0 length([during after]) -1 1]);
-%         %plot(interpsignal); 
-% %         axis([0 250 -10 10]);
-        axis([0 250 -1 1]);
-        hold off;
+%         figure(3); title(['Stim cones']); hold on; 
+% % %         plot(D5); 
+% % %         hold on; 
+%         plot( diff([during after]) );
+% %         axis([0 length([during after]) -1 1]);
+% %         %plot(interpsignal); 
+% % %         axis([0 250 -10 10]);
+%         axis([0 250 -1 1]);
+%         hold off;
         
-        
-%         N = length(D5);
-%         xdft = fft(D5);
-%         xdft = xdft(1:N/2+1);
-%         psdx = (1/(2*pi*N)) * abs(xdft).^2;
-%         psdx(2:end-1) = 2*psdx(2:end-1);
-%         freq = 0:(2*pi)/N:pi;
-% 
-%         figure(4);
-%         plot(freq/pi,10*log10(psdx))
-%         grid on
-%         title('Periodogram Using FFT')
-%         xlabel('Normalized Frequency (\times\pi rad/sample)')
-%         ylabel('Power/Frequency (dB/rad/sample)')
         
     end
+    alllabels{j} = [alllabels{j}; stimdlabels];
+    allcoeffs{j} = [allcoeffs{j}; stimdcoeffs];
 end
 
-alllabels = [controllabels; stimdlabels];
-allcoeffs = [controlcoeffs; stimdcoeffs];
+
 
 % allcoeffs = allcoeffs( [1:3769 3771:end],: );
 % alllabels = alllabels( [1:3769 3771:end],: );
 
-[pcacoeffs, pcascore, ~, ~, explained] = pca( allcoeffs );
-explained
+
+% explained
 
 
-projected = allcoeffs*pcacoeffs;
+% projected = allcoeffs*pcacoeffs;
 
-figure;
-gscatter(projected(:,1), projected(:,2), alllabels);
-
-
-SVMModel = fitcsvm(allcoeffs,alllabels,'KernelFunction','linear',...
-                                       'KernelScale','auto',...
-                                       'Standardize',true,...
-                                       'BoxConstraint',10,'OutlierFraction',0.1);
-sv = SVMModel.SupportVectors;
-
-d = 0.02; % Step size of the grid
-[x1Grid,x2Grid] = meshgrid( min(allcoeffs(:,1)):d:max(allcoeffs(:,1)),...
-                            min(allcoeffs(:,2)):d:max(allcoeffs(:,2)) );
-xGrid = [x1Grid(:),x2Grid(:)];        % The grid
-[~,scores1] = predict(SVMModel,xGrid); % The scores
-
-figure;
-h(1:2) = gscatter(allcoeffs(:,1), allcoeffs(:,2), alllabels);
-hold on
-h(3) = plot(allcoeffs(SVMModel.IsSupportVector,1),...
-            allcoeffs(SVMModel.IsSupportVector,2),'ko','MarkerSize',10);
-    % Support vectors
-contour(x1Grid, x2Grid, reshape(scores1(:,2), size(x1Grid)),[0 0],'k');
-    % Decision boundary
-title('Scatter Diagram with the Decision Boundary')
-legend({SVMModel.ClassNames{1},SVMModel.ClassNames{2},'Support Vectors'},'Location','Best');
-hold off
-
-
-% d = 0.02; % Step size of the grid
-% [x1Grid,x2Grid,x3Grid] = meshgrid( min(allcoeffs(:,1)):d:max(allcoeffs(:,1)),...
-%                                    min(allcoeffs(:,2)):d:max(allcoeffs(:,2)),...
-%                                    min(allcoeffs(:,3)):d:max(allcoeffs(:,3)) );
-% xGrid = [x1Grid(:),x2Grid(:),x3Grid(:)]; % The grid
-% [~,scores1] = predict(SVMModel,xGrid); % The scores
-% 
 % figure;
-% h(1:2) = scatter3(allcoeffs(:,1), allcoeffs(:,2), allcoeffs(:,3));
-% hold on
-% h(3) = plot3(allcoeffs(SVMModel.IsSupportVector,1),...
-%              allcoeffs(SVMModel.IsSupportVector,2),...
-%              allcoeffs(SVMModel.IsSupportVector,3),'ko','MarkerSize',10);
+% gscatter(projected(:,1), projected(:,3), alllabels);
+
+
+% Pick a random set to fit from
+dataSetInds = randperm(length(allcoeffs));
+dataSetInds(1)
+SVMModel = fitcsvm(allcoeffs{dataSetInds(1)},alllabels{dataSetInds(1)},'KernelFunction','linear',...
+                                             'KernelScale','auto',...
+                                             'Standardize',true,...
+                                             'BoxConstraint',10,'CrossVal','on','KFold',10,'OutlierFraction',0.1);
+
+kfoldPercentModelLoss = 100*kfoldLoss(SVMModel)
+
+% Aggregate all of the other data
+validationcoeff=[];
+validationlabels=[];
+for o=2:length(dataSetInds)
+   
+    validationcoeff = [validationcoeff; allcoeffs{dataSetInds(o)}];
+    validationlabels = [validationlabels; alllabels{dataSetInds(o)}];
+    
+end
+
+[pcacoeffs, pcascore, latent, ~, explained] = pca( validationcoeff );
+
+% Estimate the classification error.
+classificationPercentloss = 100*loss(SVMModel.Trained{1},validationcoeff,validationlabels)
+

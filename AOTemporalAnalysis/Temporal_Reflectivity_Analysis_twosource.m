@@ -1,8 +1,9 @@
-function []=Temporal_Reflectivity_Analysis(mov_path, ref_image_fname)
-% Robert F Cooper 11-3-2015 10:40AM
+function []=Temporal_Reflectivity_Analysis_twosource(mov_path, ref_image_fname)
+% Robert F Cooper 02-20-2016
 %
 % This software is responsible for the data processing of temporal
-% datasets.
+% datasets, by taking the data from separate stim folders and a control
+% folders.
 gui=false;
 
 profile_method = 'box';
@@ -59,7 +60,7 @@ end
 % "masks"
 visible_signal = zeros(size(visible_stack,3),1);
 
-noise_floor = 5; %mean(max(visible_stack(:,:,1)));
+noise_floor = mean(max(visible_stack(:,:,1)));
 for v=1:size(visible_stack,3)
     
     vis_frm = visible_stack(:,:,v);
@@ -118,7 +119,7 @@ end
 
 %% Shrink the control area to get further away from potentially stimulated cones.
 
-% control_mask = imerode(control_mask, ones(100));
+control_mask = imerode(control_mask, ones(100));
 
 
 %% Create the capillary mask- only use the data before the stimulus fires to do so.

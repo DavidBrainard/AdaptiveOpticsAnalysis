@@ -117,7 +117,7 @@ if ~isempty( strfind( fitParams0.type, 'gammapdf') )
     if strcmp( fitParams0.type, 'gammapdfexp')
 
         fitParams0.responseDelay2 = 0;
-        fitParams0.decay   = .25;
+        fitParams0.decay   = .5;
         fitParams0.offset = max(pooled_std_stim)-min(pooled_std_stim); 
     end
     
@@ -228,12 +228,18 @@ prestim_PI = fitParams0.preStimValue + 2*prestim_stddev;
 fitCharacteristics.amplitude = max_ampl-fitParams0.preStimValue;
 
 afterPIval = min( find( predictions > prestim_PI ) );
-beforePIval = afterPIval-1;
-interpslope = (predictions(afterPIval)-predictions(beforePIval))/(timeBase(afterPIval)-timeBase(beforePIval));
 
-fitCharacteristics.resp_start = timeBase(beforePIval) + ((prestim_PI-predictions(beforePIval))/interpslope);
+if ~isempty(afterPIval)
+    beforePIval = afterPIval-1;
+    interpslope = (predictions(afterPIval)-predictions(beforePIval))/(timeBase(afterPIval)-timeBase(beforePIval));
 
-fitCharacteristics.time_to_peak  = timeBase(max_ind) - fitParams0.stimOnsetTime;
+    fitCharacteristics.resp_start = timeBase(beforePIval) + ((prestim_PI-predictions(beforePIval))/interpslope);
+
+    fitCharacteristics.time_to_peak = timeBase(max_ind) - fitParams0.stimOnsetTime;
+else
+    fitCharacteristics.resp_start = 0;
+    fitCharacteristics.time_to_peak = 0;
+end
 
 fitCharacteristics.decay_initval = fitParams.offset;
 
@@ -402,8 +408,7 @@ switch (params.type)
         if peaked
             % Using maxval as the anchor
             [maxval, ind] = max(preds);
-            secondDelayZeroedTime = timeBase-timeBase(ind(1));
-%         secondDelayZeroedTime = secondDelayZeroedTime-params.responseDelay2;            
+            secondDelayZeroedTime = timeBase-timeBase(ind(1));          
             index2 = find( secondDelayZeroedTime >= 0 );            
         else
             % Using maxval as the anchor

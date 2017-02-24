@@ -1,9 +1,8 @@
-% function [fitCharacteristics residuals]=Aggregate_Analyses_TwoSource(stimRootDir, controlRootDir)
+function [fitCharacteristics, residuals]=Aggregate_Analyses_TwoSource(stimRootDir, controlRootDir)
 % Robert F Cooper
 % 12-31-2015
 % This script calculates pooled variance across a set of given signals.
-clear;
-close all;
+
 if ~exist('stimRootDir','var')
     close all force;
     stimRootDir = uigetdir(pwd, 'Select the directory containing the stimulus profiles');
@@ -23,6 +22,7 @@ num_stim_cones =0;
 max_cones = 0;
 min_cones = 10000000000000;
 mean_control_reflectance = zeros(500,1);
+num_contributors_control_reflectance = zeros(500,1);
 
 for j=1:length(profileCDataNames)
 
@@ -57,23 +57,10 @@ for j=1:length(profileCDataNames)
 
     end
     
-    figure(8); plot(ref_control_times{j}, sqrt(ref_variance_control{j})-sqrt(ref_variance_control{j}(1)) ); hold on; drawnow;
-      
-    for i=1 : length(norm_control_cell_reflectance)
-        for k=1 : length( norm_control_cell_reflectance{i} )
-
-            if ~isnan( norm_control_cell_reflectance{i}(k) )
-                if mean_control_reflectance(k) == 0
-                    mean_control_reflectance(k) = norm_control_cell_reflectance{i}(k);
-                else
-                    mean_control_reflectance(k) = (mean_control_reflectance(k) + norm_control_cell_reflectance{i}( (k) ) )/2;
-                end
-            end
-        end
-    end
-      
-
+    figure(8); plot(ref_control_times{j}, sqrt(ref_variance_control{j})-sqrt(ref_variance_control{j}(1)) ); hold on; drawnow;      
 end
+
+
 hold off;
 
 for j=1:length(profileSDataNames)
@@ -159,7 +146,7 @@ end
 
 % For structure: /stuff/id/intensity/time/region_cropped/data
 [remain kid] = getparent(stimRootDir);
-% [remain kid] = getparent(remain);
+
 [remain region] = getparent(remain);
 [remain stim_time] = getparent(remain);
 [remain stim_intensity] = getparent(remain);
@@ -168,15 +155,15 @@ end
 
 outFname = [id '_' stimwave '_' stim_intensity '_' stim_time '_aggregate_' num2str(length(profileSDataNames)) '_signals_twosource'];
 
-figure(8); axis([0 249 -10 25]); title('All control signals'); xlabel('Frame #'); ylabel('Standard deviations');
+figure(8); axis([0 249 -20 75]); title('All control signals'); xlabel('Frame #'); ylabel('Standard deviations');
 saveas(gcf, fullfile(pwd, [outFname '_allcontrol.png']), 'png' );
-figure(9); axis([0 249 -10 25]); title('All stimulus signals'); xlabel('Frame #'); ylabel('Standard deviations');
+figure(9); axis([0 249 -20 75]); title('All stimulus signals'); xlabel('Frame #'); ylabel('Standard deviations');
 saveas(gcf, fullfile(pwd, [outFname '_allstim.png']), 'png' );
 
 hz=16.66666666;
 timeBase = ((1:allmax)/hz)';
 
-dlmwrite(fullfile(pwd, [outFname '.csv']), [timeBase' sqrt(pooled_variance_stim) sqrt(pooled_variance_control)], ',' );
+dlmwrite(fullfile(pwd, [outFname '.csv']), [timeBase sqrt(pooled_variance_stim) sqrt(pooled_variance_control)], ',' );
 
 
 pooled_std_stim    = sqrt(pooled_variance_stim)-sqrt(pooled_variance_control);
@@ -202,7 +189,7 @@ saveas(gcf, fullfile(pwd, [outFname '.png']), 'png' );
 
 % save( fullfile(pwd,['pooled_var_aggregate_' num2str(length(profileDataNames)) '_signals.mat' ] ), 'pooled_std_stim', 'timeBase' );
 
-dlmwrite(fullfile(pwd, [date '_all_plots.csv']), [ [str2double(id(4:end)), str2double(stim_intensity(1:3)), stimlen] ;[ timeBase' sqrt(pooled_variance_stim) sqrt(pooled_variance_control) ] ]',...
+dlmwrite(fullfile(pwd, [date '_all_plots.csv']), [ [str2double(id(4:end)), str2double(stim_intensity(1:3)), stimlen] ;[ timeBase sqrt(pooled_variance_stim) sqrt(pooled_variance_control) ] ]',...
          '-append', 'delimiter', ',', 'roffset',1);
 
 % save thisshit.mat

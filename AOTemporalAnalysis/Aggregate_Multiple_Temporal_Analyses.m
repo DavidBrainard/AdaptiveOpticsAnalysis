@@ -241,11 +241,11 @@ plot(trainlocs, (.2+max(pooled_std_stim))*ones(size(trainlocs)),'y*'); hold off;
 
 saveas(gcf, fullfile(pwd, [outFname '_wfit.png']) );
 saveas(gcf, fullfile(pwd, [outFname '_wfit.fig']) );
-% saveas(gcf, fullfile(pwd, [outFname '_wfit.svg']), 'svg' );
+saveas(gcf, fullfile(pwd, [outFname '_wfit.svg']), 'svg' );
 % figure(1);
 % saveas(gcf, fullfile(pwd, [outFname '_meanratio.svg']), 'svg' );
 % close(8);
-if exist('heightpts','file')
+if exist('heightpts','var')
     fitCharacteristics.absolute_height = abs(heightpts(2)-heightpts(1));
 end
 

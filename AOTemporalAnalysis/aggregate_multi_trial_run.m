@@ -23,7 +23,7 @@ for i=1:size(dataPath,1)
     try    
         [fitData(i) residuals{i}] = Aggregate_Multiple_Temporal_Analyses(dataPath{i});
     catch ex
-       disp([ref_image_fname ' failed to analyze:']);
+       disp([dataPath{i} ' failed to analyze:']);
        disp([ex.message ' ' ex.stack(1).name ': line ' num2str(ex.stack(1).line)] );
     end
 
