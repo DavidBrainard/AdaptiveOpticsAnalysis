@@ -24,7 +24,7 @@ fit_type = 'sigmoid';
 
 %% Load CIE data
 
-ciefunc = dlmread('/local_data/Projects/AdaptiveOpticsAnalysis/AOTemporalAnalysis/linCIE2008v2e_5.csv');
+ciefunc = dlmread( fullfile(pathname,'linCIE2008v2e_5.csv') );
 
 %% Create the fits.
 legendIDs = cell(length(IDs),1);
@@ -52,13 +52,19 @@ for i=1:length(IDs)
         
     end
     
-    rel_shifts(i,:) = action_spect_fit(wavelengths, irradiances, datavals, fit_type);
+    rel_shifts(i,:) = action_spect_fit(wavelengths, irradiances, datavals, ciefunc, fit_type);
     legendIDs{i} = num2str(IDs(i));
     
-    title( legendIDs{i} );
-    
+    title( legendIDs{i} );%For getting the irradiance response as a function of subject
+    saveas(gcf, fullfile(pathname, [legendIDs{i} 'irr_response.svg']));
 end
 
+% For getting the irradiance response as a function of wavelength
+% for w=1:length(wavelengths)
+%     figure(wavelengths(w));
+%     legend(legendIDs);
+%     saveas(gcf, fullfile(pathname, [num2str(wavelengths(w)) 'irr_response.svg']));
+% end
 
 figure; hold on;
 for i=1:length(IDs)

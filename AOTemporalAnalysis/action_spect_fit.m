@@ -1,4 +1,4 @@
-function [ rel_shifts ] = action_spect_fit( wavelengths, irradiances, datavals, type )
+function [ rel_shifts ] = action_spect_fit( wavelengths, irradiances, datavals, ciefunc, type )
 
 normalize = false;
 
@@ -8,7 +8,7 @@ fitParams.irr_shift=[];
 fitParams.slope=0;
 
 max_irr = 10^5;
-log_irr_range = 0:.25:11;
+log_irr_range = 0:.1:11;
 
 
 % Rescale amplitudes so that we can fit them all the same- each column is
@@ -30,10 +30,10 @@ for w=1:length(wavelengths)
     switch(type)
         case 'sigmoid'
             fitParams.max_or_intercept = [fitParams.max_or_intercept data(end)];       
-            irrval(w) = {log(irr)};
+            irrval(w) = {log10(irr)};
             fitParams.slope = fitParams.slope+1;
         case 'linear'
-            irr=log(irr);
+            irr=log10(irr);
             m = (data(end)-data(1))/(irr(end)-irr(1));
             fitParams.slope = fitParams.slope+m;
             
@@ -53,13 +53,17 @@ for w=1:length(wavelengths)
     
     % The midpoint of the fit should never move beyond the edges of the
     % actual curve
-    vub(w) = max(irrval{w}); 
-    vlb(w) = min(irrval{w});
+    vub(w) = 2*max(irrval{w}); 
+    vlb(w) = 2*min(irrval{w});
     
-    plot(irrval{w}, datavals{w}); hold on;
-    legends{w} = num2str(wavelengths(w));
+%     handle = figure(wavelengths(w)); title(num2str(wavelengths(w))); 
+hold on;
+    plot(irrval{w}, datavals{w});
+
+%     axis([0 5 0 2.5]);
+    hold off;
 end
-legend(legends);
+
 
 % Determine the average slope we want to use.
 fitParams.slope = fitParams.slope/length(wavelengths);
@@ -102,8 +106,9 @@ finalParams = fmincon(@(v)FitModelErrorFunction(v,irrval,datavals,type),v0,[],[]
 
 rel_shifts = 1./( exp(finalParams(3:end))./exp(finalParams(5)) );
 
-% Load CIE data
-ciefunc = dlmread('/local_data/Projects/AdaptiveOpticsAnalysis/AOTemporalAnalysis/linCIE2008v2e_5.csv');
+% figure(100);
+% plot(ciefunc(:,1),ciefunc(:,2)); hold on;
+% plot(wavelengths,rel_shifts); title('Preshift'); hold off;
 
 cierow = [];
 for w=1:length(wavelengths)    
@@ -113,16 +118,20 @@ end
 cievals = ciefunc(cierow,2)';
 
 vub = 0.6;
-vlb = min(rel_shifts)-0.02; % Can't shift below what is possible, nor can it be 0!
+vlb = 0.02-min(rel_shifts); % Can't shift below what is possible, nor can it be 0!
 
 v0 = cievals(3)-1;
     
 finalShifts = fmincon(@(v)FitCIEErrorFunction(v,cievals,rel_shifts),v0,[],[],[],[],vlb,vub,[],options);
 
 
-rel_shifts= finalShifts+rel_shifts;
+rel_shifts= rel_shifts+finalShifts;
 
-hold on;
+% figure(101);
+% plot(ciefunc(:,1),ciefunc(:,2)); hold on;
+% plot(wavelengths,rel_shifts); title('Postshift'); hold off;
+
+figure(handle);hold on;
 for i=1:size(datavals,2)
     params = VectorToParams(finalParams, i)
     plot(log_irr_range, ComputeModel(params, log_irr_range, type),'r.-');
