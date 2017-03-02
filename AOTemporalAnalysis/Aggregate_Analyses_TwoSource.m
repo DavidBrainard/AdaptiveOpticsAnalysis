@@ -168,13 +168,13 @@ dlmwrite(fullfile(pwd, [outFname '.csv']), [timeBase sqrt(pooled_variance_stim) 
 
 
 figure(10); 
-plot( timeBase,sqrt(pooled_variance_stim),'r'); hold on;
-plot( timeBase,sqrt(pooled_variance_control),'b');
+% plot( timeBase,sqrt(pooled_variance_stim),'r'); hold on;
+% plot( timeBase,sqrt(pooled_variance_control),'b');
 
 
 pooled_std_stim    = sqrt(pooled_variance_stim)-sqrt(pooled_variance_control);
-plot( timeBase,pooled_std_stim,'k.');
-legend('Stimulus cones','Control cones','Subtraction');
+plot( timeBase(~isnan(pooled_std_stim)), pooled_std_stim(~isnan(pooled_std_stim)),'k'); hold on;
+% legend('Stimulus cones','Control cones','Subtraction');
 
 
 % Stim train
@@ -187,8 +187,8 @@ plot(trainlocs, max(pooled_std_stim)*ones(size(trainlocs)),'r*'); hold off;
 ylabel('Pooled Standard deviation'); xlabel('Time (s)'); title( [stim_intensity ' ' stim_time 'pooled standard deviation of ' num2str(length(profileSDataNames)) ' signals.'] );
 axis([0 16 -1 3])
 hold off;
-saveas(gcf, fullfile(pwd, [outFname '.png']), 'png' );
-% saveas(gcf, fullfile(pwd, [outFname '.svg']), 'svg' );
+% saveas(gcf, fullfile(pwd, [outFname '.png']), 'png' );
+saveas(gcf, fullfile(pwd, [outFname '.svg']), 'svg' );
 
 % save( fullfile(pwd,['pooled_var_aggregate_' num2str(length(profileDataNames)) '_signals.mat' ] ), 'pooled_std_stim', 'timeBase' );
 

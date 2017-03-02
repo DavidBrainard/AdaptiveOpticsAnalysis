@@ -215,7 +215,7 @@ trainlocs = 68/hz:1/hz:(68/hz+stimlen);
 
 
 figure(10); 
-plot( timeBase,pooled_std_stim,'r'); hold on;
+plot( timeBase(~isnan(pooled_std_stim)), pooled_std_stim(~isnan(pooled_std_stim)),'k'); hold on;
 % plot( timeBase,pooled_std_control,'b');
 % legend('Stimulus cones','Control cones');
 
@@ -226,8 +226,8 @@ plot(trainlocs, max(pooled_std_stim)*ones(size(trainlocs)),'r*'); hold off;
 ylabel('Pooled Standard deviation'); xlabel('Time (s)'); title( [stim_intensity ' ' stim_time 'pooled standard deviation of ' num2str(length(profileDataNames)) ' signals.'] );
 axis([0 16 -1 3])
 hold off;
-saveas(gcf, fullfile(pwd, [outFname '.png']), 'png' );
-% saveas(gcf, fullfile(pwd, [outFname '.svg']), 'svg' );
+% saveas(gcf, fullfile(pwd, [outFname '.png']), 'png' );
+saveas(gcf, fullfile(pwd, [outFname '.svg']), 'svg' );
 
 % save( fullfile(pwd,['pooled_var_aggregate_' num2str(length(profileDataNames)) '_signals.mat' ] ), 'pooled_std_stim', 'timeBase' );
 
