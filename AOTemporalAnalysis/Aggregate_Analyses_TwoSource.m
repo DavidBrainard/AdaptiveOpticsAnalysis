@@ -56,8 +56,8 @@ for j=1:length(profileCDataNames)
         end
 
     end
-    
-    figure(8); plot(ref_control_times{j}, sqrt(ref_variance_control{j})-sqrt(ref_variance_control{j}(1)) ); hold on; drawnow;      
+    pre = ref_variance_control{j}(ref_control_times{j}<=66);
+    figure(8); plot(ref_control_times{j}, sqrt(ref_variance_control{j})-sqrt(mean(pre)) ); hold on; drawnow;      
 end
 
 
@@ -97,7 +97,8 @@ for j=1:length(profileSDataNames)
 
     end
     
-     figure(9); plot(ref_stim_times{j}, sqrt(ref_variance_stim{j})-sqrt(ref_variance_stim{j}(1)) ); hold on; drawnow;
+    pre = ref_variance_stim{j}(ref_stim_times{j}<=66);
+    figure(9); plot(ref_stim_times{j}, sqrt(ref_variance_stim{j})-sqrt(mean(pre)) ); hold on; drawnow;
 
 end
 hold off;
@@ -166,13 +167,15 @@ timeBase = ((1:allmax)/hz)';
 dlmwrite(fullfile(pwd, [outFname '.csv']), [timeBase sqrt(pooled_variance_stim) sqrt(pooled_variance_control)], ',' );
 
 
-pooled_std_stim    = sqrt(pooled_variance_stim)-sqrt(pooled_variance_control);
-
-
 figure(10); 
-plot( timeBase,pooled_std_stim,'r'); hold on;
-% plot( timeBase,pooled_std_control,'b');
-% legend('Stimulus cones','Control cones');
+plot( timeBase,sqrt(pooled_variance_stim),'r'); hold on;
+plot( timeBase,sqrt(pooled_variance_control),'b');
+
+
+pooled_std_stim    = sqrt(pooled_variance_stim)-sqrt(pooled_variance_control);
+plot( timeBase,pooled_std_stim,'k.');
+legend('Stimulus cones','Control cones','Subtraction');
+
 
 % Stim train
 stimlen = str2double( strrep(stim_time(1:3),'p','.') );

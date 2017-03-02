@@ -31,7 +31,11 @@ function [fitCharacteristics, residuals] = modelFit(timeBase, pooled_std_stim)
 % trueParams.noiseSd = 0.3;
 % pooled_std_stim = ComputeModelPreds(trueParams,timeBase);
 
-%Remove values below zero
+%Remove values before cutoff time
+cutofftime = 8.5;
+pretime = timeBase <= cutofftime;
+timeBase = timeBase(pretime);
+pooled_std_stim = pooled_std_stim(pretime);
 
 
 %% Start plot
@@ -80,7 +84,7 @@ global peaked;
 % And set scale so that initial max predition matches max data
 if ~isempty( strfind( fitParams0.type, 'gammapdf') )
     
-    overPreStim = find( pooled_std_stim(timeBase > fitParams0.stimOnsetTime) > prestim_PI*1.2 );
+    overPreStim = find( pooled_std_stim(timeBase > fitParams0.stimOnsetTime) > prestim_PI*1.1 );
     
     % Supress the gamma function if there is no obvious response.
     if ~isempty(overPreStim)
@@ -94,8 +98,8 @@ if ~isempty( strfind( fitParams0.type, 'gammapdf') )
     else
         peaked = false;
         
-%         fitParams0.gammaA1 = 0.01;
-%         fitParams0.gammaB1 = 0.01;
+        fitParams0.gammaA1 = 0.0;
+        fitParams0.gammaB1 = 0.0;
         fitParams0.scale1 = 0;
     end
         
@@ -117,7 +121,7 @@ if ~isempty( strfind( fitParams0.type, 'gammapdf') )
     if strcmp( fitParams0.type, 'gammapdfexp')
 
         fitParams0.responseDelay2 = 0;
-        fitParams0.decay   = .5;
+        fitParams0.decay   = .25;
         fitParams0.offset = max(pooled_std_stim)-min(pooled_std_stim); 
     end
     
@@ -181,14 +185,14 @@ predictions1 = ComputeModelPreds(XToParams(x1,fitParams0),timeBase);
 switch fitParams0.type
     case 'gammapdf'
         vlb = [-1 0.01 0.01 0.1];
-        vub = [10 100 100 1000];        
+        vub = [1 3 3 10];        
     case '2xgammapdf'
         vlb = [-2 0.01 0.01 0.001  0  1    1  -6   0];
         vub = [ 1 10    10    10   2  10   10  6   0];
     case 'gammapdfexp'
         if peaked
             vlb = [-1 0.01 0.01 0.001  0.01  0];
-            vub = [ 2 10   10   10     3    2];
+            vub = [ 1 3   3   10     2    2];
         else
             vlb = [-1 0.01 0.01 0  0.01  0];
             vub = [ 2 10   10   0     3    2];
@@ -241,7 +245,9 @@ else
     fitCharacteristics.time_to_peak = 0;
 end
 
-fitCharacteristics.decay_initval = fitParams.offset;
+if strcmp( fitParams0.type, 'gammapdfexp') 
+    fitCharacteristics.decay_initval = fitParams.offset;
+end
 
 if exist('fitParams.decay','var')
     fitCharacteristics.decay_constant = fitParams.decay;
@@ -272,10 +278,11 @@ if strcmp( fitParams0.type, '2xgammapdf')
     [pks loc2]=findpeaks(gamma2preds,timeBase);
     
     figure(thePlot); hold on; plot(timeBase,gamma1preds,'k', timeBase,gamma2preds,'b'); hold off;
-    fitParams
+    
     fitCharacteristics.gamma_separation = abs(loc1-loc2);
 end
 
+fitParams
 % afterPIval
 % threeQind
 
@@ -402,10 +409,10 @@ switch (params.type)
         firstDelayZeroedTime  = stimZeroedTime-params.responseDelay1;
         
         index1 = find(firstDelayZeroedTime >= 0); % Don't use find?
-                
-        preds(index1) = preds(index1) + params.scale1*gampdf(firstDelayZeroedTime(index1),params.gammaA1,params.gammaB1);
+        if peaked        
+            preds(index1) = preds(index1) + params.scale1*gampdf(firstDelayZeroedTime(index1),params.gammaA1,params.gammaB1);
 
-        if peaked
+        
             % Using maxval as the anchor
             [maxval, ind] = max(preds);
             secondDelayZeroedTime = timeBase-timeBase(ind(1));          
