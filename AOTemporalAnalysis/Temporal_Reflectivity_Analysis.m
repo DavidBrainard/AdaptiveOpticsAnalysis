@@ -119,6 +119,9 @@ end
 %% Shrink the control area to get further away from potentially stimulated cones.
 
 % control_mask = imerode(control_mask, ones(100));
+% vis_masks = abs(vis_masks-max(vis_masks(:)));
+% stim_mask = ~stim_mask;
+% control_mask = ~stim_mask;
 
 
 %% Create the capillary mask- only use the data before the stimulus fires to do so.

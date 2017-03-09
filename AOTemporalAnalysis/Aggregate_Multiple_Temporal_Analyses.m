@@ -85,9 +85,10 @@ for j=1:length(profileDataNames)
         end
 
     end
-    
-    figure(8); plot(ref_stim_times{j}, sqrt(ref_variance_stim{j})-sqrt(ref_variance_stim{j}(1)) ); hold on; drawnow;
-    figure(9); plot(ref_control_times{j}, sqrt(ref_variance_control{j})-sqrt(ref_variance_control{j}(1)) ); hold on; drawnow;
+    precontrol = ref_variance_control{j}(ref_control_times{j}<=66);
+    prestim = ref_variance_stim{j}(ref_stim_times{j}<=66);
+    figure(8); plot(ref_stim_times{j}, sqrt(ref_variance_stim{j})-sqrt(mean(prestim)) ); hold on; drawnow;
+    figure(9); plot(ref_control_times{j}, sqrt(ref_variance_control{j})-sqrt(mean(precontrol)) ); hold on; drawnow;
       
     for i=1 : length(norm_control_cell_reflectance)
         for k=1 : length( norm_control_cell_reflectance{i} )

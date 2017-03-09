@@ -26,6 +26,10 @@ fit_type = 'sigmoid';
 
 ciefunc = dlmread( fullfile(pathname,'linCIE2008v2e_5.csv') );
 
+% temp for plot of luminosity vs response
+wavecolors=['b' 'c', 'g', 'y','r'];
+% isover9k = figure(9001); %ITS OVER NINE THOUSAAAAAAAAND
+
 %% Create the fits.
 legendIDs = cell(length(IDs),1);
 for i=1:length(IDs)
@@ -34,8 +38,10 @@ for i=1:length(IDs)
     subdata = respdata(idrows,1:end);
     
     irradiances = cell(1,length(wavelengths));
+    luminosity = cell(1,length(wavelengths));
     datavals = cell(1,length(wavelengths));
     
+%     figure(i+100); hold on;
     for w=1:length(wavelengths)
         [~, wavecols]=find(respdata==wavelengths(w));
         % First column is the irradiance, second is the data value.
@@ -48,16 +54,24 @@ for i=1:length(IDs)
         irrdata = irrdata(irrdata~=0);
         
         irradiances(w) = {irrdata};
+%         luminosity{w} = AOLightLevelConversions_Func(1, repmat(wavelengths(w),length(irradiances{w}),1), irradiances{w}/1000, false);
         datavals(w) = {valdata};
         
+%         plot(log10(luminosity{w}),datavals{w}, [wavecolors(w) 'o'],'MarkerFaceColor',wavecolors(w), 'MarkerSize',6);
+        
     end
+%     hold off;
+%     title( num2str(IDs(i)) ); xlabel('Log candelas'); ylabel('Amplitude response');
+    
+    saveas(gcf, fullfile(pathname, [num2str(IDs(i)) 'lum_response.png']));
     
     rel_shifts(i,:) = action_spect_fit(wavelengths, irradiances, datavals, ciefunc, fit_type);
     legendIDs{i} = num2str(IDs(i));
     
     title( legendIDs{i} );%For getting the irradiance response as a function of subject
-    saveas(gcf, fullfile(pathname, [legendIDs{i} 'irr_response.svg']));
+%     saveas(gcf, fullfile(pathname, [legendIDs{i} 'irr_response.svg']));
 end
+
 
 % For getting the irradiance response as a function of wavelength
 % for w=1:length(wavelengths)

@@ -1,4 +1,4 @@
-function [allLum] = AOLightLevelConversions_Func(stim_side, wavelengths, um_power_to_eye)
+function [allLum] = AOLightLevelConversions_Func(stim_side, wavelengths, um_power_to_eye,verbose)
 %
 % Take monochromatic retinal irradiance and convert it to many other
 % equivalent units.
@@ -133,20 +133,21 @@ for w=1:length(wavelengths)
     
     
     %% Report on stimulus
-    fprintf('\n\n');
-    fprintf('  *** Analyzing light levels for wavelength: %0.1fnm and power: %0.1f uW/degree2: \n',wavelengths(w),um_power_to_eye(w));
-    fprintf('  * Stimulus radiance %0.1f log10 watts/[m2-sr], %0.1f log10 watts/[cm2-sr]\n',log10(sum(radianceWattsPerM2Sr)),log10(sum(radianceWattsPerCm2Sr)));
-    fprintf('  * Stimulus luminance %0.1f candelas/m2\n',photopicLuminanceCdM2);
-    fprintf('    * For comparison, sunlight in Philly: %0.1f cd/m2\n',photopicLuminancePhillyBrightCdM2);
-    fprintf('  * Stimulus %0.0f (check val %0.0f) scotopic trolands, %0.0f photopic trolands (check val %0.0f)\n',irradianceScotTrolands,irradianceScotTrolands_check,...
-        irradiancePhotTrolands,irradiancePhotTrolands_check);
-    fprintf('  * Stimulus %0.1f log10 scotopic trolands, %0.1f log10 photopic trolands\n',log10(irradianceScotTrolands),log10(irradiancePhotTrolands));
-    fprintf('  * Stimulus retinal irradiance %0.1f log10 watts/cm2\n',log10(sum(retIrradianceWattsPerCm2)));
-    fprintf('  * Stimulus retinal irradiance %0.1f log10 quanta/[cm2-sec]\n',log10(sum(retIrradianceQuantaPerCm2Sec)));
-    fprintf('  * Stimulus retinal irradiance %0.1f log10 quanta/[deg2-sec]\n',log10(sum(retIrradianceQuantaPerDeg2Sec)));
-    fprintf('  * Stimulus corneal irradiance %0.1f log10 watts/cm2\n',log10(sum(cornealIrradianceWattsPerCm2)));
-    fprintf('  * Stimulus corneal irradiance %0.1f log10 quanta/[cm2-sec]\n',log10(sum(cornealIrradianceQuantaPerCm2Sec)));
-    
+    if verbose
+        fprintf('\n\n');
+        fprintf('  *** Analyzing light levels for wavelength: %0.1fnm and power: %0.1f uW/degree2: \n',wavelengths(w),um_power_to_eye(w));
+        fprintf('  * Stimulus radiance %0.1f log10 watts/[m2-sr], %0.1f log10 watts/[cm2-sr]\n',log10(sum(radianceWattsPerM2Sr)),log10(sum(radianceWattsPerCm2Sr)));
+        fprintf('  * Stimulus luminance %0.1f candelas/m2\n',photopicLuminanceCdM2);
+        fprintf('    * For comparison, sunlight in Philly: %0.1f cd/m2\n',photopicLuminancePhillyBrightCdM2);
+        fprintf('  * Stimulus %0.0f (check val %0.0f) scotopic trolands, %0.0f photopic trolands (check val %0.0f)\n',irradianceScotTrolands,irradianceScotTrolands_check,...
+            irradiancePhotTrolands,irradiancePhotTrolands_check);
+        fprintf('  * Stimulus %0.1f log10 scotopic trolands, %0.1f log10 photopic trolands\n',log10(irradianceScotTrolands),log10(irradiancePhotTrolands));
+        fprintf('  * Stimulus retinal irradiance %0.1f log10 watts/cm2\n',log10(sum(retIrradianceWattsPerCm2)));
+        fprintf('  * Stimulus retinal irradiance %0.1f log10 quanta/[cm2-sec]\n',log10(sum(retIrradianceQuantaPerCm2Sec)));
+        fprintf('  * Stimulus retinal irradiance %0.1f log10 quanta/[deg2-sec]\n',log10(sum(retIrradianceQuantaPerDeg2Sec)));
+        fprintf('  * Stimulus corneal irradiance %0.1f log10 watts/cm2\n',log10(sum(cornealIrradianceWattsPerCm2)));
+        fprintf('  * Stimulus corneal irradiance %0.1f log10 quanta/[cm2-sec]\n',log10(sum(cornealIrradianceQuantaPerCm2Sec)));
+    end
     allLum(w) = photopicLuminanceCdM2;    
 end
 

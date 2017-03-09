@@ -32,7 +32,18 @@ function [fitCharacteristics, residuals] = modelFit(timeBase, pooled_std_stim)
 % pooled_std_stim = ComputeModelPreds(trueParams,timeBase);
 
 %Remove values before cutoff time
-cutofftime = 8.5;
+cutofftime = 7.5;
+
+% timeBase = timeBase([1:101 103:end] );
+% pooled_std_stim = pooled_std_stim([1:101 103:end] );
+% 
+% %TEMP
+% goodtimes = find(timeBase<=4.56 | timeBase>=5.4);
+
+% 
+% timeBase = timeBase(goodtimes);
+% pooled_std_stim = pooled_std_stim(goodtimes);
+
 pretime = timeBase <= cutofftime;
 timeBase = timeBase(pretime);
 pooled_std_stim = pooled_std_stim(pretime);
