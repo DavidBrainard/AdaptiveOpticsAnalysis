@@ -57,7 +57,7 @@ for j=1:length(profileCDataNames)
 
     end
     pre = ref_variance_control{j}(ref_control_times{j}<=66);
-    figure(8); plot(ref_control_times{j}, sqrt(ref_variance_control{j})-sqrt(mean(pre)) ); hold on; drawnow;      
+    figure(8); plot(ref_control_times{j}/16.6, sqrt( (ref_variance_control{j}-sqrt(mean(pre)))./ref_control_count{j} ) ); hold on; drawnow;      
 end
 
 
@@ -97,8 +97,8 @@ for j=1:length(profileSDataNames)
 
     end
     
-    pre = ref_variance_stim{j}(ref_stim_times{j}<=66);
-    figure(9); plot(ref_stim_times{j}, sqrt(ref_variance_stim{j})-sqrt(mean(pre)) ); hold on; drawnow;
+    pre = ref_variance_stim{j}(ref_stim_times{j}<=66)./ref_stim_count{j}(ref_stim_times{j}<=66);
+    figure(9); plot(ref_stim_times{j}/16.6, sqrt( (ref_variance_stim{j}-sqrt(mean(pre)))./ref_stim_count{j} ) ); hold on; drawnow;
 
 end
 hold off;
@@ -156,9 +156,9 @@ end
 
 outFname = [id '_' stimwave '_' stim_intensity '_' stim_time '_aggregate_' num2str(length(profileSDataNames)) '_signals_twosource'];
 
-figure(8); axis([0 249 -20 75]); title('All control signals'); xlabel('Frame #'); ylabel('Standard deviations');
+figure(8);  title('All control signals'); xlabel('Frame #'); ylabel('Standard deviations'); %axis([0 249 -20 75]);
 saveas(gcf, fullfile(pwd, [outFname '_allcontrol.png']), 'png' );
-figure(9); axis([0 249 -20 75]); title('All stimulus signals'); xlabel('Frame #'); ylabel('Standard deviations');
+figure(9);  title('All stimulus signals'); xlabel('Frame #'); ylabel('Standard deviations'); %axis([0 249 -20 75]);
 saveas(gcf, fullfile(pwd, [outFname '_allstim.png']), 'png' );
 
 hz=16.66666666;
@@ -168,13 +168,13 @@ dlmwrite(fullfile(pwd, [outFname '.csv']), [timeBase sqrt(pooled_variance_stim) 
 
 
 figure(10); 
-% plot( timeBase,sqrt(pooled_variance_stim),'r'); hold on;
-% plot( timeBase,sqrt(pooled_variance_control),'b');
+plot( timeBase,sqrt(pooled_variance_stim),'r'); hold on;
+plot( timeBase,sqrt(pooled_variance_control),'b');
 
 
 pooled_std_stim    = sqrt(pooled_variance_stim)-sqrt(pooled_variance_control);
 plot( timeBase(~isnan(pooled_std_stim)), pooled_std_stim(~isnan(pooled_std_stim)),'k'); hold on;
-% legend('Stimulus cones','Control cones','Subtraction');
+legend('Stimulus cones','Control cones','Subtraction');
 
 
 % Stim train

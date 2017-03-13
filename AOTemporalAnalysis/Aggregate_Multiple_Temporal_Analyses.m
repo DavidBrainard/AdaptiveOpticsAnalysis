@@ -209,7 +209,7 @@ stimlen = str2double( strrep(stim_time(1:3),'p','.') );
 
 %% Manual marking
 % figure(7); plot(timeBase, sqrt(pooled_variance_stim),'r'); hold on;
-trainlocs = 68/hz:1/hz:(68/hz+stimlen);
+% trainlocs = 68/hz:1/hz:(68/hz+stimlen);
 % plot(timeBase, sqrt(pooled_variance_control),'b');
 % plot(trainlocs, max(pooled_std_stim)*ones(size(trainlocs)),'r*'); hold off;
 % [timepts, heightpts]=ginput(2);

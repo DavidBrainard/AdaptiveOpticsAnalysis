@@ -37,7 +37,7 @@ function [ ref_variance, ref_times, ref_count ] = reflectance_pooled_variance( c
             end
         end
         
-%         ref_variance(k) = ref_variance(k)/(ref_count(k)-1); % -1 For pooled variance calculation
+%         ref_variance(k) = ref_variance(k)/(ref_count(k)-1); % -1 For pooled std dev calculation
 
         if has_content
             ref_times = [ref_times; k];

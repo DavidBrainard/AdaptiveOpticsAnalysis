@@ -53,12 +53,12 @@ for w=1:length(wavelengths)
     
     % The midpoint of the fit should never move beyond the edges of the
     % actual curve
-    vub(w) = 2*max(irrval{w}); 
-    vlb(w) = 2*min(irrval{w});
+    vub(w) = 3*max(irrval{w}); 
+    vlb(w) = min(irrval{w});
     
 %     handle = figure(wavelengths(w)); title(num2str(wavelengths(w))); 
-hold on;
-    plot(irrval{w}, datavals{w});
+    hold on;
+    plot(irrval{w}, datavals{w},'.','MarkerSize',15);
 
 %     axis([0 5 0 2.5]);
     hold off;
@@ -102,13 +102,13 @@ v0 = ParamsToVector(fitParams);
 
 finalParams = fmincon(@(v)FitModelErrorFunction(v,irrval,datavals,type),v0,[],[],[],[],vlb,vub,[],options);
 
-%% Lock the parameters, then shift the curves up and down to fit the CIE
+%% Lock the parameters, then scale the curves up and down to fit the CIE
 
-rel_shifts = 1./( exp(finalParams(3:end))./exp(finalParams(5)) );
+rel_shifts = 1./( 10.^(finalParams(3:end))./10.^(finalParams(5)) );
 
-% figure(100);
-% plot(ciefunc(:,1),ciefunc(:,2)); hold on;
-% plot(wavelengths,rel_shifts); title('Preshift'); hold off;
+figure(100);
+plot(ciefunc(:,1),ciefunc(:,2)); hold on;
+plot(wavelengths,rel_shifts); title('Preshift'); hold off;
 
 cierow = [];
 for w=1:length(wavelengths)    
@@ -117,23 +117,22 @@ end
 
 cievals = ciefunc(cierow,2)';
 
-vub = 0.6;
-vlb = 0.02-min(rel_shifts); % Can't shift below what is possible, nor can it be 0!
+vub = 2;
+vlb = 0; 
 
-v0 = cievals(3)-1;
+v0 = 1;
     
-finalShifts = fmincon(@(v)FitCIEErrorFunction(v,cievals,rel_shifts),v0,[],[],[],[],vlb,vub,[],options);
+finalShifts = fmincon(@(v)FitCIEErrorFunction(v, (cievals), (rel_shifts)),v0,[],[],[],[],vlb,vub,[],options);
 
+rel_shifts= rel_shifts*finalShifts;
 
-rel_shifts= rel_shifts+finalShifts;
-
-% figure(101);
-% plot(ciefunc(:,1),ciefunc(:,2)); hold on;
-% plot(wavelengths,rel_shifts); title('Postshift'); hold off;
+figure(101);
+plot(ciefunc(:,1),ciefunc(:,2)); hold on;
+plot(wavelengths,rel_shifts); title('Postshift'); hold off;
 
 figure(handle);hold on;
 for i=1:size(datavals,2)
-    params = VectorToParams(finalParams, i)
+    params = VectorToParams(finalParams, i);
     plot(log_irr_range, ComputeModel(params, log_irr_range, type),'r.-');
     
 end
@@ -143,18 +142,18 @@ axis([0 max(cellfun(@max,irrval)) 0 max(cellfun(@max,datavals))]);
 
 end
 
-function f = FitCIEErrorFunction(v, cie, shifts)
+function f = FitCIEErrorFunction(v, cie, rel_action)
 
-    preds = ComputeCIEModel(v,shifts);
+    preds = ComputeCIEModel(v,rel_action);
     
-    diff = (preds-cie).^2;
+    diff = (preds-cie).^2; 
 
     f = 100*sqrt(sum(diff)/length(diff));
 end
 
-function values = ComputeCIEModel(v, shifts)
+function values = ComputeCIEModel(v, rel_action)
 
-values = shifts+v;
+values = rel_action*v;
 
 end
 

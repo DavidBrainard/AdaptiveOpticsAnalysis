@@ -63,13 +63,13 @@ for i=1:length(IDs)
 %     hold off;
 %     title( num2str(IDs(i)) ); xlabel('Log candelas'); ylabel('Amplitude response');
     
-    saveas(gcf, fullfile(pathname, [num2str(IDs(i)) 'lum_response.png']));
+%     saveas(gcf, fullfile(pathname, [num2str(IDs(i)) 'lum_response.png']));
     
     rel_shifts(i,:) = action_spect_fit(wavelengths, irradiances, datavals, ciefunc, fit_type);
     legendIDs{i} = num2str(IDs(i));
     
     title( legendIDs{i} );%For getting the irradiance response as a function of subject
-%     saveas(gcf, fullfile(pathname, [legendIDs{i} 'irr_response.svg']));
+    saveas(gcf, fullfile(pathname, [legendIDs{i} 'irr_response.svg']));
 end
 
 
@@ -82,7 +82,7 @@ end
 
 figure; hold on;
 for i=1:length(IDs)
-    semilogy(wavelengths,rel_shifts(i,:));
+    semilogy(wavelengths,rel_shifts(i,:),'.','MarkerSize',15);
 end
 semilogy(ciefunc(:,1), ciefunc(:,2),'k')
 legend(legendIDs);
@@ -94,24 +94,3 @@ plot(ciefunc(:,1), ciefunc(:,2),'k')
 set(gca,'yscale','log')
 axis([450 700 10^-3 10^1]);
 hold off;
-% 
-% for i=2:2:size(a510,2)
-%     
-% %     figure(1); 
-% %     semilogx(a480(:,i-1), a480(:,i),'b',...
-% %             x480(i/2), interptarget,'b*',...
-% %             a510(:,i-1), a510(:,i),'c',...
-% %             x510(i/2), interptarget,'c*',...
-% %             a550(:,i-1), a550(:,i),'g',...
-% %             x550(i/2), interptarget,'g*',...
-% %             a590(:,i-1), a590(:,i),'y',...
-% %             x590(i/2), interptarget,'y*',...
-% %             a675(:,i-1), a675(:,i),'r',...
-% %             x675(i/2), interptarget,'r*'); %hold on;
-% 
-%     irradiances  = [{a480(:,i-1)}, {a510(:,i-1)}, {a550(:,i-1)}, {a590(:,i-1)}, {a675(:,i-1)}];
-%     datavals = [{a480(:,i)}, {a510(:,i)}, {a550(:,i)}, {a590(:,i)}, {a675(:,i)}];    
-% 
-%     
-%     rel_shifts(i/2,:) = action_spect_fit(wavelengths, irradiances, datavals);
-% end
