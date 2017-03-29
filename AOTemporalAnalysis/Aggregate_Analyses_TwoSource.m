@@ -200,9 +200,9 @@ dlmwrite(fullfile(pwd, [date '_all_plots.csv']), [ [str2double(id(4:end)), str2d
 figure(2); hold on;
 plot(trainlocs, (.2+max(pooled_std_stim))*ones(size(trainlocs)),'y*'); hold off;
 
-saveas(gcf, fullfile(pwd, [outFname '_wfit.png']) );
+% saveas(gcf, fullfile(pwd, [outFname '_wfit.png']) );
 saveas(gcf, fullfile(pwd, [outFname '_wfit.fig']) );
-% saveas(gcf, fullfile(pwd, [outFname '_wfit.svg']), 'svg' );
+saveas(gcf, fullfile(pwd, [outFname '_wfit.svg']), 'svg' );
 % figure(1);
 % saveas(gcf, fullfile(pwd, [outFname '_meanratio.svg']), 'svg' );
 % close(8);

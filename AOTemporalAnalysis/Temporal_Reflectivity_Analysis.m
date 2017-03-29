@@ -6,8 +6,8 @@ function []=Temporal_Reflectivity_Analysis(mov_path, ref_image_fname)
 gui=false;
 
 profile_method = 'box';
-norm_type = 'regional_norm_prestimminusdiv_sub';
-cutoff = 0.9; % The percentage of time a cone must be stimulated relative to all stimulus in order to be included for analysis
+norm_type = 'regional_norm_prestimminusdiv';
+cutoff = 0.7; % The percentage of time a cone must be stimulated relative to all stimulus in order to be included for analysis
 
 % mov_path=pwd;
 if ~exist('mov_path','var') || ~exist('ref_image_fname','var')
@@ -59,7 +59,7 @@ end
 % "masks"
 visible_signal = zeros(size(visible_stack,3),1);
 
-noise_floor = 5; %mean(max(visible_stack(:,:,1)));
+noise_floor = mean(max(visible_stack(:,:,1)));
 for v=1:size(visible_stack,3)
     
     vis_frm = visible_stack(:,:,v);
@@ -497,8 +497,8 @@ for i=1:length( stim_cell_reflectance )
 %     norm_control_cell_reflectance{i} = norm_control_cell_reflectance{i}(no_ref); 
     stim_cell_times{i}            = stim_cell_times{i}(no_ref);
 %     control_cell_times = stim_cell_times;
-    
-%     plot( stim_cell_times{i}, norm_stim_cell_reflectance{i} ); hold on;
+%     i
+%     plot( stim_cell_times{i}, norm_stim_cell_reflectance{i} ); %hold on;
 end
 % save thisshit.mat;
 
@@ -540,6 +540,7 @@ if ~isempty( strfind(norm_type, 'prestimminusdiv'))
         prestim_std(i) = std( norm_stim_cell_reflectance{i}(stim_cell_times{i}<stim_locs(1) & ~isnan( norm_stim_cell_reflectance{i} )) );
         
         norm_stim_cell_reflectance{i} = norm_stim_cell_reflectance{i}/( prestim_std(i) ); % /sqrt(length(norm_stim_cell_reflectance{i})) );
+        plot(norm_stim_cell_reflectance{i});
     end
     prestim_mean_stim = prestim_mean;
     prestim_std_stim = prestim_std;

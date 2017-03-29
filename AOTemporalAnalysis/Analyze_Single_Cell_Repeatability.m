@@ -35,7 +35,7 @@ for j=1:length(profileDataNames)
     stimulus_inds{j} = stimcellinds;
     stimulus_cones_times{j} = stim_cell_times;
     stimulus_cones_reflectance{j} = norm_stim_cell_reflectance;
-        
+        stimulus_inds{j}
 end
 
 
@@ -99,141 +99,14 @@ for i=1: length(cons_stimulus_inds)
         % Determine if the cell responded in this trial.
         stim_reflectance  = reflectance(stim_frames)';
         
-        num_stim_pts = length(stim_times);
-        pos_interval_bound =  tinv(0.95, num_stim_pts-1)*ref_stddev_control{j}( stim_frames )*sqrt(1+(1/num_stim_pts));
-        neg_interval_bound = -tinv(0.95, num_stim_pts-1)*ref_stddev_control{j}( stim_frames )*sqrt(1+(1/num_stim_pts));
-
-        stim_over  = sum( stim_reflectance > pos_interval_bound )/num_stim_pts;
-        stim_under = sum( stim_reflectance < neg_interval_bound )/num_stim_pts;
-        
-%         interval_bound = prestim_mean + 1.96*prestim_std/sqrt(num_prestim_pts);                               % Confidence interval
-
-        allstim = stim_under + stim_under;
-
-        if allstim > 0
-            control_stim_response_detected(i,j) = 1;
-%             title('Response detected');
-
-        else
-%             title('Response NOT detected');
-        end
 
         figure(2); plot( stimulus_cones_times{j}{i},  reflectance );  hold on;
-        plot( stim_times,  pos_interval_bound,'b' );
-        plot( stim_times,  neg_interval_bound,'b' );
         
-        maxresp = max(maxresp, max(reflectance) );
-        maxtime = max(maxtime, length(stimulus_cones_times{j}{i}) );
-        
+
 %         plot( control_times{j}{i}, control_reflectance{j}{i}); hold on;
 %         maxresp = max(maxresp, max(control_reflectance{j}{i}) );
 %         maxtime = max(maxtime, length(control_times{j}{i}) );
     end
-    
-    percent_resp_control(i)  = 100*( sum(control_stim_response_detected(i,:))/length(profileDataNames) );
-    
-     
-    plot( stim_times, maxresp*ones(num_stim_pts,1 ),'r*'); title([num2str(percent_resp_control(i)) '% over threshold.']);  hold off;
-%     frame = getframe(gcf);
-%     writeVideo(profile_vid,frame);
-
+    hold off;
+    saveas(gcf, fullfile(pwd, ['repeated_cone_profile' num2str(i) '.png']), 'png' );
 end
-figure(4); hist(percent_resp_control,6); title('Histogram of cell response repeatability- control standard devs'); ylabel('# of cells'); xlabel('% times reponded to stimulus');
-
-
-%% Determine % response using the prediction interval of each cell as the threshold.
-
-% profile_vid = VideoWriter('NC_11049_0ND_control_cell_profiles.avi','Uncompressed AVI');
-% open(profile_vid);
-
-% pred_int_stim_response_detected = zeros( length(cons_stimulus_inds), length(profileDataNames) );
-% percent_resp = zeros( size(pred_int_stim_response_detected,1),1 );
-% 
-% for i=1: length(cons_stimulus_inds)
-%     
-%     maxresp = 0;
-%     maxtime = 0;
-%     power_spect=[];
-%     
-%     for j=1:length(profileDataNames)
-% %         conv(stim_reflectance{j}{i}, filt_coeff,'same')
-% 
-%         reflectance = (conv(stimulus_cones_reflectance{j}{i}, filt_coeff,'same') );
-% 
-%         % Determine if the cell responded in this trial.
-%         prestim_frames = stimulus_cones_times{j}{i}( stimulus_cones_times{j}{i}<stim_locs(1) & ~isnan( reflectance ) )';
-%         prestim_reflectance = reflectance( stimulus_cones_times{j}{i}<stim_locs(1) & ~isnan( reflectance ) )';
-%         num_prestim_pts = length( prestim_reflectance );
-%         
-%         prestim_reg_coef  = [ones(length(prestim_frames),1) prestim_frames]\prestim_reflectance;
-%         prestim_regression= prestim_reg_coef(1) + prestim_frames*prestim_reg_coef(2);
-%         
-%         prestim_mean =   mean( prestim_reflectance );
-% %         prestim_std  =   std( prestim_reflectance-prestim_regression );
-%         prestim_std  =   std( prestim_reflectance );
-%         
-%         SS = (length(prestim_reflectance)-1) * var(prestim_reflectance);
-%         resid = norm(prestim_reflectance-prestim_regression);
-%         R_squared = 1-resid.^2 / SS;
-%         
-%                 
-%         stim_frames = stimulus_cones_times{j}{i}( stimulus_cones_times{j}{i}>=stim_locs(1) & stimulus_cones_times{j}{i}<=stim_locs(end) & ~isnan( reflectance ) );
-%         stim_reflectance = reflectance( stimulus_cones_times{j}{i}>=stim_locs(1) & stimulus_cones_times{j}{i}<=stim_locs(end) & ~isnan( reflectance ) );
-%         num_stim_pts = length(stim_reflectance);
-%         stim_regression   = prestim_reg_coef(1) + stim_frames*prestim_reg_coef(2);
-% 
-%         pos_interval_bound = stim_regression + tinv(0.99, num_prestim_pts-1)*prestim_std*sqrt(1+(1/num_prestim_pts));  % 99% Prediction interval
-%         neg_interval_bound = stim_regression - tinv(0.99, num_prestim_pts-1)*prestim_std*sqrt(1+(1/num_prestim_pts));
-%         
-%         stim_over  = sum( stim_reflectance > pos_interval_bound )/num_stim_pts;
-%         stim_under = sum( stim_reflectance < neg_interval_bound )/num_stim_pts;
-%         
-% %         interval_bound = prestim_mean + 1.96*prestim_std/sqrt(num_prestim_pts);                               % Confidence interval
-% 
-%         figure(2); hold on;
-%         
-%         allstim = stim_under + stim_under;
-% 
-%         if allstim >= .05
-%             pred_int_stim_response_detected(i,j) = 1;
-% %             figure(2); plot( stimulus_cones_times{j}{i},  reflectance ); hold on;
-% %             plot( stim_frames,  stim_reflectance );
-% %             plot( [prestim_frames' stim_frames], [prestim_regression' stim_regression] );
-% %             plot(stim_frames, pos_interval_bound);
-% %             plot(stim_frames, neg_interval_bound); hold off;
-% %             R_squared
-%             title('Response detected');
-% %         elseif stim_under >= .05
-% %             pred_int_stim_response_detected(i,j) = 1; 
-% %             title('Response detected');
-%         else
-%             title('Response NOT detected');
-%         end
-% 
-%         plot( stimulus_cones_times{j}{i},  reflectance ); 
-%         plot( stim_frames,  stim_reflectance );
-%         plot( [prestim_frames' stim_frames], [prestim_regression' stim_regression] );
-%         plot(stim_frames, pos_interval_bound);
-%         plot(stim_frames, neg_interval_bound); hold off;
-% 
-% 
-% 
-%         
-%         maxresp = max(maxresp, max(reflectance) );
-%         maxtime = max(maxtime, length(stimulus_cones_times{j}{i}) );
-%         
-% %         plot( stimulus_cones_times{j}{i}, reflectance); hold on;
-% %         maxresp = max(maxresp, max(control_reflectance{j}{i}) );
-% %         maxtime = max(maxtime, length(control_times{j}{i}) );
-%     end
-%     
-%     percent_resp(i)  = 100*( sum(pred_int_stim_response_detected(i,:))/length(profileDataNames) );
-%     
-%     plot(stim_locs, maxresp*ones(34),'r*'); title([num2str(percent_resp(i)) '% over threshold.']);  hold off;
-% %     frame = getframe(gcf);
-% %     writeVideo(profile_vid,frame);
-% percent_resp;
-% end
-% % close(profile_vid);
-% 
-% figure(3); hist(percent_resp,6); title('Histogram of cell response repeatability- prediction interval'); ylabel('# of cells'); xlabel('% times reponded to stimulus');

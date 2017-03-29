@@ -104,31 +104,36 @@ finalParams = fmincon(@(v)FitModelErrorFunction(v,irrval,datavals,type),v0,[],[]
 
 %% Lock the parameters, then scale the curves up and down to fit the CIE
 
-rel_shifts = 1./( 10.^(finalParams(3:end))./10.^(finalParams(5)) );
+% Put the shifts back into a linear scale
+linearshifts = 10.^finalParams(3:end);
+
+rel_shifts = 1./( linearshifts ./ linearshifts(2) );
 
 figure(100);
 plot(ciefunc(:,1),ciefunc(:,2)); hold on;
-plot(wavelengths,rel_shifts); title('Preshift'); hold off;
+plot(wavelengths,rel_shifts); title('Preshift');set(gca,'yscale','log');axis([450 700 10^-3 10^1]); hold off;
 
-cierow = [];
+cierow = []; % Find the rows (wavelengths) in the CIE function that we care about
 for w=1:length(wavelengths)    
     cierow = [cierow find(ciefunc(:,1) == wavelengths(w))];
 end
 
 cievals = ciefunc(cierow,2)';
 
-vub = 2;
-vlb = 0; 
+vub = 4;
+vlb = -3; 
 
-v0 = 1;
-    
-finalShifts = fmincon(@(v)FitCIEErrorFunction(v, (cievals), (rel_shifts)),v0,[],[],[],[],vlb,vub,[],options);
+v0 = 0;
+% Shift our relative actions around to get the best fit    
+finalShifts = fmincon(@(v)FitCIEErrorFunction(v, log10(cievals), log10(rel_shifts)),v0,[],[],[],[],vlb,vub,[],options);
+% finalShifts = rel_shifts'\cievals';
 
-rel_shifts= rel_shifts*finalShifts;
+rel_shifts= 10.^(log10(rel_shifts)+finalShifts);
 
 figure(101);
 plot(ciefunc(:,1),ciefunc(:,2)); hold on;
-plot(wavelengths,rel_shifts); title('Postshift'); hold off;
+plot(wavelengths,rel_shifts); title('Postshift'); set(gca,'yscale','log');
+axis([450 700 10^-3 10^1]);hold off;
 
 figure(handle);hold on;
 for i=1:size(datavals,2)
@@ -146,14 +151,14 @@ function f = FitCIEErrorFunction(v, cie, rel_action)
 
     preds = ComputeCIEModel(v,rel_action);
     
-    diff = (preds-cie).^2; 
-
-    f = 100*sqrt(sum(diff)/length(diff));
+    diff = (cie-preds).^2; 
+% (abs(cie-preds))
+    f = sqrt(sum(diff)/length(diff));
 end
 
 function values = ComputeCIEModel(v, rel_action)
 
-values = rel_action*v;
+values = rel_action+v;
 
 end
 

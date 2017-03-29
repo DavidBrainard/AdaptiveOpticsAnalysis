@@ -32,10 +32,11 @@ function [fitCharacteristics, residuals] = modelFit(timeBase, pooled_std_stim)
 % pooled_std_stim = ComputeModelPreds(trueParams,timeBase);
 
 %Remove values before cutoff time
-cutofftime = 7.3;
+cutofftime = 9;
 
-% timeBase = timeBase([1:101 103:end] );
-% pooled_std_stim = pooled_std_stim([1:101 103:end] );
+timeBase = timeBase([1:79 84:end] );
+pooled_std_stim = pooled_std_stim([1:79 84:end] );
+
 % 
 % %TEMP
 % goodtimes = find(timeBase<=4.56 | timeBase>=5.4);
@@ -215,12 +216,15 @@ x = fmincon(@(x)FitModelErrorFunction(x,timeBase,pooled_std_stim,fitParams0),x1,
 fitParams = XToParams(x,fitParams0);
 
 
+delta=min(diff(timeBase));
+fitTimeBase = 0:delta:8;%max(timeBase);
+
 % Add final fit to plot
-predictions = ComputeModelPreds(fitParams,timeBase);
+predictions = ComputeModelPreds(fitParams,fitTimeBase);
+residuals=0;
+% residuals = [pooled_std_stim-predictions; timeBase];
 
-residuals = [pooled_std_stim-predictions; timeBase];
-
-figure(thePlot); hold on; plot(timeBase,predictions,'g','LineWidth',2); 
+figure(thePlot); hold on; plot(fitTimeBase,predictions,'g','LineWidth',2); 
 % figure(thePlot); plot(timeBase, residuals(1,:),'b','LineWidth',1);
 
 % legend({' Data', ' Initial Guess', ' Intermediate Fit' ' Final Fit' ' Residuals'},'FontSize',14,'Location','NorthEast');
@@ -250,7 +254,7 @@ if ~isempty(afterPIval)
 
     fitCharacteristics.resp_start = timeBase(beforePIval) + ((prestim_PI-predictions(beforePIval))/interpslope);
 
-    fitCharacteristics.time_to_peak = timeBase(max_ind) - fitParams0.stimOnsetTime;
+    fitCharacteristics.time_to_peak = fitTimeBase(max_ind) - fitParams0.stimOnsetTime;
 else
     fitCharacteristics.resp_start = 0;
     fitCharacteristics.time_to_peak = 0;

@@ -32,13 +32,14 @@ wavecolors=['b' 'c', 'g', 'y','r'];
 
 %% Create the fits.
 legendIDs = cell(length(IDs),1);
+luminosity = cell(1,length(wavelengths));
 for i=1:length(IDs)
     [idrows, ~]=find(respdata==IDs(i));
     
     subdata = respdata(idrows,1:end);
     
     irradiances = cell(1,length(wavelengths));
-    luminosity = cell(1,length(wavelengths));
+    
     datavals = cell(1,length(wavelengths));
     
 %     figure(i+100); hold on;
@@ -54,7 +55,7 @@ for i=1:length(IDs)
         irrdata = irrdata(irrdata~=0);
         
         irradiances(w) = {irrdata};
-%         luminosity{w} = AOLightLevelConversions_Func(1, repmat(wavelengths(w),length(irradiances{w}),1), irradiances{w}/1000, false);
+%         luminosity{w} = [luminosity{w}; AOLightLevelConversions_Func(1, repmat(wavelengths(w),length(irradiances{w}),1), irradiances{w}/1000, false)];
         datavals(w) = {valdata};
         
 %         plot(log10(luminosity{w}),datavals{w}, [wavecolors(w) 'o'],'MarkerFaceColor',wavecolors(w), 'MarkerSize',6);
@@ -82,13 +83,14 @@ end
 
 figure; hold on;
 for i=1:length(IDs)
-    semilogy(wavelengths,rel_shifts(i,:),'.','MarkerSize',15);
+    plot(wavelengths,rel_shifts(i,:),'.','MarkerSize',15);
 end
-semilogy(ciefunc(:,1), ciefunc(:,2),'k')
+plot(ciefunc(:,1), ciefunc(:,2),'k')
+set(gca,'yscale','log')
 legend(legendIDs);
 hold off;
 
-figure; errorbar(wavelengths, mean(rel_shifts), std(rel_shifts)); hold on;
+figure; errorbar(wavelengths, mean( log10(rel_shifts) ), std(log10(rel_shifts))); hold on;
 title('Mean Wavelength vs Normalized Irradiance'); xlabel('Wavelength'); ylabel('Action (relative)');
 plot(ciefunc(:,1), ciefunc(:,2),'k')
 set(gca,'yscale','log')
