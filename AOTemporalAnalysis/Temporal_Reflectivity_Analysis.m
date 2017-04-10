@@ -7,7 +7,7 @@ gui=false;
 
 profile_method = 'box';
 norm_type = 'regional_norm_prestimminusdiv';
-cutoff = 0.7; % The percentage of time a cone must be stimulated relative to all stimulus in order to be included for analysis
+cutoff = 0.9; % The percentage of time a cone must be stimulated relative to all stimulus in order to be included for analysis
 
 % mov_path=pwd;
 if ~exist('mov_path','var') || ~exist('ref_image_fname','var')

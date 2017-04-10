@@ -83,16 +83,17 @@ end
 
 figure; hold on;
 for i=1:length(IDs)
-    plot(wavelengths,rel_shifts(i,:),'.','MarkerSize',15);
+    plot(wavelengths, log10(rel_shifts(i,:)),'.','MarkerSize',15);
 end
-plot(ciefunc(:,1), ciefunc(:,2),'k')
-set(gca,'yscale','log')
+plot(ciefunc(:,1), log10(ciefunc(:,2)),'k')
+% set(gca,'yscale','log')
 legend(legendIDs);
+axis([450 700 -3 1]);
 hold off;
 
 figure; errorbar(wavelengths, mean( log10(rel_shifts) ), std(log10(rel_shifts))); hold on;
 title('Mean Wavelength vs Normalized Irradiance'); xlabel('Wavelength'); ylabel('Action (relative)');
-plot(ciefunc(:,1), ciefunc(:,2),'k')
-set(gca,'yscale','log')
-axis([450 700 10^-3 10^1]);
+plot(ciefunc(:,1), log10(ciefunc(:,2)),'k')
+% set(gca,'yscale','log')
+axis([450 700 -3 1]);
 hold off;

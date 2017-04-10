@@ -56,12 +56,12 @@ for j=1:length(profileCDataNames)
         end
 
     end
-    pre = ref_variance_control{j}(ref_control_times{j}<=66);
-    figure(8); plot(ref_control_times{j}/16.6, sqrt( (ref_variance_control{j}-sqrt(mean(pre)))./ref_control_count{j} ) ); hold on; drawnow;      
+    precontrol = ref_variance_control{j}(ref_control_times{j}<=66)./ref_control_count{j}(ref_control_times{j}<=66);
+    figure(8); plot(ref_control_times{j}/16.6, sqrt(ref_variance_control{j}./ref_control_count{j})-sqrt(mean(precontrol)) ); hold on; drawnow;      
 end
 
 
-hold off;
+hold off;axis([0 16 0 4])
 
 for j=1:length(profileSDataNames)
 
@@ -97,11 +97,11 @@ for j=1:length(profileSDataNames)
 
     end
     
-    pre = ref_variance_stim{j}(ref_stim_times{j}<=66)./ref_stim_count{j}(ref_stim_times{j}<=66);
-    figure(9); plot(ref_stim_times{j}/16.6, sqrt( (ref_variance_stim{j}-sqrt(mean(pre)))./ref_stim_count{j} ) ); hold on; drawnow;
+    prestim = ref_variance_stim{j}(ref_stim_times{j}<=66)./ref_stim_count{j}(ref_stim_times{j}<=66);
+    figure(9); plot(ref_stim_times{j}/16.6, sqrt( ref_variance_stim{j}./ref_stim_count{j})-sqrt(mean(prestim)) ); hold on; drawnow;
 
 end
-hold off;
+hold off;axis([0 16 0 4])
 
 if (length(stim_cell_times) + length(control_cell_times)) < min_cones
     min_cones = (length(stim_cell_times) + length(control_cell_times));

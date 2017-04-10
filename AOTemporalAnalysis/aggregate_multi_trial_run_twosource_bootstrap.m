@@ -31,13 +31,28 @@ for i=1:length(dataPath)
         if any( cellfun(@(s)strcmp(controlpath,s),dataPath) ) && ...
            ~strcmp(controlpath,dataPath{i})
            
-            [fitData(i), residuals(i)] = Aggregate_Analyses_TwoSource(dataPath{i},controlpath);
+            fitData(i) = Aggregate_Analyses_TwoSource_bootstrap(dataPath{i},controlpath);
         elseif ~strcmp(controlpath,dataPath{i})
             warning(['Unable to find paired control video for,' parent]);
-            [fitData(i), residuals(i)] = Aggregate_Multiple_Temporal_Analyses(dataPath{i});
+            fitData(i) = Aggregate_Multiple_Temporal_Analyses_bootstrap(dataPath{i});
         else
             warning(['Not processing control video:' parent]);
         end
+        
+
+        [remain kid] = getparent(dataPath{i});
+        [remain region] = getparent(remain);
+        [remain stim_time] = getparent(remain);
+        [remain stim_intensity] = getparent(remain);
+        [remain stimwave] = getparent(remain);
+        [~, id] = getparent(remain);
+        
+        outFname = [id '_' stimwave '_' stim_intensity '_' stim_time '_all_amps'];
+        
+        all_amps = fitData(i).all_amps;
+        figure(1); hist(all_amps,20); title(outFname,'Interpreter','none');
+        saveas(gcf,[outFname '.png']);
+        save([outFname '.mat'],'all_amps');
     catch ex
        disp([dataPath{i} ' failed to analyze:']);
        disp([ex.message ' ' ex.stack(1).name ': line ' num2str(ex.stack(1).line)] );
@@ -50,5 +65,4 @@ close(wbh);
 
 fitData = struct2table(fitData);
 
-writetable(fitData,['Aggregate_Summary_' date '.csv']);
-save(['Residuals_' date '.mat'], 'residuals');
+writetable(fitData,['Bootstrapped_Aggregate_Summary_' date '.csv']);

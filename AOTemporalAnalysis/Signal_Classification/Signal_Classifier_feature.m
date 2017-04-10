@@ -30,7 +30,7 @@ allsigs=[];
 
 clipind = 11; % Need to clip ends due to artifacts after filtering
 stimind = 66;
-maxind = 240;
+maxind = 241;
 
 
 affinitycurve = normpdf(0:maxind-stimind-1,16,33);
@@ -62,15 +62,16 @@ for j=1:length(controlDataNames)
         
         interpsignal = interpsignal(clipind:maxind);
 
-        D5 = filtfilt(prefilt, interpsignal);
+        filtinterpsignal = filtfilt(prefilt, interpsignal);
         
         % Remove the remaining signal before the stimulus delivery
-        D5 = D5((stimind-clipind)+1:end-1);
+        interpsignal = interpsignal((stimind-clipind)+1:end);
+        filtinterpsignal = filtinterpsignal((stimind-clipind)+1:end-1);
         
-        allsigs=[allsigs; D5];
+        allsigs=[allsigs; filtinterpsignal];
                 
-        during = D5( 1:33 );
-        after = D5( 34:end-clipind );
+        during = filtinterpsignal( 1:33 );
+        after = filtinterpsignal( 34:end-clipind );
 
         % Determine distance from max response to stim?
         [maxrespval,maxrespind]=max( abs( diff([during after])) );
@@ -97,9 +98,17 @@ for j=1:length(controlDataNames)
             pk_pk(p) = peakvals(p)+troughvals(p);
         end
         
+        SWC = swt(interpsignal,4,'db4');
+        
+        % Features from Subasi et al 2007
+        meanabscoeff = mean(abs(SWC'));
+        meanpowercoeff = sum(SWC'.^2);
+        stddevcoeff = std(SWC');
+        coeffratio = [meanabscoeff(1)/meanabscoeff(2) meanabscoeff(2)/meanabscoeff(3) ...
+                      meanabscoeff(3)/meanabscoeff(4) meanabscoeff(4)/meanabscoeff(5)];
         
         % Put together the feature lists
-        controlcoeffs = [controlcoeffs; stim_affinity std(pk_pk) max(derivduring)-min(derivduring) ];        
+        controlcoeffs = [controlcoeffs; stim_affinity std(pk_pk) max(derivduring)-min(derivduring) meanabscoeff(3:5) meanpowercoeff(3:5) stddevcoeff(3:5) coeffratio(2:4)];        
         controllabels = [controllabels; {'control'}];
         
         
@@ -111,7 +120,7 @@ for j=1:length(controlDataNames)
 % %         axis([0 250 -10 10]);
 %         hold off;
         
-        controlreconst(i,:) = D5;
+        controlreconst(i,:) = filtinterpsignal;
 
 
     end
@@ -144,15 +153,16 @@ for j=1:length(controlDataNames)
 
         interpsignal = interpsignal(clipind:maxind);
 
-        D5 = filtfilt(prefilt, interpsignal);
+        filtinterpsignal = filtfilt(prefilt, interpsignal);
         
         % Remove the remaining signal before the stimulus delivery
-        D5 = D5((stimind-clipind)+1:end-1);
+        interpsignal = interpsignal((stimind-clipind)+1:end);
+        filtinterpsignal = filtinterpsignal((stimind-clipind)+1:end-1);
         
-        allsigs=[allsigs; D5];
+        allsigs=[allsigs; filtinterpsignal];
                 
-        during = D5( 1:33 );
-        after = D5( 34:end-clipind );
+        during = filtinterpsignal( 1:33 );
+        after  = filtinterpsignal( 34:end-clipind );
 
         % Determine distance from max response to stim?
         [maxrespval,maxrespind]=max( abs( diff([during after])) );
@@ -179,11 +189,19 @@ for j=1:length(controlDataNames)
             pk_pk(p) = peakvals(p)+troughvals(p);
         end
         
+        SWC = swt(interpsignal,4,'db4');
+        
+        % Features from Subasi et al 2007
+        meanabscoeff = mean(abs(SWC'));
+        meanpowercoeff = sum(SWC'.^2);
+        stddevcoeff = std(SWC');
+        coeffratio = [meanabscoeff(1)/meanabscoeff(2) meanabscoeff(2)/meanabscoeff(3) ...
+                      meanabscoeff(3)/meanabscoeff(4) meanabscoeff(4)/meanabscoeff(5)];
         
         stimd = [stimd i];
 
         if( stim_affinity > .05)
-            stimdcoeffs = [stimdcoeffs; stim_affinity std(pk_pk) max(derivduring)-min(derivduring)  ];
+            stimdcoeffs = [stimdcoeffs; stim_affinity std(pk_pk) max(derivduring)-min(derivduring) meanabscoeff(3:5) meanpowercoeff(3:5) stddevcoeff(3:5) coeffratio(2:4)];
             stimdlabels = [stimdlabels; {'stimulus'}];
         end
 

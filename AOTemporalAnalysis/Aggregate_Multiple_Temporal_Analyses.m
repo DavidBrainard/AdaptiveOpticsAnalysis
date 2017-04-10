@@ -63,21 +63,36 @@ for j=1:length(profileDataNames)
     [ ref_variance_stim{j}, ref_stim_times{j}, ref_stim_count{j} ]    = reflectance_pooled_variance( stim_cell_times, norm_stim_cell_reflectance, allmax );
     [ ref_variance_control{j},ref_control_times{j}, ref_control_count{j} ] = reflectance_pooled_variance( control_cell_times, norm_control_cell_reflectance, allmax );    
 
+    i=1;
+    while i<= length( ref_stim_times{j} )
 
+        % Remove times from both stim and control that are NaN, or 0
+        if isnan(ref_stim_times{j}(i)) || ref_stim_times{j}(i) == 0 || ...
+           isnan(ref_variance_stim{j}(i)) || ref_variance_stim{j}(i) == 0
+
+            ref_stim_count{j}(i) = [];
+            
+            ref_stim_times{j}(i) = [];
+
+            ref_variance_stim{j}(i) = [];       
+        else
+%             ref_times = [ref_times; ref_stim_times(i)];
+            i = i+1;
+        end
+
+    end
+    
     i=1;
     while i<= length( ref_control_times{j} )
 
         % Remove times from both stim and control that are NaN, or 0
-        if isnan(ref_stim_times{j}(i)) || isnan(ref_control_times{j}(i)) || ref_stim_times{j}(i) == 0 || ref_control_times{j}(i) ==0 || ...
-           isnan(ref_variance_stim{j}(i)) || isnan(ref_variance_control{j}(i)) || ref_variance_stim{j}(i) == 0 || ref_variance_control{j}(i) ==0
+        if isnan(ref_control_times{j}(i)) || ref_control_times{j}(i) ==0 || ...
+           isnan(ref_variance_control{j}(i)) || ref_variance_control{j}(i) ==0
 
-            ref_stim_count{j}(i) = [];
             ref_control_count{j}(i) = [];
             
-            ref_stim_times{j}(i) = [];
             ref_control_times{j}(i) = [];
 
-            ref_variance_stim{j}(i) = [];
             ref_variance_control{j}(i) = [];        
         else
 %             ref_times = [ref_times; ref_stim_times(i)];
@@ -85,10 +100,11 @@ for j=1:length(profileDataNames)
         end
 
     end
-    precontrol = ref_variance_control{j}(ref_control_times{j}<=66);
-    prestim = ref_variance_stim{j}(ref_stim_times{j}<=66);
-    figure(8); plot(ref_stim_times{j}, sqrt(ref_variance_stim{j})-sqrt(mean(prestim)) ); hold on; drawnow;
-    figure(9); plot(ref_control_times{j}, sqrt(ref_variance_control{j})-sqrt(mean(precontrol)) ); hold on; drawnow;
+    precontrol = ref_variance_control{j}(ref_control_times{j}<=66)./ref_control_count{j}(ref_control_times{j}<=66);
+    prestim = ref_variance_stim{j}(ref_stim_times{j}<=66)./ref_stim_count{j}(ref_stim_times{j}<=66);
+    
+    figure(8); plot(ref_stim_times{j}, sqrt( ref_variance_stim{j}./ref_stim_count{j})-sqrt(mean(prestim)) ); hold on; drawnow;
+    figure(9); plot(ref_control_times{j}, sqrt(ref_variance_control{j}./ref_control_count{j})-sqrt(mean(precontrol)) ); hold on; drawnow;
       
     for i=1 : length(norm_control_cell_reflectance)
         for k=1 : length( norm_control_cell_reflectance{i} )
