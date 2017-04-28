@@ -1,4 +1,4 @@
-function [ rel_shifts ] = action_spect_fit( wavelengths, irradiances, datavals, ciefunc, type )
+function [ rel_shifts, fits ] = action_spect_fit( wavelengths, irradiances, datavals, ciefunc, type )
 
 normalize = false;
 
@@ -8,12 +8,12 @@ fitParams.irr_shift=[];
 fitParams.slope=0;
 
 max_irr = 10^5;
-log_irr_range = 0:.1:11;
+log_irr_range = -10:.1:10;
 
 
 % Rescale amplitudes so that we can fit them all the same- each column is
 % a different wavelength
-handle = figure;
+handle = figure(99); clf;
 
 for w=1:length(wavelengths)
     data = datavals{w};
@@ -56,11 +56,9 @@ for w=1:length(wavelengths)
     vub(w) = 3*max(irrval{w}); 
     vlb(w) = min(irrval{w});
     
-%     handle = figure(wavelengths(w)); title(num2str(wavelengths(w))); 
+
     hold on;
     plot(irrval{w}, datavals{w},'.','MarkerSize',15);
-
-%     axis([0 5 0 2.5]);
     hold off;
 end
 
@@ -84,7 +82,7 @@ hold off;
 
 
 options = optimset('fmincon');
-options = optimset(options,'LargeScale','off','Algorithm','interior-point'); % 'Diagnostics','off','Display','off'
+options = optimset(options,'Diagnostics','off','Display','off','LargeScale','off','Algorithm','interior-point'); % 'Diagnostics','off','Display','off'
 
 switch(type)
     case 'sigmoid'
@@ -135,12 +133,16 @@ plot(ciefunc(:,1),ciefunc(:,2)); hold on;
 plot(wavelengths,rel_shifts); title('Postshift'); set(gca,'yscale','log');
 axis([450 700 10^-3 10^1]);hold off;
 
+
+wavecolors=['b' 'c', 'g', 'y','r'];
 figure(handle);hold on;
 for i=1:size(datavals,2)
     params = VectorToParams(finalParams, i);
-    plot(log_irr_range, ComputeModel(params, log_irr_range, type),'r.-');
+    fits{i} = ComputeModel(params, log_irr_range, type);
+    plot(log_irr_range, ComputeModel(params, log_irr_range, type),wavecolors(i));
     
 end
+legend(num2str(wavelengths));
 hold off;
 axis([0 max(cellfun(@max,irrval)) 0 max(cellfun(@max,datavals))]);
 
@@ -152,7 +154,7 @@ function f = FitCIEErrorFunction(v, cie, rel_action)
     preds = ComputeCIEModel(v,rel_action);
     
     diff = (cie-preds).^2; 
-% (abs(cie-preds))
+
     f = sqrt(sum(diff)/length(diff));
 end
 
@@ -172,7 +174,11 @@ function f = FitModelErrorFunction(v, irradiances, values,type)
         preds{i} = ComputeModel(params, irradiances{i},type);
 
         diff = [diff; (values{i}-preds{i}).^2];
-    end
+        
+%         plot(0:.1:11,ComputeModel(params,0:.1:11,type),'k-.', irradiances{i}, values{i}); hold on;
+%         axis([0 5 0 3]);
+    end        
+%     drawnow;  hold off;
     
     f = 100*sqrt(sum(diff)/length(diff));
 end

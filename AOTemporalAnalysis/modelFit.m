@@ -39,8 +39,9 @@ cutofftime = 8;
 
 % 
 % %TEMP
-% goodtimes = find(timeBase>4.15 | timeBase<4.13);
-
+% goodtimes = find(timeBase>5.1 | (timeBase<4.56));
+% goodtimes = find(timeBase>3.5);
+% 
 % timeBase = timeBase(goodtimes);
 % pooled_std_stim = pooled_std_stim(goodtimes);
 
@@ -50,16 +51,16 @@ pooled_std_stim = pooled_std_stim(pretime);
 
 
 %% Start plot
-% thePlot = figure(2); clf; hold on;
-% % set(gca,'FontName','Helvetica','FontSize',14);
-% plot(timeBase,pooled_std_stim,'ro','MarkerFaceColor','r','MarkerSize',6);
-% % figure(thePlot); plot(timeBase,theResponse,'r','LineWidth',4);
-% xlim([0 16]);
-% ylim([-1 3]);
-% xlabel('Time (secs)','FontSize',18);
-% ylabel('Pooled Standard deviation','FontSize',18);
-% title('Pooled standard deviation data and fit');
-% drawnow;
+thePlot = figure(2); clf; hold on;
+% set(gca,'FontName','Helvetica','FontSize',14);
+plot(timeBase,pooled_std_stim,'ro','MarkerFaceColor','r','MarkerSize',6);
+% figure(thePlot); plot(timeBase,theResponse,'r','LineWidth',4);
+xlim([0 16]);
+ylim([-1 3]);
+xlabel('Time (secs)','FontSize',18);
+ylabel('Pooled Standard deviation','FontSize',18);
+title('Pooled standard deviation data and fit');
+drawnow;
 
 
 %% Set up initial guess for fit parameters
@@ -159,7 +160,7 @@ end
 % fitParams0;
 % Add initial guess to the plot
 predictions0 = ComputeModelPreds(fitParams0,timeBase);
-% figure(thePlot); hold on; plot(timeBase,predictions0,'k:','LineWidth',2); hold off;
+figure(thePlot); hold on; plot(timeBase,predictions0,'k:','LineWidth',2); hold off;
 
 %% Fit
 
@@ -202,7 +203,7 @@ switch fitParams0.type
         vub = [ 1 10    10    10   2  10   10  6   0];
     case 'gammapdfexp'
         if peaked
-            vlb = [-3 0.2 0.2   0   0.01  0];
+            vlb = [-3 0.2 0.2   .1   0.01  0];
             vub = [ 3 3    3    20  2     3];
         else
             vlb = [-1 0 0  0  0.01  0];
@@ -225,7 +226,7 @@ predictions = ComputeModelPreds(fitParams,fitTimeBase);
 residual = mean((pooled_std_stim-predictions(1:length(pooled_std_stim))').^2);
 
 
-% figure(thePlot); hold on; plot(fitTimeBase,predictions,'g','LineWidth',2);
+figure(thePlot); hold on; plot(fitTimeBase,predictions,'g','LineWidth',2);
 
 
 
@@ -334,7 +335,9 @@ preds = ComputeModelPreds(fitParams,timeBase);
 % Compute fit error as RMSE
 nPoints = length(theResponse);
 theDiff2 = (theResponse-preds).^2;
-f = 100*sqrt(sum(theDiff2)/nPoints);
+f = mean(sqrt(theDiff2));
+% theDiff2 = abs(theResponse-preds);
+% f = mean(theDiff2);
 
 end
 

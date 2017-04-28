@@ -1,5 +1,5 @@
 clear;
-close all;
+% close all;
 
 % a480 = dlmread('/local_data/Projects/AOSLO-Intrinsic-Reflectivity-2015_10_01-/data/allsubs_manual_480_20170120.csv');
 % a510 = dlmread('/local_data/Projects/AOSLO-Intrinsic-Reflectivity-2015_10_01-/data/allsubs_manual_510_20161130.csv');
@@ -25,6 +25,7 @@ fit_type = 'sigmoid';
 %% Load CIE data
 
 ciefunc = dlmread( fullfile(pathname,'linCIE2008v2e_5.csv') );
+% ciefunc2 = dlmread( fullfile(pathname,'linss2_10e_5_M.csv') );
 
 % temp for plot of luminosity vs response
 wavecolors=['b' 'c', 'g', 'y','r'];
@@ -81,7 +82,7 @@ end
 %     saveas(gcf, fullfile(pathname, [num2str(wavelengths(w)) 'irr_response.svg']));
 % end
 
-figure; hold on;
+figure(1); hold on;
 for i=1:length(IDs)
     plot(wavelengths, log10(rel_shifts(i,:)),'.','MarkerSize',15);
 end

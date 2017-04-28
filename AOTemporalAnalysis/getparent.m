@@ -1,4 +1,4 @@
-function [ parent kids ] = getparent( path, height,returntype)
+function [ parent kids ] = getparent( path, height, returntype)
 % Robert Cooper 08-29-11
 %   This function returns the parents of a path, up to a height designated
 %   by height. It then returns the parent directories in the parent

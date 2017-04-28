@@ -143,40 +143,71 @@ parfor b=1:1500
 
     rng('shuffle'); % Reshuffle the RNG after each loop to make sure we're getting a good mix.
     
-    stim_signal_inds = randi(length(profileDataNames),length(profileDataNames),1);
-    control_signal_inds = randi(length(profileDataNames),length(profileDataNames),1);
-
-    sel_stim_times = ref_stim_times(stim_signal_inds);
-    sel_stim_var = ref_variance_stim(stim_signal_inds);
-    sel_stim_count = ref_stim_count(stim_signal_inds);
-
-    sel_control_times = ref_control_times(control_signal_inds);
-    sel_control_var = ref_variance_control(control_signal_inds);
-    sel_control_count = ref_control_count(control_signal_inds);
+    num_signals_stim = cell(allmax, 1);
+    num_signals_control = cell(allmax, 1);
     
-    pooled_variance_stim = zeros(allmax,1);
-    pooled_variance_stim_count = zeros(allmax,1);
-    pooled_variance_control = zeros(allmax,1);
-    pooled_variance_control_count = zeros(allmax,1);
+    % Get an array of which signals have data for each time point    
+    for j=1:length(profileDataNames)
+        for i=1:length(ref_stim_times{j})
+            num_signals_stim{ ref_stim_times{j}(i) } = [num_signals_stim{ ref_stim_times{j}(i) }; j ];
+        end
+    end
+    
+    for j=1:length(profileDataNames) 
+        for i=1:length(ref_control_times{j})
+            num_signals_control { ref_control_times{j}(i) } = [num_signals_control{ ref_control_times{j}(i) } j];
+        end
+    end
+    
+    stim_signal_inds = cell(1,length(num_signals_stim));
+    control_signal_inds = cell(1,length(num_signals_control));
+    
+    % Randomly pick the datapoints we'll average from the signals we have
+    % at each time point
+    for i=1:length(num_signals_stim)
+        if ~isempty(num_signals_stim{i})
+            signal_picks = randi( length(num_signals_stim{i}), length(num_signals_stim{i}),1);
+            stim_signal_inds{i} = num_signals_stim{i}( signal_picks );
+        end
+    end
+    
+    for i=1:length(num_signals_control)
+        if ~isempty(num_signals_control{i})
+            signal_picks = randi( length(num_signals_control{i}), length(num_signals_control{i}),1);
+            control_signal_inds{i} = num_signals_control{i}( signal_picks );
+        end
+    end       
+
+    
+    pooled_variance_stim = zeros(allmax, 1);
+    pooled_variance_stim_count = zeros(allmax, 1);
+    pooled_variance_control = zeros(allmax, 1);
+    pooled_variance_control_count = zeros(allmax, 1);
 
     %% Create the pooled variance for each of these
-    for j=1:length(profileDataNames)    
-        for i=1:length(sel_stim_times{j})
-
+    for i=1:length(pooled_variance_stim)
+        for j=1:length(stim_signal_inds{i})
+            which_ind = stim_signal_inds{i}(j);
+            which_time = ref_stim_times{ which_ind };
+            which_signal = ref_variance_stim{ which_ind };
+            which_count = ref_stim_count{ which_ind };
+            
             % Create the upper and lower halves of our pooled variance
-            pooled_variance_stim( sel_stim_times{j}(i) ) = pooled_variance_stim( sel_stim_times{j}(i) ) + sel_stim_var{j}(i);
-            pooled_variance_stim_count( sel_stim_times{j}(i) ) = pooled_variance_stim_count( sel_stim_times{j}(i) ) + (sel_stim_count{j}(i)-1);
-
+            pooled_variance_stim( i ) = pooled_variance_stim( i ) + which_signal( which_time==i );
+            pooled_variance_stim_count( i ) = pooled_variance_stim_count( i ) + which_count( which_time==i );
         end
     end
 
-    for j=1:length(profileDataNames) 
-        for i=1:length(sel_control_times{j})
-
+    for i=1:length(pooled_variance_control)
+        for j=1:length(control_signal_inds{i})
+            which_ind = control_signal_inds{i}(j);
+            which_time = ref_control_times{ which_ind };
+            which_signal = ref_variance_control{ which_ind };
+            which_count = ref_control_count{ which_ind };
+            
             % Create the upper and lower halves of our pooled variance
-            pooled_variance_control( sel_control_times{j}(i) ) = pooled_variance_control( sel_control_times{j}(i) ) + sel_control_var{j}(i);
-            pooled_variance_control_count( sel_control_times{j}(i) ) = pooled_variance_control_count( sel_control_times{j}(i) ) + (sel_control_count{j}(i)-1);
-
+            pooled_variance_control( i ) = pooled_variance_control( i ) + which_signal( which_time==i );
+            pooled_variance_control_count( i ) = pooled_variance_control_count( i ) + which_count( which_time==i );
         end
     end
 
