@@ -1,4 +1,4 @@
-function [fitCharacteristics, residuals]=Aggregate_Analyses_TwoSource(stimRootDir, controlRootDir)
+function [fitCharacteristics]=Aggregate_Analyses_TwoSource(stimRootDir, controlRootDir)
 % Robert F Cooper
 % 12-31-2015
 % This script calculates pooled variance across a set of given signals.

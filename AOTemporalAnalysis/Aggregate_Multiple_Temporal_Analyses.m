@@ -1,4 +1,4 @@
-function [fitCharacteristics residuals]=Aggregate_Multiple_Temporal_Analyses(rootDir)
+function [fitCharacteristics]=Aggregate_Multiple_Temporal_Analyses(rootDir)
 % Robert F Cooper
 % 12-31-2015
 % This script calculates pooled variance across a set of given signals.

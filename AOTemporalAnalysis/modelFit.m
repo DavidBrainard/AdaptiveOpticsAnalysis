@@ -39,7 +39,7 @@ cutofftime = 8;
 
 % 
 % %TEMP
-% goodtimes = find(timeBase>5.1 | (timeBase<4.56));
+% goodtimes = find(timeBase>5.34 | (timeBase<4.56));
 % goodtimes = find(timeBase>3.5);
 % 
 % timeBase = timeBase(goodtimes);
@@ -251,20 +251,20 @@ fitCharacteristics.amplitude = max_ampl-fitParams0.preStimValue;
 
 afterPIval = min( find( predictions > prestim_PI ) );
 
-if ~isempty(afterPIval)
-    if afterPIval<=length(timeBase)            
-        beforePIval = afterPIval-1;
+fitCharacteristics.resp_start = 0;
+fitCharacteristics.time_to_peak = 0;
 
-        interpslope = (predictions(afterPIval)-predictions(beforePIval))/(timeBase(afterPIval)-timeBase(beforePIval));
 
-        fitCharacteristics.resp_start = timeBase(beforePIval) + ((prestim_PI-predictions(beforePIval))/interpslope);
+if afterPIval<=length(timeBase)            
+    beforePIval = afterPIval-1;
 
-        fitCharacteristics.time_to_peak = fitTimeBase(max_ind) - fitParams0.stimOnsetTime;
-    end
-else
-    fitCharacteristics.resp_start = 0;
-    fitCharacteristics.time_to_peak = 0;
+    interpslope = (predictions(afterPIval)-predictions(beforePIval))/(timeBase(afterPIval)-timeBase(beforePIval));
+
+    fitCharacteristics.resp_start = timeBase(beforePIval) + ((prestim_PI-predictions(beforePIval))/interpslope);
+
+    fitCharacteristics.time_to_peak = fitTimeBase(max_ind) - fitParams0.stimOnsetTime;
 end
+
 
 if strcmp( fitParams0.type, 'gammapdfexp') 
     fitCharacteristics.decay_initval = fitParams.offset;

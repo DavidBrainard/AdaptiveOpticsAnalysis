@@ -71,6 +71,7 @@ for i=1:length(IDs)
     legendIDs{i} = num2str(IDs(i));
     
     title( legendIDs{i} );%For getting the irradiance response as a function of subject
+    axis([0 5 0 2.5]);
     saveas(gcf, fullfile(pathname, [legendIDs{i} 'irr_response.svg']));
 end
 

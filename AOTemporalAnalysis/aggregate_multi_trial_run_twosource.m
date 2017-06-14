@@ -16,7 +16,7 @@ dataPath = unique(dataPath)';
 
 wbh = waitbar(0,['Aggregating dataset 0 of ' num2str(length(dataPath)) '.']);
 
-
+fitData=[];
 for i=1:length(dataPath)
        
     waitbar(i/length(dataPath), wbh, ['Aggregating dataset (' num2str(i) ' of ' num2str(length(dataPath)) ').']);
@@ -31,10 +31,10 @@ for i=1:length(dataPath)
         if any( cellfun(@(s)strcmp(controlpath,s),dataPath) ) && ...
            ~strcmp(controlpath,dataPath{i})
            
-            [fitData(i), residuals(i)] = Aggregate_Analyses_TwoSource(dataPath{i},controlpath);
+            fitData = [fitData; Aggregate_Analyses_TwoSource(dataPath{i},controlpath)];
         elseif ~strcmp(controlpath,dataPath{i})
             warning(['Unable to find paired control video for,' parent]);
-            [fitData(i), residuals(i)] = Aggregate_Multiple_Temporal_Analyses(dataPath{i});
+            fitData = [fitData; Aggregate_Multiple_Temporal_Analyses(dataPath{i})];
         else
             warning(['Not processing control video:' parent]);
         end
@@ -51,4 +51,4 @@ close(wbh);
 fitData = struct2table(fitData);
 
 writetable(fitData,['Aggregate_Summary_' date '.csv']);
-save(['Residuals_' date '.mat'], 'residuals');
+% save(['Residuals_' date '.mat'], 'residuals');

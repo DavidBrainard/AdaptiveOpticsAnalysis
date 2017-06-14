@@ -47,6 +47,7 @@ fit_type = 'sigmoid';
 
 %% Load CIE data
 ciefunc = dlmread( fullfile(pwd,'linCIE2008v2e_5.csv') );
+% conefunda = dlmread( fullfile(pwd,'linss2_10e_5.csv') );
 
 
 
@@ -117,8 +118,8 @@ for i=1:length(alldata)
             
         end
         meanamps{w} = mean(sumamps{w},2);
-        errorbar(log10(irradiances{w}), meanamps{w},1.96*std(sumamps{w},[],2)*sqrt(1+1/1000) );
-        
+%         errorbar(log10(irradiances{w}), meanamps{w},1.96*std(sumamps{w},[],2)*sqrt(1+1/1000) );
+        errorbar(log10(irradiances{w}), meanamps{w}, prctile(sumamps{w},5,2)-meanamps{w}, prctile(sumamps{w},95,2)-meanamps{w});
         labels{w} = num2str(wavelengths(w));
         
     end
@@ -152,10 +153,14 @@ for i=1:length(alldata)
     meanshifts(i,:) = mean( log10(subshifts) );
 %     stdshifts(i,:) = std(subshifts);
 
-    errorbar(wavelengths, mean( log10(subshifts) ), std(log10(subshifts)),'MarkerSize',15);
+    errorbar(wavelengths, mean( log10(subshifts) ), prctile(log10(subshifts),5)-mean( log10(subshifts) ),...
+                                                    prctile(log10(subshifts),95)-mean( log10(subshifts) ),...
+                                                    'MarkerSize',15);
 
 end
 plot(ciefunc(:,1), log10(ciefunc(:,2)),'k')
+% plot(conefunda(:,1), log10(conefunda(:,2)), 'r');
+% plot(conefunda(:,1), log10(conefunda(:,3)), 'g');
 % set(gca,'yscale','log')
 legend(legendIDs);
 axis([450 700 -3 1]);

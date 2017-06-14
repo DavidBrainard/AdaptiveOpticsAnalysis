@@ -6,7 +6,7 @@ function []=Temporal_Reflectivity_Analysis(mov_path, ref_image_fname)
 gui=false;
 
 profile_method = 'box';
-norm_type = 'regional_norm_prestimminusdiv';
+norm_type = 'no_norm'; %prestimminusdiv
 cutoff = 0.9; % The percentage of time a cone must be stimulated relative to all stimulus in order to be included for analysis
 
 % mov_path=pwd;
@@ -59,11 +59,11 @@ end
 % "masks"
 visible_signal = zeros(size(visible_stack,3),1);
 
-noise_floor = mean(max(visible_stack(:,:,1)));
+noise_floor = 20; %mean(max(visible_stack(:,:,1)));
 for v=1:size(visible_stack,3)
     
     vis_frm = visible_stack(:,:,v);
-%     figure(1); imagesc(vis_frm); colormap gray; axis image;pause(.2);
+%     figure(1); imagesc(vis_frm); colormap gray; axis image;pause;%(.2);
     visible_signal(v) = mean(vis_frm(:));
 end
 
@@ -820,7 +820,7 @@ figure(11);
 if ~isempty(ref_stddev_control)
     for i=1:length(norm_control_cell_reflectance) % Plot raw
     %     i
-        plot(control_cell_times{i}, norm_control_cell_reflectance{i},'b' ); hold on;
+        plot(control_cell_times{i}, norm_control_cell_reflectance{i}-norm_control_cell_reflectance{i}(1),'b' ); hold on;
     %     axis([0 250 -15 15]);
     %     plot([0 length(cell_times{i})], [1+2*pstddev 1+2*pstddev],'r');
     %     plot([0 length(cell_times{i})], [1-2*pstddev 1-2*pstddev],'r');
@@ -835,7 +835,7 @@ end
 norm_stim_cell_reflectance = norm_stim_cell_reflectance( ~cellfun(@isempty,norm_stim_cell_reflectance) );
 stim_cell_times            = stim_cell_times(  ~cellfun(@isempty,stim_cell_times) );
 
-
+figure(11);
 if ~isempty(ref_stddev_stim)
     for i=1:length(norm_stim_cell_reflectance) % Plot raw
     %     i
@@ -843,8 +843,8 @@ if ~isempty(ref_stddev_stim)
     %     axis([0 250 -15 15]);
 
     %     temporal_stack( stim_coords_used(45-4:45-4,1), stim_coords_used(45-4:45-4,2),:)
-        plot(stim_cell_times{i}, norm_stim_cell_reflectance{i},'r' ); hold on;
-    %     plot(control_cell_times{i}, control_cell_reflectance{i},'b' ); hold on;
+        plot(stim_cell_times{i}, norm_stim_cell_reflectance{i}-norm_stim_cell_reflectance{i}(1),'r' ); hold on;
+%         plot(control_cell_times{i}, control_cell_reflectance{i},'b' ); hold on;
     %     plot([0 length(cell_times{i})], [1+2*pstddev 1+2*pstddev],'r');
     %     plot([0 length(cell_times{i})], [1-2*pstddev 1-2*pstddev],'r');
     %     plot(stim_locs, 2*ones(size(stim_ locs)),'r*'); hold off;

@@ -32,27 +32,42 @@ for i=1:length(dataPath)
            ~strcmp(controlpath,dataPath{i})
            
             fitData(i) = Aggregate_Analyses_TwoSource_bootstrap(dataPath{i},controlpath);
+            [remain kid] = getparent(dataPath{i});
+            [remain region] = getparent(remain);
+            [remain stim_time] = getparent(remain);
+            [remain stim_intensity] = getparent(remain);
+            [remain stimwave] = getparent(remain);
+            [~, id] = getparent(remain);
+
+            outFname = [id '_' stimwave '_' stim_intensity '_' stim_time '_all_amps'];
+
+            all_amps = fitData(i).all_amps;
+            figure(1); hist(all_amps,20); title(outFname,'Interpreter','none');
+            saveas(gcf,[outFname '.png']);
+            save([outFname '.mat'],'all_amps');
         elseif ~strcmp(controlpath,dataPath{i})
             warning(['Unable to find paired control video for,' parent]);
             fitData(i) = Aggregate_Multiple_Temporal_Analyses_bootstrap(dataPath{i});
+            
+            [remain kid] = getparent(dataPath{i});
+            [remain region] = getparent(remain);
+            [remain stim_time] = getparent(remain);
+            [remain stim_intensity] = getparent(remain);
+            [remain stimwave] = getparent(remain);
+            [~, id] = getparent(remain);
+
+            outFname = [id '_' stimwave '_' stim_intensity '_' stim_time '_all_amps'];
+
+            all_amps = fitData(i).all_amps;
+            figure(1); hist(all_amps,20); title(outFname,'Interpreter','none');
+            saveas(gcf,[outFname '.png']);
+            save([outFname '.mat'],'all_amps');
         else
             warning(['Not processing control video:' parent]);
         end
         
 
-        [remain kid] = getparent(dataPath{i});
-        [remain region] = getparent(remain);
-        [remain stim_time] = getparent(remain);
-        [remain stim_intensity] = getparent(remain);
-        [remain stimwave] = getparent(remain);
-        [~, id] = getparent(remain);
         
-        outFname = [id '_' stimwave '_' stim_intensity '_' stim_time '_all_amps'];
-        
-        all_amps = fitData(i).all_amps;
-        figure(1); hist(all_amps,20); title(outFname,'Interpreter','none');
-        saveas(gcf,[outFname '.png']);
-        save([outFname '.mat'],'all_amps');
     catch ex
        disp([dataPath{i} ' failed to analyze:']);
        disp([ex.message ' ' ex.stack(1).name ': line ' num2str(ex.stack(1).line)] );
