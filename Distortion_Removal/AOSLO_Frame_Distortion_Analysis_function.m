@@ -6,35 +6,33 @@ function [] = AOSLO_Frame_Distortion_Analysis_function(motion_path,fName)
 
     loadmotion = dlmread( fullfile(motion_path, fName) );
     
+    crop_ROI = loadmotion(1,1:4)+1; % Add one so the index (designed for python) is correct in MATLAB.
+    framemotion = loadmotion(2:end,:);
+    
     imfname = [fName(1:end-length('_transforms.csv')) ]
     
     im = imread(fullfile(motion_path, [imfname '.tif']));
 
     %Ref_Frame
-    ref_largest_slow_axis = max(loadmotion(1,:));
-    ref_smallest_slow_axis = min(loadmotion(1,:));
+    ref_largest_slow_axis = max(framemotion(1,:));
+    ref_smallest_slow_axis = min(framemotion(1,:));
 
     % Find the largest slow axis pixel
     largest_slow_axis = 0;
     smallest_slow_axis = 100000;
    
-    if largest_slow_axis < max(max(loadmotion(1:3:size(loadmotion,1),:),[],2))
-        largest_slow_axis = max(max(loadmotion(1:3:size(loadmotion,1),:),[],2));        
+    if largest_slow_axis < max(max(framemotion(1:3:size(framemotion,1),:),[],2))
+        largest_slow_axis = max(max(framemotion(1:3:size(framemotion,1),:),[],2));        
     end
-    if smallest_slow_axis > min(loadmotion(1:3:size(loadmotion,1),1))
-        smallest_slow_axis = min(loadmotion(1:3:size(loadmotion,1),1));
+    if smallest_slow_axis > min(framemotion(1:3:size(framemotion,1),1))
+        smallest_slow_axis = min(framemotion(1:3:size(framemotion,1),1));
     end
     
-
-    
-
     slow_axis_size = largest_slow_axis-smallest_slow_axis+1;
     all_xmotion  = cell(slow_axis_size, repeats);
     all_ymotion  = cell(slow_axis_size, repeats);
 
-    
-    framemotion = loadmotion;
-    
+
     all_slow_axis_ref_ind = 1:3:size(framemotion,1);
     all_fast_axis_trans_ind = 2:3:size(framemotion,1);
     all_slow_axis_trans_ind = 3:3:size(framemotion,1);
@@ -79,9 +77,11 @@ function [] = AOSLO_Frame_Distortion_Analysis_function(motion_path,fName)
     end
 
     startingind = ref_smallest_slow_axis-smallest_slow_axis+1;
-    % Clip out the rows that aren't part of our reference frame.
-    all_xmotion = all_xmotion(startingind:largest_slow_axis,:);
-    all_ymotion = all_ymotion(startingind:largest_slow_axis,:);
+    
+    % Clip out the rows that aren't part of our reference frame
+    % so that it matches the cropped output image!
+    all_xmotion = all_xmotion(crop_ROI(1):crop_ROI(2),:);
+    all_ymotion = all_ymotion(crop_ROI(1):crop_ROI(2),:); 
 
 
     %% View and adjust each row's translation so that we have something we can
@@ -92,8 +92,8 @@ function [] = AOSLO_Frame_Distortion_Analysis_function(motion_path,fName)
     % allmag=[];
 
     
-    v=VideoWriter(fullfile(motion_path, [imfname '_motion_video.avi']));
-    open(v);
+%     v=VideoWriter(fullfile(motion_path, [imfname '_motion_video.avi']));
+%     open(v);
     xmotion_norm=cell(size(all_xmotion,1),repeats);
     ymotion_norm=cell(size(all_xmotion,1),repeats);
     xmotion_vect=zeros(size(all_xmotion,1),repeats);
@@ -114,21 +114,16 @@ function [] = AOSLO_Frame_Distortion_Analysis_function(motion_path,fName)
 
         %     [idx] = clusterdata([nooutx', noouty'],'maxclust',3,'linkage','ward');
 
-            figure(1);
-            plot(all_xmotion{i,r},all_ymotion{i,r},'.');hold on;
-    
-            plot(median(nooutx),median(noouty),'kx');
-    
-        %     scatter(nooutx,noouty,[],idx);hold on;    
-        %     plot(median(all_xmotion{i}),median(all_ymotion{i}),'kx');
-    
-            plot(0,0,'r.'); hold off;
-            axis square; axis([-outlier_cutoff outlier_cutoff -outlier_cutoff outlier_cutoff]); 
-            title([ 'median x: ' num2str(median(all_xmotion{i,r})) ' median y: ' num2str(median(all_ymotion{i,r})) ]);
-             drawnow;
-        %      pause;
-             f= getframe;
-             writeVideo(v,f);
+        % For displaying the row offsets
+%             figure(1);
+%             plot(all_xmotion{i,r},all_ymotion{i,r},'.');hold on;
+%             plot(median(nooutx),median(noouty),'kx');
+%             plot(0,0,'r.'); hold off;
+%             axis square; axis([-outlier_cutoff outlier_cutoff -outlier_cutoff outlier_cutoff]); 
+%             title([ 'median x: ' num2str(median(all_xmotion{i,r})) ' median y: ' num2str(median(all_ymotion{i,r})) ]);
+%              drawnow;
+%              f= getframe;
+%              writeVideo(v,f);
 
             estimatevar(i,r) = sqrt(var(all_xmotion{i,r}).^2 + var(all_ymotion{i,r}).^2);
             xmotion_norm{i,r} = all_xmotion{i,r}-median(all_xmotion{i,r});
@@ -152,9 +147,8 @@ function [] = AOSLO_Frame_Distortion_Analysis_function(motion_path,fName)
     %         allloc = [allloc; i.*ones(length(all_xmotion{i}),1)];
 
         end
-        close(v);
+%         close(v);
     end
-
 
     for i=1:size(xmotion_vect,1)
 
@@ -179,7 +173,7 @@ function [] = AOSLO_Frame_Distortion_Analysis_function(motion_path,fName)
 %     h=imshow(overlay);
 %     set(h, 'AlphaData', ones(size(warpedim)).*.4); 
 
-        figure(1); imshowpair(im,warpedim);
+%         figure(1); imshowpair(im,warpedim);
 
     imwrite(warpedim, fullfile(motion_path, [imfname '_warped.tif']));
     
