@@ -3,15 +3,48 @@ function [] = AOSLO_Frame_Distortion_Analysis_function(motion_path,fName)
     repeats = 1;
     outlier_cutoff = 20;
 
-
-    loadmotion = dlmread( fullfile(motion_path, fName) );
+    
+    flipName = fliplr(fName);
+    
+    [tok,remain]=strtok(flipName,'_');
+    for i=1:4
+        [tok,remain]=strtok(remain,'_');
+    end
+    
+    commonName = fliplr(remain)
+    
+    xformsFname = [commonName 'transforms.csv'];
+   
+    modalities = {'confocal','split_det','avg'};    
+    repcheck = perms(1:length(modalities));
+    
+    if ~exist( fullfile(motion_path, xformsFname),'file')
+        for i=1:size(repcheck,1)
+            tmpname = strrep(xformsFname, modalities{repcheck(i,1)}, modalities{repcheck(i,2)});
+            if exist( fullfile(motion_path, tmpname),'file')
+                xformsFname = tmpname;
+               break; 
+            end
+            tmpname = strrep(xformsFname, modalities{repcheck(i,1)}, modalities{repcheck(i,3)});
+            if exist( fullfile(motion_path, tmpname),'file')
+               xformsFname = tmpname;
+               break; 
+            end
+        end
+    end
+    
+    if ~exist( fullfile(motion_path, xformsFname),'file')
+        warning(['Unable to find transform file for image: ' fName ]);
+        return;
+    end
+    
+    loadmotion = dlmread( fullfile(motion_path, xformsFname) );
     
     crop_ROI = loadmotion(1,1:4)+1; % Add one so the index (designed for python) is correct in MATLAB.
     framemotion = loadmotion(2:end,:);
     
-    imfname = [fName(1:end-length('_transforms.csv')) ]
-    
-    im = imread(fullfile(motion_path, [imfname '.tif']));
+    im = imread(fullfile(motion_path, fName));
+
 
     %Ref_Frame
     ref_largest_slow_axis = max(framemotion(1,:));
@@ -175,7 +208,7 @@ function [] = AOSLO_Frame_Distortion_Analysis_function(motion_path,fName)
 
 %         figure(1); imshowpair(im,warpedim);
 
-    imwrite(warpedim, fullfile(motion_path, [imfname '_warped.tif']));
+    imwrite(warpedim, fullfile(motion_path, [fName(1:end-4) '_warped.tif']));
     
     % imwrite(warpedim,'monte_warped.tif','WriteMode','append');
 end

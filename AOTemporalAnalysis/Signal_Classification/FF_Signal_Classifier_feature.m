@@ -110,6 +110,7 @@ for j=1:length(controlDataNames)
         
         % Put together the feature lists
         controlcoeffs = [controlcoeffs; stim_affinity std(pk_pk) max(derivduring)-min(derivduring) meanabscoeff(3:5) meanpowercoeff(3:5) stddevcoeff(3:5) coeffratio(2:4)];        
+%         controlcoeffs = [controlcoeffs; meanabscoeff(4:5) meanpowercoeff(4) stddevcoeff(3) coeffratio(3)];
         controllabels = [controllabels; {'control'}];
         
         
@@ -134,7 +135,7 @@ end
 
 stimless=[];
 stimd=[];
-for j=1:length(controlDataNames)
+for j=1:length(stimDataNames)
     
     load(fullfile(stimBaseDir, stimDataNames{j}));
     
@@ -208,6 +209,7 @@ for j=1:length(controlDataNames)
 
         if( stim_affinity > .05)
             stimdcoeffs = [stimdcoeffs; stim_affinity std(pk_pk) max(derivduring)-min(derivduring) meanabscoeff(3:5) meanpowercoeff(3:5) stddevcoeff(3:5) coeffratio(2:4)];
+%             stimdcoeffs = [stimdcoeffs; meanabscoeff(4:5) meanpowercoeff(4) stddevcoeff(3) coeffratio(3)];
             stimdlabels = [stimdlabels; {'stimulus'}];
         end
 
@@ -223,6 +225,12 @@ for j=1:length(controlDataNames)
         
         
     end
+    
+    if j>length(alllabels)
+        alllabels{j} = [];
+        allcoeffs{j} = []; 
+    end
+    
     alllabels{j} = [alllabels{j}; stimdlabels];
     allcoeffs{j} = [allcoeffs{j}; stimdcoeffs];
 end
@@ -243,27 +251,48 @@ end
 
 
 % Pick a random set to fit from
-dataSetInds = randperm(length(allcoeffs));
-dataSetInds(1)
-SVMModel = fitcsvm(allcoeffs{dataSetInds(1)},alllabels{dataSetInds(1)},'KernelFunction','linear',...
+dataSetInds = randperm( length( min( length(controlDataNames), length(stimDataNames)) ));
+
+
+
+
+%% Train our models.
+
+% SVM
+[pcacoeffs, pcascore, latent, ~, explained] = pca( allcoeffs{dataSetInds(1)}, 'VariableWeights','variance', 'Centered', true );
+orthocoeffs = diag(std( allcoeffs{dataSetInds(1)} )) \ pcacoeffs; % Make the coefficients orthonormal
+mu = mean(allcoeffs{dataSetInds(1)});
+stddev = std(allcoeffs{dataSetInds(1)});
+
+SVMModel = fitcsvm(pcascore(:,1:10),alllabels{dataSetInds(1)},'KernelFunction','linear',...%'PolynomialOrder',2
                                              'KernelScale','auto',...
                                              'Standardize',true,...
-                                             'BoxConstraint',10,'CrossVal','on','KFold',10,'OutlierFraction',0.1);
+                                             'BoxConstraint',10,'CrossVal','on','KFold',10,'OutlierFraction',0.05);
 
-kfoldPercentModelLoss = 100*kfoldLoss(SVMModel)
+kfoldPercentModelLoss = 100*kfoldLoss(SVMModel,'mode','individual')
+
+[minLoss, minInd]= min(kfoldPercentModelLoss)
 
 % Aggregate all of the other data
 validationcoeff=[];
 validationlabels=[];
-for o=2:length(dataSetInds)
-   
-    validationcoeff = [validationcoeff; allcoeffs{dataSetInds(o)}];
-    validationlabels = [validationlabels; alllabels{dataSetInds(o)}];
-    
+for o=1:length(allcoeffs)   
+    if o ~= dataSetInds(1)
+        validationcoeff = [validationcoeff; allcoeffs{o}];
+        validationlabels = [validationlabels; alllabels{o}];
+    end
 end
 
-[pcacoeffs, pcascore, latent, ~, explained] = pca( validationcoeff );
+
+centeredvalidationcoeff = (validationcoeff-repmat(mu,size(validationcoeff,1),1))./ repmat(stddev,size(validationcoeff,1),1);
+validationscore = centeredvalidationcoeff*orthocoeffs;
 
 % Estimate the classification error.
-classificationPercentloss = 100*loss(SVMModel.Trained{1},validationcoeff,validationlabels)
+classificationPercentloss = 100*loss(SVMModel.Trained{minInd},validationscore(:,1:10),validationlabels)
 
+% Random forest
+randforest = TreeBagger(25, allcoeffs{dataSetInds(1)}, alllabels{dataSetInds(1)},'OOBPrediction','on','OOBPredictorImportance','on');
+
+plot(oobError(randforest))
+
+100*(1-error(randforest,validationcoeff,validationlabels))

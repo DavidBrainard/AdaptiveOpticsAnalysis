@@ -50,8 +50,9 @@ for file in os.listdir(folder_path):
 		topmostrow = minmaxpix[:,0].max()
 		bottommostrow= minmaxpix[:,1].min()
 
+		print np.array([pick['strip_cropping_ROI_2'][-1]]).shape
 		# The first row is the crop ROI.
-		np.savetxt(pickle_path[0:-4]+ "_transforms.csv" , pick['strip_cropping_ROI_2'],delimiter=',',fmt='%f')
+		np.savetxt(pickle_path[0:-4]+ "_transforms.csv" , np.array([pick['strip_cropping_ROI_2'][-1]]), delimiter=",", newline="\n", fmt="%f")
 
 		for frame in strip_translation_info:
 			 print "************************ Frame " +str(frame[0]['frame_index']+1) + "************************"
@@ -60,7 +61,7 @@ for file in os.listdir(folder_path):
 
 			 ff_row_shift = ff_translation_info_rowshift[frame_ind]
 			 ff_col_shift = ff_translation_info_colshift[frame_ind]
-			 print ff_row_shift
+			 
 			 #First set the relative shifts
 			 row_shift = (np.subtract(frame[0]['slow_axis_pixels_in_reference_frame'],\
 				                   frame[0]['slow_axis_pixels_in_current_frame_interpolated']))
