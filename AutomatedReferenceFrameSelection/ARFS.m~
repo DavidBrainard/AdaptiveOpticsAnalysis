@@ -92,23 +92,11 @@ for modalityInd=1 : 1%length(stack_fname)
         % After thresholding and removal, update the contenders list.
         frame_contenders = frame_contenders(~any(radon_bandwidth > threshold,2));
         
+        parfor f=1:numFrames
+            
+        end
         
         frm1 = double(image_stack(:,:, frame_contenders(1, modalityInd), modalityInd));
-        [m, n] = size(frm1);
-        paddiffm = (size(frm1,1)*2)-1-m;
-        paddiffn = (size(frm1,2)*2)-1-n;
-        
-%         fft_frm = zeros((size(frm1,1)*2)-1,(size(frm1,2)*2)-1, length(frame_contenders));
-%         
-%         parfor f=1:numFrames
-%             frame_ind = frame_contenders(f, modalityInd);
-%             frm = double(image_stack(:,:,frame_ind, modalityInd));
-%             
-%             padfrm = padarray(frm,[paddiffm paddiffn],0,'post');
-%             fft_frm(:,:,f) =  fft2( padfrm );
-%         end
-        
-%         frm1 = double(image_stack(:,:, frame_contenders(1, modalityInd), modalityInd));
         
         % Make a mask to remove any edge effects.
         [maskdistx, maskdisty] = meshgrid( 1:(size(frm1,2)*2)-1, 1:(size(frm1,1)*2)-1);
