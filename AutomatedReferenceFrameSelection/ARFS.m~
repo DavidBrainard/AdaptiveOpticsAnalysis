@@ -167,24 +167,23 @@ for modalityInd=1 : 1%length(stack_fname)
             
             peakmaskedncc = masked_ncc_frm;
             peakmaskedncc( (roff-12):(roff+12),(coff-12):(coff+12)) = 0; % Mask out the found peak
-            peakmaskedncc( peakmaskedncc > (ncc(f-1)*(1-1/2.71)) )  = 1;
-            peakmaskedncc( peakmaskedncc < (ncc(f-1)*(1-1/2.71)) )  = 0;
+            peakmaskedncc( peakmaskedncc>(ncc(f-1)*(1-1/2.71)) )  = 1;
             if any( peakmaskedncc(:) );
-                % They don't align; make sure we keep track of that.
-                % Every instance of "NaN" signifies a new group.
-                ncc(f-1) = NaN;
-                ncc_offset(f-1,:) = [NaN NaN];
-            else                
+                % Do things?
+            else
+                
                 ncc_offset(f-1,:) = [roff coff];
             end
+            
+            
+            
+            if f>56
+                figure(1);imshowpair(frm1,frm2,'montage')
+                figure(2);imagesc(masked_ncc_frm); axis image;
+                figure(3); imagesc(stddev_ncc_frm);
+                
 
-%             if f>56
-%                 figure(1);imshowpair(frm1,frm2,'montage')
-%                 figure(2);imagesc(masked_ncc_frm); axis image;
-%                 figure(3); imagesc(stddev_ncc_frm);
-%                 
-% 
-%             end
+            end
             
             % Frame 2 is now frame 1
             fft_frm1 = fft_frm2;
@@ -194,7 +193,7 @@ for modalityInd=1 : 1%length(stack_fname)
         
         %% Filter by neighbor NCC
         % When calculating the ncc threshold, only use sequential frames (further separated in time isn't fair).
-        sequential_frames = diff( frame_contenders ) == 1;
+        sequential_frames = diff(frame_contenders)==1;        
         ncc_threshold = median(ncc(sequential_frames));
         
         seq_ncc = ncc(sequential_frames);
