@@ -1,4 +1,4 @@
-function [] = AOSLO_Frame_Distortion_Analysis_function(motion_path,fName)
+function [] = AOSLO_Eye_Motion_Distortion_Repair(motion_path, fName, static_grid_distortion)
     
     repeats = 1;
     outlier_cutoff = 20;
@@ -11,7 +11,7 @@ function [] = AOSLO_Frame_Distortion_Analysis_function(motion_path,fName)
         [tok,remain]=strtok(remain,'_');
     end
     
-    commonName = fliplr(remain)
+    commonName = fliplr(remain);
     
     xformsFname = [commonName 'transforms.csv'];
    
@@ -186,9 +186,13 @@ function [] = AOSLO_Frame_Distortion_Analysis_function(motion_path,fName)
     for i=1:size(xmotion_vect,1)
 
         xgriddistortion(i,:) = repmat(median(xmotion_vect(i,:)), [1 size(im,2)] ); %The ref should be all 0s
-        ygriddistortion(i,:) = repmat(median(ymotion_vect(i,:)), [1 size(im,2)] );
+        if i<= length(static_grid_distortion)
+            ygriddistortion(i,:) = repmat(median(ymotion_vect(i,:))+static_grid_distortion(i), [1 size(im,2)] );
+        else
+            ygriddistortion(i,:) = repmat(median(ymotion_vect(i,:)), [1 size(im,2)] );
+        end
 
-        allestvar = sqrt(var(xmotion_vect(i,:)).^2 + var(ymotion_vect(i,:)).^2);
+%         allestvar = sqrt(var(xmotion_vect(i,:)).^2 + var(ymotion_vect(i,:)).^2);
     end
     disp_field = cat(3,xgriddistortion,ygriddistortion);
 
@@ -208,7 +212,13 @@ function [] = AOSLO_Frame_Distortion_Analysis_function(motion_path,fName)
 
 %         figure(1); imshowpair(im,warpedim);
 
-    imwrite(warpedim, fullfile(motion_path, [fName(1:end-4) '_warped.tif']));
+    if ~exist( fullfile(motion_path, 'Redewarped'), 'dir' )
+        mkdir(fullfile(motion_path, 'Redewarped'))
+    end
     
-    % imwrite(warpedim,'monte_warped.tif','WriteMode','append');
+    % Crop out any border regions from the top
+%     bwconncomp(warpedim<1);
+darkregions= bwconncomp(warpedim<1);
+    imwrite(warpedim, fullfile(motion_path,'Redewarped', [fName(1:end-4) '_redewarped.tif']));
+    
 end
