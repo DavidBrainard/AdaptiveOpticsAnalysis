@@ -58,7 +58,7 @@ for modalityInd=1 : 1%length(stack_fname)
     
     radon_bandwidth = zeros(numFrames,num_strips);
     %%
-    tic;
+    
     if exist('parfor','builtin') == 5 % If we can multithread it, do it!
         %% Filter by Radon transform FWHM
         parfor f=1:numFrames
@@ -116,95 +116,91 @@ for modalityInd=1 : 1%length(stack_fname)
         
         fft_frm1 =  fft2( padfrm1 );
         
-        ncc = zeros(length(frame_contenders)-1,1);
+        ncc = zeros(length(frame_contenders),1);
         ncc_offset = zeros(length(frame_contenders)-1,2);
+        frame_group = zeros(length(frame_contenders)-1,1);
+        fft_ims = zeros(size(padfrm1,1), size(padfrm1,2), length(frame_contenders));
         
-        % This is NOT sped up by multithreading.        
+        fft_ims(:,:,1) = fft2( padfrm1 );
+        
+        group = 1;        
+        frame_group(1) = group;
+        ncc(1) = NaN; % 0 to 1 doesn't align.
+        ncc_offset(1,:) = [NaN NaN];
+        
+        % This is NOT sped up by multithreading.
+        % Flipping the 2nd frame to the first halves the number of dfts we
+        % calculate.
+        tic;
         for f=2:length(frame_contenders)
             
             frm2 = double(contender_image_stack(:,:,f));
                          
             padfrm2 = padarray(frm2,[paddiffm paddiffn],0,'post'); 
-            
-            % Denominator for NCC (Using the local sum method used by
-            % MATLAB and J.P Lewis.            
-            local_sum_F = arfs_local_sum(frm1,m,n);
-            local_sum_F2 = arfs_local_sum(frm1.*frm1,m,n);
-            
-            rotfrm2 = rot90(frm2,2); % Need to rotate because we'll be conjugate in the fft (double-flipped)
-            local_sum_T = arfs_local_sum(rotfrm2,m,n);
-            local_sum_T2 = arfs_local_sum(rotfrm2.*rotfrm2,m,n);
+            fft_ims(:,:,f) = fft2( padfrm2 );
+            fft_frm2 = fft_ims(:,:,f);
 
-            % f_uv, assumes that the two images are the same size (they should
-            % be for this application)- otherwise we'd need to calculate
-            % overlap, ala normxcorr2_general by Dirk Padfield
-            denom_F = max( local_sum_F2- ((local_sum_F.^2)./numberOfOverlapPixels), 0);
-            % t
-            denom_T = max( local_sum_T2- ((local_sum_T.^2)./numberOfOverlapPixels), 0);
-
-            fft_frm2 = fft2( padfrm2 );
+            [ncc(f), ncc_offset(f,:), peakmaskedncc]  = auto_ref_ncc(frm1, fft_frm1, frm2, fft_frm2, numberOfOverlapPixels, xcorr_mask);
             
-            % Numerator for NCC
-            numerator = fftshift( real(ifft2( fft_frm1 .* conj( fft_frm2 ) ) ));
-            
-            numerator = numerator - local_sum_F.*local_sum_T./numberOfOverlapPixels;
-            
-            denom = sqrt(denom_F.*denom_T);
-            
-            ncc_frm = (numerator./denom);
-            ncc_frm(isnan(ncc_frm)) =0;
-%             tic; Too slow; only use in the future if we need the
-%             performance
-%             stddev_ncc_frm = stdfilt(ncc_frm,ones(11)).*xcorr_mask;
-%             toc;
-            masked_ncc_frm = (ncc_frm.*xcorr_mask);
-            masked_ncc_frm(isnan(masked_ncc_frm)) =0;
-            
-                        
-            [ncc(f-1), ncc_ind_offset]  = max(masked_ncc_frm(:));                                    
-            
-            [roff, coff]= ind2sub(size(masked_ncc_frm),ncc_ind_offset);
-            
-            peakmaskedncc = masked_ncc_frm;
-            peakmaskedncc( (roff-12):(roff+12),(coff-12):(coff+12)) = 0; % Mask out the found peak
-            peakmaskedncc( peakmaskedncc > (ncc(f-1)*(1-1/2.71)) )  = 1;
-            peakmaskedncc( peakmaskedncc < (ncc(f-1)*(1-1/2.71)) )  = 0;
-            if any( peakmaskedncc(:) );
-                % They don't align; make sure we keep track of that.
-                % Every instance of "NaN" signifies a new group.
-                ncc(f-1) = NaN;
-                ncc_offset(f-1,:) = [NaN NaN];
-            else                
-                ncc_offset(f-1,:) = [roff coff];
+            if isnan(ncc(f))
+                group = group+1;
             end
-
-%             if f>56
-%                 figure(1);imshowpair(frm1,frm2,'montage')
-%                 figure(2);imagesc(masked_ncc_frm); axis image;
-%                 figure(3); imagesc(stddev_ncc_frm);
-%                 
-% 
-%             end
+            
+            frame_group(f) = group; % Frame 2's group.
             
             % Frame 2 is now frame 1
             fft_frm1 = fft_frm2;
             frm1 = frm2;            
         end
         toc;
+                
+        num_groups = max(frame_group);
+        ncc_offset(:,1) = ncc_offset(:,1)-size(contender_image_stack(:,:,1), 1);
+        ncc_offset(:,2) = ncc_offset(:,2)-size(contender_image_stack(:,:,1), 2);
+        
+        % Find the center-most frame in each group, and compare them to
+        % non-adjacent groups (because we already know non-adjacents don't
+        % align)
+        for i=1:num_groups
+            first_grp_inds = (frame_group == i);
+            first_grp_frms = contender_image_stack(:,:,first_grp_inds);
+            first_grp_fft_frms = fft_ims(:,:,first_grp_inds);
+            
+            first_group_offset = ncc_offset(first_grp_inds,:);            
+            first_group_offset(isnan(first_group_offset(:,1)),:) = [];
+            
+            first_group_offset = cumsum(first_group_offset);
+            
+            [minoff, mininds] = min( first_group_offset );
+            [maxoff, maxinds] = max( first_group_offset );
+            
+            extremeinds = unique([mininds, maxinds]);
+            
+            for j=1:numgroups
+                if i~=j
+                    second_grp_inds = (frame_group == i);
+                    second_grp_frms = fft_ims(:,:,second_grp_inds);
+                    second_grp_fft_frms = fft_ims(:,:,second_grp_inds);
+                    
+                    [this_ncc, ncc_ind_offset, peakmaskedncc]  = auto_ref_ncc(frm1, fft_frm1, frm2, fft_frm2, numberOfOverlapPixels, xcorr_mask);
+                    
+                end
+            end
+        end
+        
         
         %% Filter by neighbor NCC
         % When calculating the ncc threshold, only use sequential frames (further separated in time isn't fair).
         sequential_frames = diff( frame_contenders ) == 1;
-        ncc_threshold = median(ncc(sequential_frames));
+        ncc_threshold = median(ncc(sequential_frames & ~isnan(ncc) ));
         
         seq_ncc = ncc(sequential_frames);
         
         hist(seq_ncc,20); hold on; plot([ncc_threshold ncc_threshold],[0 10],'r'); hold off;
                 
-        ncc_offset(:,1)=ncc_offset(:,1)-size(contender_image_stack(:,:,1),1);
-        ncc_offset(:,2)=ncc_offset(:,2)-size(contender_image_stack(:,:,1),2); 
+         
         
-        absolute_offsets = cumsum(ncc_offset);
+%         absolute_offsets = cumsum(ncc_offset);
         
         rem_voting = nan(size(frame_contenders));
         voting_capacity = zeros(size(frame_contenders));               
@@ -227,8 +223,9 @@ for modalityInd=1 : 1%length(stack_fname)
                 voting_capacity(f-1)=voting_capacity(f-1)+1;
                 voting_capacity(f)= voting_capacity(f)+1;
                 % Add weighted votes between the frame of interest and previous frame
-                rem_voting(f-1) = rem_voting(f-1) + (ncc(f-1) < ncc_threshold);
-                rem_voting(f) = rem_voting(f) + (ncc(f-1) < ncc_threshold);
+                % (NaN is always beneath threshold)
+                rem_voting(f-1) = rem_voting(f-1) + ((ncc(f-1) < ncc_threshold) );
+                rem_voting(f) = rem_voting(f) + ((ncc(f-1) < ncc_threshold) );
             else
 %                 frame_contenders(f)
             end
@@ -262,16 +259,16 @@ for modalityInd=1 : 1%length(stack_fname)
             end
         end
         
-        figure; plot(absolute_offsets(:,1), absolute_offsets(:,2),'.'); title('Before removal');
+%         figure; plot(absolute_offsets(:,1), absolute_offsets(:,2),'.'); title('Before removal');
         
-        % If you recieved all the votes you could to get removed, then you get dropped.
-        frame_contenders = frame_contenders(rem_voting ~= voting_capacity);
-        ncc = ncc(remove_by_vote_paired);
-        ncc_offset = ncc_offset(remove_by_vote_paired,:);
-        absolute_offsets = absolute_offsets(remove_by_vote_paired,:);
+%         % If you recieved all the votes you could to get removed, then you get dropped.
+%         frame_contenders = frame_contenders(rem_voting ~= voting_capacity);
+%         ncc = ncc(remove_by_vote_paired);
+%         ncc_offset = ncc_offset(remove_by_vote_paired,:);
+%         absolute_offsets = absolute_offsets(remove_by_vote_paired,:);
         
-        figure; plot(absolute_offsets(:,1), absolute_offsets(:,2),'.'); title('After removal');
-        % If we can't be sure you're a good frame, then you get dropped.
+%         figure; plot(absolute_offsets(:,1), absolute_offsets(:,2),'.'); title('After removal');
+%         % If we can't be sure you're a good frame, then you get dropped.
 %         voting_capacity = voting_capacity(rem_voting ~= voting_capacity);
 %         frame_contenders = frame_contenders(voting_capacity ~= 2);
 %         ncc = ncc(rem_voting ~= voting_capacity);
@@ -283,7 +280,7 @@ for modalityInd=1 : 1%length(stack_fname)
         for f=2:length(ncc_offset)            
             transim = imtranslate(contender_image_stack(:,:,f),[ncc_offset(f-1,2), ncc_offset(f-1,1)],'FillValues',0);        
             figure(2);imshowpair(transim,contender_image_stack(:,:,f-1));
-            title(num2str(ncc(f-1)));
+            title(num2str(this_ncc(f-1)));
             pause;
         end
         
