@@ -1,4 +1,4 @@
-% SimpleSpatialSummation2D
+function SimpleSpatialSummation2D
 
 %% Clear
 clear; close all; clc
@@ -18,7 +18,7 @@ detectorSizes = [6 12 18]; % Human foveal parasol cell diamter ~30 microns (abou
 
 % Detector array specifications
 gaussianFlag = 1; % Set to 1 if want detecting units to have Gaussian profile
-centerSpacings = detectorSizes; % Make these equal to detector sizes for a tightly-packed array
+centerSpacings = 2*detectorSizes; % Make these equal to detector sizes for a tightly-packed array
 imageSize = maxSpotSize*3; % Pad things out a bit
 
 % Background retinal irradiance (isomerizations per cone per stimulus
@@ -66,7 +66,10 @@ for dd = 1:length(detectorSizes)
         % Place the stimulus in the blank canvas
         startLoc = centerLoc-floor(spotSize/2);
         stopLoc = startLoc+spotSize-1;
-        spotImage(startLoc:stopLoc, startLoc:stopLoc) = double(Circle(spotSize/2));
+        spotImage(startLoc:stopLoc, startLoc:stopLoc) = double(Circle(spotSize/2));      
+        if (any(isnan(spotImage(:))))
+            error('Got a NaN in spot image after Circle call');
+        end
         
         if dd == 1 % Count up the number of pixels the first time through;
             spotPixels(ss) = nansum(spotImage(:));
@@ -75,7 +78,10 @@ for dd = 1:length(detectorSizes)
         if rem(spotSize,2)==0 % Spot size even
             % Shift spotImage back onto centerLoc pixel
             [xx, yy] = meshgrid(1:imageSize, 1:imageSize);
-            spotImage = interp2(xx,yy,spotImage, xx-0.5, yy-0.5);
+            spotImage = interp2(xx,yy,spotImage, xx-0.5, yy-0.5,'linear',0);
+        end   
+        if (any(isnan(spotImage(:))))
+            error('Got a NaN in spot image after interp');
         end
         
         % Threshold guesses and bounds in irradiance expressed as
@@ -133,9 +139,9 @@ set(gcf,'Position',[100 100 1050 560]);
 %     plot(log10(pi.*((spotSizes(plotFlag(dd,:)==1)./2).^2)),log10(threshold(dd,plotFlag(dd,:)==1)),[theColor ],'LineWidth',2);
 %     plot([log10(pi.*((detectorSizes(dd)./2).^2)) log10(pi.*((detectorSizes(dd)./2).^2))],[1 1.25],[theColor ],'LineWidth',3);
 % end
-% xlim([0 3.5]);
+xlim([0 3.5]);
 % ylim([1 4.5]);
-% axis('square');
+axis('square');
 % xlabel('Log Stimulus Area');
 % ylabel('Log Threshold Irradiance');
 
@@ -159,6 +165,8 @@ for dd = 1:length(detectorSizes)
     plot(xEval,yEval, '-', 'Color', theColor, 'LineWidth', 2);
     riccosAreaFits(dd) = riccosFit.Coefficients.Estimate(2);
     plot([riccosFit.Coefficients.Estimate(2) riccosFit.Coefficients.Estimate(2)], [2.5 riccosFit.Coefficients.Estimate(1)], ':', 'Color', theColor', 'LineWidth', 2);
+    
+    fprintf('Slope of rising limb is %0.2f\n',riccosFit.Coefficients.Estimate(3));
 
 end
 xlim([0 3.5]);
@@ -167,6 +175,12 @@ axis('square');
 xlabel('Log Stimulus Area');
 ylabel('Log Threshold Energy');
 % FigureSave('SimplePoissonSpatialSummation',gcf,'pdf');
+
+ylim([0 3.5])
+axis('equal'); grid on
+
+
+end
 
 %% Error function.
 function [f,fractionCorrect] = FindThresholdFunction(x,backgroundIsomerizations,detectorImage,spotImage,criterionFractionCorrect,weights)
@@ -189,13 +203,22 @@ if (isempty(weights))
     % compile into vectors "backgroundResponses" and "testResponses"
     for layerNum = 1:size(detectorImage,3)
         detectorResponseBackground = detectorImage(:,:,layerNum).*backgroundIsomerizations;
-        backgroundResponses(layerNum) = nanmean(detectorResponseBackground(:));
+        backgroundResponses(layerNum) = sum(detectorResponseBackground(:));
         detectorResponseTest = (stimImage+backgroundIsomerizations).*detectorImage(:,:,layerNum);
-        testResponses(layerNum) = nanmean(detectorResponseTest(:));
+        testResponses(layerNum) = sum(detectorResponseTest(:));
+    end
+    
+    % Check for horrible things
+    if (any(isnan(testResponses)))
+        error('Got a NaN in test responses');
+    end
+    if (any(isnan(backgroundResponses)))
+        error('Got a NaN in background responses');
     end
     
     % Do the computation
-    fractionCorrect = analyticPoissonIdealObserver(backgroundResponses,testResponses);
+    efficiency = 0.5;
+    fractionCorrect = analyticPoissonIdealObserver(efficiency*backgroundResponses,efficiency*testResponses);
     f = 1000.*(fractionCorrect-criterionFractionCorrect).^2;
     
 else % This section is carried over from the 1D simulation but currently not used
