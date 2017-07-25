@@ -1,5 +1,5 @@
-function [ static_grid_distortion ] = AOSLO_Static_Distortion_Repair( horizontal_fringes_indices_minima )
-% [ static_grid_distortion ] = AOSLO_Static_Distortion_Repair( horizontal_fringes_indices_minima )
+function [ static_grid_distortion ] = Static_Distortion_Repair( horizontal_fringes_indices_minima )
+% [ static_grid_distortion ] = Static_Distortion_Repair( horizontal_fringes_indices_minima )
 %   Robert F Cooper, 2017-07-13
 %
 % This function estimates the residual static distortion not currently
@@ -24,7 +24,7 @@ residuals = (fringe_reg-horizontal_fringes_indices_minima);
 p=fit(horizontal_fringes_indices_minima,residuals,'exp2');
 % figure; plot(p,horizontal_fringes_indices_minima,residuals);
 % Set for how far into the fringes you want to attempt to repair distortion
-dist_fix_rng = 100;
+dist_fix_rng = 1000;
 
 static_grid_distortion = zeros(dist_fix_rng,1);
 for i=1:dist_fix_rng

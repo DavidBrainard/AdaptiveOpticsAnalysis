@@ -1,4 +1,4 @@
-function [] = AOSLO_Eye_Motion_Distortion_Repair(motion_path, fName, static_grid_distortion)
+function [] = Eye_Motion_Distortion_Repair(motion_path, fName, static_grid_distortion)
     
     repeats = 1;
     outlier_cutoff = 20;
@@ -43,7 +43,25 @@ function [] = AOSLO_Eye_Motion_Distortion_Repair(motion_path, fName, static_grid
     crop_ROI = loadmotion(1,1:4)+1; % Add one so the index (designed for python) is correct in MATLAB.
     framemotion = loadmotion(2:end,:);
     
-    im = imread(fullfile(motion_path, fName));
+    if strcmp(fName(end-2:end), 'tif')
+        
+        imStk = cell(1);
+        imStk{1} = imread(fullfile(motion_path, fName));
+        
+    elseif strcmp(fName(end-2:end), 'avi')
+        
+        vidobj = VideoReader( fullfile(motion_path, fName) );
+        vid_length = round(vidobj.Duration*vidobj.FrameRate);
+        
+        imStk = cell(1, vid_length);
+        
+        i=1;
+        while hasFrame(vidobj)
+            imStk{i} = readFrame(vidobj);
+            i=i+1;
+        end
+        
+    end
 
 
     %Ref_Frame
@@ -122,20 +140,14 @@ function [] = AOSLO_Eye_Motion_Distortion_Repair(motion_path, fName, static_grid
     
      % Clip out the rows that aren't part of our reference frame
     % so that it matches the cropped output image!
-    all_xmotion = all_xmotion(crop_ROI(1):crop_ROI(2),:);
-    all_ymotion = all_ymotion(crop_ROI(1):crop_ROI(2),:); 
+    all_xmotion = all_xmotion( (crop_ROI(1)+1):crop_ROI(2),:);
+    all_ymotion = all_ymotion( (crop_ROI(1)+1):crop_ROI(2),:);
+
 
 
     %% View and adjust each row's translation so that we have something we can
     % move
-    % allxmotion=[];
-    % allymotion=[];
-    % allloc=[];
-    % allmag=[];
 
-    
-%     v=VideoWriter(fullfile(motion_path, [imfname '_motion_video.avi']));
-%     open(v);
     xmotion_norm=cell(size(all_xmotion,1),repeats);
     ymotion_norm=cell(size(all_xmotion,1),repeats);
     xmotion_vect=zeros(size(all_xmotion,1),repeats);
@@ -153,8 +165,6 @@ function [] = AOSLO_Eye_Motion_Distortion_Repair(motion_path, fName, static_grid
                      all_xmotion{i,r}>-outlier_cutoff & all_ymotion{i,r}>-outlier_cutoff);
             noouty = all_ymotion{i,r}(all_xmotion{i,r}<outlier_cutoff & all_ymotion{i,r}<outlier_cutoff & ...
                      all_xmotion{i,r}>-outlier_cutoff & all_ymotion{i,r}>-outlier_cutoff);
-
-        %     [idx] = clusterdata([nooutx', noouty'],'maxclust',3,'linkage','ward');
 
         % For displaying the row offsets
 %             figure(1);
@@ -183,57 +193,54 @@ function [] = AOSLO_Eye_Motion_Distortion_Repair(motion_path, fName, static_grid
                disp('NAN!');
             end
 
-    %         allymotion = [allymotion; all_ymotion{i}'];
-    %         allxmotion = [allxmotion; all_xmotion{i}'];
-    %         allmag = [allmag; motionmag_norm{i}'];
-    %         allloc = [allloc; i.*ones(length(all_xmotion{i}),1)];
-
         end
-%         close(v);
     end
 
     for i=1:size(xmotion_vect,1)
 
-        xgriddistortion(i,:) = repmat(median(xmotion_vect(i,:)), [1 size(im,2)] ); %The ref should be all 0s
-        if i<= length(static_grid_distortion)
-            ygriddistortion(i,:) = repmat(median(ymotion_vect(i,:))+static_grid_distortion(i), [1 size(im,2)] );
+        xgriddistortion(i,:) = repmat(median(xmotion_vect(i,:)), [1 size(imStk{1},2)] ); %The ref should be all 0s
+        if i >= crop_ROI(1) && i<= crop_ROI(2) % Only apply the grid correction within the roi we've cropped to.           
+            ygriddistortion(i,:) = repmat(median(ymotion_vect(i,:))+static_grid_distortion(i+crop_ROI(1)-1), [1 size(imStk{1},2)] );
         else
-            ygriddistortion(i,:) = repmat(median(ymotion_vect(i,:)), [1 size(im,2)] );
+            ygriddistortion(i,:) = repmat(median(ymotion_vect(i,:)), [1 size(imStk{1},2)] );
         end
-
-%         allestvar = sqrt(var(xmotion_vect(i,:)).^2 + var(ymotion_vect(i,:)).^2);
     end
+    
     disp_field = cat(3,xgriddistortion,ygriddistortion);
 
-    warpedim = imwarp(im,disp_field,'FillValues',0);
+    warpedStk = uint8(zeros(size(imStk{1},1),size(imStk{1},2),length(imStk)));
+    
+    for i=1:length(imStk)
+        warpedStk(:,:,i) = uint8(imwarp(imStk{i},disp_field,'FillValues',0) );
+    end
 
-%     figure; imagesc(warpedim); colormap gray; axis image; hold on;
-% 
-%     overlay = zeros(size(warpedim,1),size(warpedim,2),3);
-%     overcolor = colormap( parula( max(ceil(allestvar))*100 ) );
-%     for i=1:size(overlay,1)
-%         for j=1:size(overlay,2)
-%             overlay(i,j,:) = overcolor(ceil(allestvar(i)*100),:);
-%         end
-%     end
-%     h=imshow(overlay);
-%     set(h, 'AlphaData', ones(size(warpedim)).*.4); 
-
-%         figure(1); imshowpair(im,warpedim);
 
     if ~exist( fullfile(motion_path, 'Redewarped'), 'dir' )
         mkdir(fullfile(motion_path, 'Redewarped'))
     end
     
-    % Crop out any border regions from the top
-%     bwconncomp(warpedim<1);
-    imregions= bwconncomp(warpedim>0);
+    warpedIm = mean(warpedStk,3);
+    
+    
+    % Crop out any border regions
+    imregions= bwconncomp(warpedIm>0);
     cropbox = regionprops(imregions,'Area','BoundingBox');
     [maxarea, maxind] = max([cropbox.Area]); % Take the bigger of the two areas
     cropbox = cropbox(maxind).BoundingBox;
     
-    warpedim = warpedim( round(cropbox(2)):round(cropbox(4)), round(cropbox(1)):round(cropbox(3)) );
+    warpedStk = warpedStk( round(cropbox(2)):round(cropbox(4)), round(cropbox(1)):round(cropbox(3)), : );
+    
+    
     fName(1:end-4)
-    imwrite(warpedim, fullfile(motion_path,'Redewarped', [fName(1:end-4) '_redewarped.tif']));
+    
+    if length(imStk)== 1
+        imwrite(warpedStk, fullfile(motion_path,'Redewarped', [fName(1:end-4) '_redewarped.tif']));
+    else
+        vidobj = VideoWriter( fullfile(motion_path,'Redewarped', [fName(1:end-4) '_redewarped.avi']), 'Grayscale AVI' );
+
+        open(vidobj);
+        writeVideo(vidobj,warpedStk);
+        close(vidobj);
+    end
     
 end

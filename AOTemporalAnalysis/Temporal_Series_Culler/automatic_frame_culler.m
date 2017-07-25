@@ -68,17 +68,17 @@ if ~exist(fullfile(pathname, acceptable_frame_fname),'file')
     end
 end
 
-acceptable_frame_fname_out = [confocal_fname{f}(1:confind-1) confocal_fname_out '_crop_affine_acceptable_frames.csv'];
+acceptable_frame_fname_out = [confocal_fname{f}(1:confind-1) confocal_fname_out '_crop_affine'];
 
 
 if loadsplit
-    split_fname_out = [confocal_fname{f}(1:confind-1) confocal_fname_out '_crop.avi'];
+    split_fname_out = [confocal_fname{f}(1:confind-1) confocal_fname_out '_crop_affine'];
     split_fname_out = strrep(split_fname_out, 'confocal', 'split_det');
 end
 
 % Create our confocal output filename - affine will need to be done outside
 % MATLAB.
-confocal_fname_out = [confocal_fname{f}(1:confind-1) confocal_fname_out '_crop.avi'];
+confocal_fname_out = [confocal_fname{f}(1:confind-1) confocal_fname_out '_crop_affine'];
 
 confocal_vidobj = VideoReader( fullfile(pathname, confocal_fname{f}) );
 
@@ -275,11 +275,12 @@ end
 tic;
 disp('Forward')
 cumu_tform=affine2d();
-% Register the image stack forward.
+% Register the image stack forward. It is more stable if we simply align to
+% the first frame.
 parfor f=2:length(im_only_vid)
 
-    % Register using the cropped frame,
-    forward_reg_tform{f}=imregtform(im_only_vid{f}, im_only_vid{f-1},'affine',...
+    % Register using the cropped frame
+    forward_reg_tform{f}=imregtform(im_only_vid{f}, im_only_vid{1},'affine',...
                             optimizer, metric,'PyramidLevels',1, 'InitialTransformation', affine2d());%,'DisplayOptimization',true);
 
 end
@@ -291,8 +292,8 @@ reg_confocal_vid{1} = im_only_vid{1};
 cumu_tform=affine2d();
 for f=2:length(im_only_vid)    
     
-    cumu_tform.T = forward_reg_tform{f}.T*cumu_tform.T;
-%     cumu_tform.T = forward_reg_tform{f}.T;
+%     cumu_tform.T = forward_reg_tform{f}.T*cumu_tform.T;
+    cumu_tform.T = forward_reg_tform{f}.T;
     
     reg_confocal_vid{f}= imwarp(im_only_vid{f}, cumu_tform,'OutputView', imref2d(size(reg_confocal_vid{1})) ); 
     figure(2); imagesc(reg_confocal_vid{f}); axis image; colormap gray;
@@ -374,11 +375,13 @@ end
 outfolder = 'region_cropped';
 mkdir(pathname, outfolder);
 
-dlmwrite( fullfile(pathname, outfolder,acceptable_frame_fname_out),acc_frame_list);
-confocal_vidobj = VideoWriter( fullfile(pathname, outfolder, confocal_fname_out), 'Grayscale AVI' );
+frmcount = ['_n' num2str(size(confocal_vid_out,3))];
+
+dlmwrite( fullfile(pathname, outfolder,[acceptable_frame_fname_out frmcount '_acceptable_frames.csv']),acc_frame_list);
+confocal_vidobj = VideoWriter( fullfile(pathname, outfolder, [confocal_fname_out frmcount '.avi']), 'Grayscale AVI' );
 
 if loadsplit
-    split_vidobj = VideoWriter( fullfile(pathname, outfolder, split_fname_out), 'Grayscale AVI' );
+    split_vidobj = VideoWriter( fullfile(pathname, outfolder, [split_fname_out frmcount '.avi']), 'Grayscale AVI' );
 end
 
 
@@ -391,6 +394,9 @@ if loadsplit
     writeVideo(split_vidobj,split_vid_out);
     close(split_vidobj);
 end
+
+% Write the average image.
+imwrite(uint8(sum(confocal_vid_out,3)./sum_map), fullfile(pathname, outfolder, [confocal_fname_out frmcount '_AVG.tif']) );
 
 close all;
 end
