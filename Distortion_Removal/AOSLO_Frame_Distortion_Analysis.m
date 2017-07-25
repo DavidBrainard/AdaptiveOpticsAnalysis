@@ -15,6 +15,5 @@ motion_path = uigetdir(pwd);
 fNames = read_folder_contents(motion_path,'tif');
 
 parfor i=1:length(fNames)
-    i
     AOSLO_Eye_Motion_Distortion_Repair(motion_path, fNames{i}, static_grid_distortion);
 end

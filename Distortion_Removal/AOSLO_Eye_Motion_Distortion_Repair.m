@@ -111,7 +111,16 @@ function [] = AOSLO_Eye_Motion_Distortion_Repair(motion_path, fName, static_grid
 
     startingind = ref_smallest_slow_axis-smallest_slow_axis+1;
     
-    % Clip out the rows that aren't part of our reference frame
+    % Clamp the values in case Python overestimates the size
+    if crop_ROI(2)>size(all_xmotion,1) || crop_ROI(2)>size(all_ymotion,1)
+        crop_ROI(2) = min(size(all_xmotion,1), size(all_ymotion,1));
+    end
+    
+    if crop_ROI(1)<1
+        crop_ROI(1)=1;
+    end
+    
+     % Clip out the rows that aren't part of our reference frame
     % so that it matches the cropped output image!
     all_xmotion = all_xmotion(crop_ROI(1):crop_ROI(2),:);
     all_ymotion = all_ymotion(crop_ROI(1):crop_ROI(2),:); 
@@ -219,11 +228,12 @@ function [] = AOSLO_Eye_Motion_Distortion_Repair(motion_path, fName, static_grid
     % Crop out any border regions from the top
 %     bwconncomp(warpedim<1);
     imregions= bwconncomp(warpedim>0);
-    cropbox = regionprops(imregions,'BoundingBox');
-    cropbox = cropbox.BoundingBox;
+    cropbox = regionprops(imregions,'Area','BoundingBox');
+    [maxarea, maxind] = max([cropbox.Area]); % Take the bigger of the two areas
+    cropbox = cropbox(maxind).BoundingBox;
     
     warpedim = warpedim( round(cropbox(2)):round(cropbox(4)), round(cropbox(1)):round(cropbox(3)) );
-    
+    fName(1:end-4)
     imwrite(warpedim, fullfile(motion_path,'Redewarped', [fName(1:end-4) '_redewarped.tif']));
     
 end
