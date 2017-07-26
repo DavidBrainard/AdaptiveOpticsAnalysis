@@ -27,7 +27,7 @@ for i=1:size(fPaths,1)
         end
         
         try    
-            FF_Temporal_Reflectivity_Analysis_twosource(mov_path,ref_image_fname,[67 99],vid_type);
+            FF_Temporal_Reflectivity_Analysis(mov_path,ref_image_fname,[67 99],vid_type);
         catch ex
            disp([ref_image_fname ' failed to process:']);
            disp([ex.message ': line ' num2str(ex.stack(1).line)] );
