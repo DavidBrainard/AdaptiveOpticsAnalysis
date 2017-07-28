@@ -105,7 +105,7 @@ for j=1:length(controlDataNames)
                       meanabscoeff(3)/meanabscoeff(4) meanabscoeff(4)/meanabscoeff(5)];
         
         % Put together the feature lists
-        controlcoeffs = [controlcoeffs; stim_affinity std(pk_pk) max(derivduring)-min(derivduring) meanabscoeff(3:5) meanpowercoeff(3:5) stddevcoeff(3:5) coeffratio(2:4)];        
+        controlcoeffs = [controlcoeffs; stim_affinity std(pk_pk) max(derivduring)-min(derivduring) meanabscoeff(4:5) meanpowercoeff(4:5) stddevcoeff(4:5) coeffratio(2:4)];        
 %         controlcoeffs = [controlcoeffs; meanabscoeff(4:5) meanpowercoeff(4) stddevcoeff(3) coeffratio(3)];
         controllabels = [controllabels; {'control'}];
         
@@ -213,19 +213,20 @@ for j=1:length(stimDataNames)
         stimd = [stimd i];
 
         if( stim_affinity > .05)
-            stimdcoeffs = [stimdcoeffs; stim_affinity std(pk_pk) max(derivduring)-min(derivduring) meanabscoeff(3:5) meanpowercoeff(3:5) stddevcoeff(3:5) coeffratio(2:4)];
+            stimdcoeffs = [stimdcoeffs; stim_affinity std(pk_pk) max(derivduring)-min(derivduring) meanabscoeff(4:5) meanpowercoeff(4:5) stddevcoeff(4:5) coeffratio(2:4)];
 %             stimdcoeffs = [stimdcoeffs; meanabscoeff(4:5) meanpowercoeff(4) stddevcoeff(3) coeffratio(3)];
             stimdlabels = [stimdlabels; {'stimulus'}];
         end
 
-%         figure(3); title(['Stim cones']); hold on; 
-% % %         plot(D5); 
+%         figure(3); title(['Stim cones']); 
+%         plot(interpsignal);hold on;
+%         plot(filtinterpsignal); 
 % % %         hold on; 
 %         plot( diff([during after]) );
 % %         axis([0 length([during after]) -1 1]);
 % %         %plot(interpsignal); 
 % % %         axis([0 250 -10 10]);
-%         axis([0 250 -1 1]);
+% %         axis([0 250 -1 1]);
 %         hold off;
         
         
@@ -297,7 +298,7 @@ classificationPercentloss = 100*loss(minLossSVM,validationscore(:,1:10),validati
 
 [predictions, score] = minLossSVM.predict(validationscore(:,1:10));
 
-[x,y,t,auc,optrocpt]=perfcurve(predictions,max(score,[],2),'stimulus');
+[x,y,t,auc,optrocpt]=perfcurve(predictions,max(score,[],2),'control');
 optrocpt
 
 figure(10); plot(x,y); hold on; %title(['SVM AUC: ' num2str(auc)]); 
@@ -306,7 +307,7 @@ confusionmat(validationlabels,predictions)
 
 % Random forest
 randforest = TreeBagger(200, trainingcoeff, traininglabels, 'ClassNames',{'control','stimulus'},...
-                        'OOBPrediction','on','OOBPredictorImportance','on','SampleWithReplacement','off','InBagFraction',0.1);
+                        'OOBPrediction','on','OOBPredictorImportance','on'); %,'SampleWithReplacement','off','InBagFraction',0.1);
 
 figure(2); plot(oobError(randforest))
 

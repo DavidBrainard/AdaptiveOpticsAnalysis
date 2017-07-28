@@ -331,18 +331,12 @@ for f=1:length(im_only_vid)
         % the registration.
         tfo = tforms(:,:,f);
         t=1;
-        theend = false;
-        while abs(tfo(:)'*mean_tforms(:)) > max_frob_dist
+        while abs(tfo(:)'*mean_tforms(:)) > max_frob_dist && (f-t) > 0
             tfo = tforms(:,:,f-t);
             t=t+1;
-            
-            if (f-t) == 0
-               theend = true;
-               break;
-            end
         end
         
-        if theend % If we reached the end in that direction, check the other direction
+        if (f-t) == 0 && f ~= 1 % If we reached the end in that direction, check the other direction
             t=1;
             while abs(tfo(:)'*mean_tforms(:)) > frob_dist  && (f+t) < length(im_only_vid)
 %                 f
