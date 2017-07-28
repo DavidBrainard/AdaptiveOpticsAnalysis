@@ -17,12 +17,12 @@ coeff = [ones(size(xvals(fitstartind:end))) xvals(fitstartind:end)] \ horizontal
 fringe_reg = coeff(2).*xvals + coeff(1);
 
 % figure; plot(xvals,horizontal_fringes_indices_minima,'r',xvals,fringe_reg,'k'); 
-% axis([0 5 0 100]);
+
 
 residuals = (fringe_reg-horizontal_fringes_indices_minima);
 
 p=fit(horizontal_fringes_indices_minima,residuals,'exp2');
-% figure; plot(p,horizontal_fringes_indices_minima,residuals);
+
 % Set for how far into the fringes you want to attempt to repair distortion
 dist_fix_rng = 1000;
 
@@ -31,5 +31,6 @@ for i=1:dist_fix_rng
 	static_grid_distortion(i) = -p(i);
 end
 
+% figure; plot(1:dist_fix_rng, -static_grid_distortion,horizontal_fringes_indices_minima,residuals);
 end
 

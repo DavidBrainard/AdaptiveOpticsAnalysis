@@ -14,6 +14,13 @@ motion_path = uigetdir(pwd);
 
 fNames = read_folder_contents(motion_path,'avi');
 
-for i=1:length(fNames)
-    Eye_Motion_Distortion_Repair(motion_path, fNames{i}, static_grid_distortion);
+if exist('parfor','builtin') == 5 % If we can multithread it, do it!
+    parfor i=1:length(fNames)
+        Eye_Motion_Distortion_Repair(motion_path, fNames{i}, static_grid_distortion);
+    end
+
+else
+    for i=1:length(fNames)
+        Eye_Motion_Distortion_Repair(motion_path, fNames{i}, static_grid_distortion);
+    end
 end

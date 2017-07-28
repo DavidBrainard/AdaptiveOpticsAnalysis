@@ -140,8 +140,8 @@ function [] = Eye_Motion_Distortion_Repair(motion_path, fName, static_grid_disto
     
      % Clip out the rows that aren't part of our reference frame
     % so that it matches the cropped output image!
-    all_xmotion = all_xmotion( (crop_ROI(1)+1):crop_ROI(2),:);
-    all_ymotion = all_ymotion( (crop_ROI(1)+1):crop_ROI(2),:);
+    all_xmotion = all_xmotion( crop_ROI(1):crop_ROI(2),:);
+    all_ymotion = all_ymotion( crop_ROI(1):crop_ROI(2),:);
 
 
 
@@ -199,16 +199,16 @@ function [] = Eye_Motion_Distortion_Repair(motion_path, fName, static_grid_disto
     for i=1:size(xmotion_vect,1)
 
         xgriddistortion(i,:) = repmat(median(xmotion_vect(i,:)), [1 size(imStk{1},2)] ); %The ref should be all 0s
-        if i >= crop_ROI(1) && i<= crop_ROI(2) % Only apply the grid correction within the roi we've cropped to.           
+%         if i >= crop_ROI(1) && i<= crop_ROI(2) % Only apply the grid correction within the roi we've cropped to.           
             ygriddistortion(i,:) = repmat(median(ymotion_vect(i,:))+static_grid_distortion(i+crop_ROI(1)-1), [1 size(imStk{1},2)] );
-        else
-            ygriddistortion(i,:) = repmat(median(ymotion_vect(i,:)), [1 size(imStk{1},2)] );
-        end
+%         else
+%             ygriddistortion(i,:) = repmat(median(ymotion_vect(i,:)), [1 size(imStk{1},2)] );
+%         end
     end
     
     disp_field = cat(3,xgriddistortion,ygriddistortion);
 
-    warpedStk = uint8(zeros(size(imStk{1},1),size(imStk{1},2),length(imStk)));
+    warpedStk = uint8(zeros(size(disp_field,1),size(disp_field,2),length(imStk)));
     
     for i=1:length(imStk)
         warpedStk(:,:,i) = uint8(imwarp(imStk{i},disp_field,'FillValues',0) );
