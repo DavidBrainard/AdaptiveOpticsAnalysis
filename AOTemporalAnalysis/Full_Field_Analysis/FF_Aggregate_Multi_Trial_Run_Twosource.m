@@ -23,7 +23,7 @@ for i=1:length(dataPath)
 
     try 
         % Find the control match to the stim
-        [~, tail] = getparent(dataPath{i},2,'full');
+        [~, tail] = getparent(dataPath{i},1,'full');
         [parent, ~] = getparent(dataPath{i},3,'full');
         
         controlpath = fullfile(parent,'control',tail);
@@ -31,7 +31,7 @@ for i=1:length(dataPath)
         if any( cellfun(@(s)strcmp(controlpath,s),dataPath) ) && ...
            ~strcmp(controlpath,dataPath{i})
            
-            fitData = [fitData; Aggregate_Analyses_TwoSource(dataPath{i},controlpath)];
+            fitData = [fitData; FF_Aggregate_Analyses_TwoSource(dataPath{i},controlpath)];
         elseif ~strcmp(controlpath,dataPath{i})
             warning(['Unable to find paired control video for,' parent]);            
         else

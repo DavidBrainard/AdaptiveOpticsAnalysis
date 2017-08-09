@@ -6,7 +6,7 @@ function []=Temporal_Reflectivity_Analysis(mov_path, ref_image_fname)
 gui=false;
 
 profile_method = 'box';
-norm_type = 'no_norm'; %prestimminusdiv
+norm_type = 'regional_norm_prestimminusdiv'; %prestimminusdiv
 cutoff = 0.9; % The percentage of time a cone must be stimulated relative to all stimulus in order to be included for analysis
 
 % mov_path=pwd;
@@ -110,7 +110,7 @@ if ~isempty(stim_locs) % If there were stimulus frames, find them and set up the
 else % If there were no detected stimuli frames.
     
     stim_mask  = zeros( size(temporal_stack,1), size(temporal_stack,2) );
-    stim_locs = size(temporal_stack,3)+1;
+    stim_locs = 67; %size(temporal_stack,3)+1;
     vis_masks = [];
     control_mask = ~stim_mask;
     
@@ -382,23 +382,29 @@ end
 close(wbh);
 
 
-
 %% Normalize the intensities of each cone to the average value of the control cones
 c_cell_ref = cell2mat(control_cell_reflectance);
 
 % Get the indexes of the control cells.
 % control_coords_used = coords_used(~all(isnan(c_cell_ref),2), :);
+% contcellinds = find( ~all(isnan(c_cell_ref),2) );
+% coords_used = coords_used(contcellinds,:);
 
-contcellinds = find( ~all(isnan(c_cell_ref),2) );
+
 c_cell_ref = c_cell_ref( ~all(isnan(c_cell_ref),2), :);
 
 s_cell_ref = cell2mat(stim_cell_reflectance);
+
+% coords_used = coords_used(~all(isnan(s_cell_ref),2),:);
+
 
 % Get the indexes of the stimulated cells.
 % stim_coords_used = coords_used(~all(isnan(s_cell_ref),2),:);
 
 stimcellinds = find( ~all(isnan(s_cell_ref),2) );
 s_cell_ref = s_cell_ref( ~all(isnan(s_cell_ref),2), :);
+
+
 
 
 %% Find and remove any extrema reflectance

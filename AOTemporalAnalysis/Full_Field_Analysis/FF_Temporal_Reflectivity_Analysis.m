@@ -36,6 +36,14 @@ norm_type = 'global_norm_prestim_stdiz';
 if ~exist('mov_path','var') || ~exist('ref_image_fname','var')
     close all force;
     [ref_image_fname, mov_path]  = uigetfile(fullfile(pwd,'*.tif'));
+    stimulus_frames=[67 99];
+    
+    rply = input('Stimulus (s) or Control (c)? [s]','s');
+    if isempty(rply) || strcmpi(rply,'s')
+        vid_type='stimulus';
+    elseif strcmpi(rply,'c')
+        vid_type='control';
+    end
 end
 ref_coords_fname = [ref_image_fname(1:end-4) '_coords.csv'];
 stack_fnames = read_folder_contents( mov_path,'avi' );
@@ -56,7 +64,7 @@ stimd_images = sort(stimd_images)' +1; % For some dumb reason it doesn't store t
 
 ref_coords = dlmread( fullfile(mov_path, ref_coords_fname));
 
-% ref_coords = [ref_coords(:,1)-2 ref_coords(:,2)-3];
+% ref_coords = [ref_coords(:,1)-2 ref_coords(:,2)];
 ref_coords = [ref_coords(:,1) ref_coords(:,2)];
 
 temporal_stack_reader = VideoReader( fullfile(mov_path,temporal_stack_fname) );
@@ -247,7 +255,8 @@ close(wbh);
 cell_ref = cell2mat(cell_reflectance);
 
 cellinds = find( ~all(isnan(cell_ref),2) );
-cell_ref = cell_ref( ~all(isnan(cell_ref),2), :); % Remove any cells that have NaNs.
+coords_used = coords_used(cellinds,:);
+cell_ref = cell_ref( cellinds, :); % Remove any cells that have NaNs.
 
 %% Find the means / std devs
 for t=1:size(cell_ref,2)
@@ -349,7 +358,7 @@ if strcmp(vid_type,'stimulus')
 end
 hold off;
 ylabel('Standard deviation'); xlabel('Time (s)'); title( strrep( [ref_image_fname(1:end - length('_AVG.tif') ) '_' profile_method '_stddev_ref_plot' ], '_',' ' ) );
-axis([0 15 -1 3])
+axis([0 15 -1 4])
 
 if ~exist( fullfile(mov_path, 'Std_Dev_Plots'), 'dir' )
     mkdir(fullfile(mov_path, 'Std_Dev_Plots'))
@@ -361,7 +370,7 @@ if ~exist( fullfile(mov_path, 'Profile_Data'), 'dir' )
 end
 % Dump all the analyzed data to disk
 save(fullfile(mov_path, 'Profile_Data' ,[ref_image_fname(1:end - length('_AVG.tif') ) '_' profile_method '_' norm_type '_' vid_type '_profiledata.mat']), ...
-     'cell_times', 'norm_cell_reflectance','cellinds','ref_mean','ref_stddev','vid_type' );
+     'cell_times', 'norm_cell_reflectance','coords_used','ref_image','ref_mean','ref_stddev','vid_type' );
 
   
 %% Remove the empty cells

@@ -145,10 +145,10 @@ for i=1:length(pooled_variance_control)
     pooled_variance_control(i) = pooled_variance_control(i)/pooled_variance_control_count(i);
 end
 
-% For structure: /stuff/id/intensity/time/region_cropped/data
+% For structure: /stuff/id/intensity/time/data
 [remain kid] = getparent(stimRootDir);
 
-[remain region] = getparent(remain);
+% [remain region] = getparent(remain);
 [remain stim_time] = getparent(remain);
 [remain stim_intensity] = getparent(remain);
 [remain stimwave] = getparent(remain);

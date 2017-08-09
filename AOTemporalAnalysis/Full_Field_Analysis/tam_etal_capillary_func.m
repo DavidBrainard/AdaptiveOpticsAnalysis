@@ -112,7 +112,7 @@ figure(1); imagesc( sdImagestretched ); colormap gray; axis image; title('SD Ima
 
 % imwrite(uint8(sdImagestretched),parula(256),'NC_11049_20160209_OD_confocal_0003_ref_65_affine_crop_TAM_capillaries.tif');
 
-threshold = mean(sdImagestretched(:))  + std(sdImagestretched(:))/3;
+threshold = mean(sdImagestretched(:))  + std(sdImagestretched(:));
 figure(2); imagesc( sdImagestretched > threshold ); colormap gray; axis image; title('Vessel Mask');
 
 sdImageMasked = (sdImagestretched > threshold);
