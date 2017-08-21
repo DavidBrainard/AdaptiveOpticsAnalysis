@@ -16,7 +16,7 @@ thatstimmax=0;
 thatcontrolmax=0;
 %% Code for determining variance across all signals at given timepoint
 
-allmax=249;
+allmax=400;
 num_control_cones = 0;
 num_stim_cones =0;
 max_cones = 0;

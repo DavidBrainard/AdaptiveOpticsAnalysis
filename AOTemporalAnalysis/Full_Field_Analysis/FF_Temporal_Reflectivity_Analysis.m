@@ -317,7 +317,21 @@ if ~isempty( strfind(norm_type, 'prestim_stdiz'))
         
         norm_cell_reflectance{i} = norm_cell_reflectance{i}/( prestim_std(i) ); % /sqrt(length(norm_control_cell_reflectance{i})) );
     end
+elseif ~isempty( strfind(norm_type, 'poststim_stdiz'))
+    % Then normalize to the average intensity of each cone AFTER stimulus.
+    poststim_std=nan(1,length( norm_cell_reflectance ));
+    poststim_mean=nan(1,length( norm_cell_reflectance ));
     
+    for i=1:length( norm_cell_reflectance )
+
+        poststim_mean(i) = mean( norm_cell_reflectance{i}( cell_times{i}>stim_locs(2) & ~isnan( norm_cell_reflectance{i} ) ) );
+        
+        norm_cell_reflectance{i} = norm_cell_reflectance{i}-poststim_mean(i);
+        
+        poststim_std(i) = std( norm_cell_reflectance{i}( cell_times{i}>stim_locs(2) & ~isnan( norm_cell_reflectance{i} ) ) );
+        
+        norm_cell_reflectance{i} = norm_cell_reflectance{i}/( poststim_std(i) ); % /sqrt(length(norm_control_cell_reflectance{i})) );
+    end
 else
     % NOP - leave stub in case of change.
 end
