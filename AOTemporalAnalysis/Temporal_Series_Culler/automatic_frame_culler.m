@@ -17,7 +17,7 @@ if ~iscell(confocal_fname)
     confocal_fname={confocal_fname};
 end
 
-for k=2:length(confocal_fname)
+for k=1:length(confocal_fname)
 
     confind = strfind(confocal_fname{k},'confocal');
 
