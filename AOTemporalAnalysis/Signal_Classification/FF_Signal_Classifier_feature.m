@@ -15,7 +15,7 @@ allstimlabels = cell(length(stimDataNames),1);
 allstimcoeffs = cell(length(stimDataNames),1);
 
 for j=1:length(controlDataNames)
-
+    controlDataNames{j}
     load(fullfile(controlBaseDir, controlDataNames{j}));
     
     % Legacy support
@@ -26,6 +26,10 @@ for j=1:length(controlDataNames)
     %3
     [controlcoeffs, controllabels]=extract_features(cell_times, norm_cell_reflectance,[66 99],'control');
     
+    % Remove the nan'd data.
+    controllabels = controllabels(~isnan(controlcoeffs(:,1)));
+    controlcoeffs = controlcoeffs( ~isnan(controlcoeffs(:,1)) ,:);
+    
     clear norm_cell_reflectance;
     allcontrollabels{j} = [allcontrollabels{j}; controllabels];
     allcontrolcoeffs{j} = [allcontrolcoeffs{j}; controlcoeffs];
@@ -33,7 +37,7 @@ end
 
 
 for j=1:length(stimDataNames)
-    
+    stimDataNames{j}
     load(fullfile(stimBaseDir, stimDataNames{j}));
     
     % Legacy support
@@ -45,6 +49,10 @@ for j=1:length(stimDataNames)
     
      [stimdcoeffs, stimdlabels]=extract_features(cell_times, norm_cell_reflectance,[66 99],'stimulus');    
 
+    % Remove the nan'd data.
+    stimdlabels = stimdlabels( ~isnan(stimdcoeffs(:,1)) );
+    stimdcoeffs = stimdcoeffs( ~isnan(stimdcoeffs(:,1)) ,:);
+     
     clear norm_cell_reflectance;
     allstimlabels{j} = [allstimlabels{j}; stimdlabels];
     allstimcoeffs{j} = [allstimcoeffs{j}; stimdcoeffs];
@@ -56,23 +64,23 @@ end
 
 %% Train our models.
 % Pick a random set from each type to fit from
-numtrainingsets = 1;
-% controlSetInds = randperm( length(allcontrollabels), min( numtrainingsets, length(allcontrollabels)) )
-% stimSetInds = randperm( length(allstimlabels), min( numtrainingsets, length(allstimlabels)) )
+numtrainingsets = 4;
+controlSetInds = randperm( length(allcontrollabels), min( numtrainingsets, length(allcontrollabels)) )
+stimSetInds = randperm( length(allstimlabels), min( numtrainingsets, length(allstimlabels)) )
 
-controlSetInds=3;
-stimSetInds=3;
+% controlSetInds=[1 2 4];
+% stimSetInds=[1 2 4];
 
 trainingControlFiles=controlDataNames(controlSetInds)
 trainingStimFiles=stimDataNames(stimSetInds)
 
 
 
-for j=1:size(allstimcoeffs{1},2)
-
-    figure(j); hold off; histogram(allcontrolcoeffs{controlSetInds}(:,j),100); hold on; histogram(allstimcoeffs{stimSetInds}(:,j),100);
-
-end
+% for j=1:size(allstimcoeffs{1},2)
+% 
+%     figure(j); hold off; histogram(allcontrolcoeffs{controlSetInds}(:,j),100); hold on; histogram(allstimcoeffs{stimSetInds}(:,j),100);
+% 
+% end
 
 
 % Aggregate all of the other data
@@ -135,12 +143,11 @@ validationTable.Properties.VariableNames = varNames;
 SVMModel = fitcsvm(trainingcoeff,traininglabels,'KernelFunction','polynomial','PolynomialOrder',2,...
                                              'KernelScale','auto',...
                                              'Standardize',true,...
-                                             'BoxConstraint',1,...
-                                             'KFold',5,...
+                                             'BoxConstraint',1,...                                             
                                              'ClassNames', {'control'; 'stimulus'});
 
 % Perform cross-validation
-partmod = crossval(trainedClassifier.ClassificationSVM, 'KFold', 5);
+partmod = crossval(SVMModel, 'KFold', 5);
 
 % Compute validation accuracy
 validationAccuracy = 1 - kfoldLoss(partmod, 'LossFun', 'ClassifError');
@@ -157,21 +164,21 @@ figure(10); plot(x,y); hold on; %title(['SVM AUC: ' num2str(auc)]);
 
 confusionmat(validationlabels,predictions)
 
-svm_classifier = minLossSVM;
+svm_classifier = SVMModel;
 % svm_classifier = [];
 
-% Random forest
+%% Random forest
 randforest = TreeBagger(200, trainingcoeff, traininglabels, 'ClassNames',{'stimulus','control'},...
                         'OOBPrediction','on','OOBPredictorImportance','on'); %,'SampleWithReplacement','off','InBagFraction',0.1);
 
 figure(2); plot(oobError(randforest))
 
-100*(1-error(randforest,validationcoeff,validationlabels))
+100*(1-error(randforest,validationcoeff,validationlabels));
 
 [predictions, score] = randforest.predict(validationcoeff);
 
 [x,y,t,auc,optrocpt]=perfcurve(predictions,max(score,[],2),'stimulus');
-optrocpt
+optrocpt;
 % auc
 
 figure(10); plot(x,y); xlabel('False Positive rate'); ylabel('True Positive rate'); hold off; %title(['Random forest AUC: ' num2str(auc)]);
@@ -179,5 +186,5 @@ figure(10); plot(x,y); xlabel('False Positive rate'); ylabel('True Positive rate
 confusionmat(validationlabels,predictions)
 
 
-randforest_classifier = trainedClassifier;
+randforest_classifier = randforest;
 save(['trained_classifier_' date '.mat'],'randforest_classifier','svm_classifier','trainingControlFiles','trainingStimFiles');
