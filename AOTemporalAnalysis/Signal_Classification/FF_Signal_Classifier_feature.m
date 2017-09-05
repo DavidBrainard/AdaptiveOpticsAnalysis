@@ -23,8 +23,12 @@ for j=1:length(controlDataNames)
         norm_cell_reflectance = norm_control_cell_reflectance;
         cell_times = control_cell_times;
     end
-    %3
-    [controlcoeffs, controllabels]=extract_features(cell_times, norm_cell_reflectance,[66 99],'control');
+    norm_cell_reflectance = norm_cell_reflectance( ~cellfun(@isempty,norm_cell_reflectance)  );
+    cell_times    = cell_times( ~cellfun(@isempty,cell_times) );
+    
+    thissig = norm_cell_reflectance{1};
+    
+    [controlcoeffs, controllabels, varNames]=extract_features_v2(cell_times, norm_cell_reflectance,[66 132],'control');
     
     % Remove the nan'd data.
     controllabels = controllabels(~isnan(controlcoeffs(:,1)));
@@ -34,7 +38,6 @@ for j=1:length(controlDataNames)
     allcontrollabels{j} = [allcontrollabels{j}; controllabels];
     allcontrolcoeffs{j} = [allcontrolcoeffs{j}; controlcoeffs];
 end
-
 
 for j=1:length(stimDataNames)
     stimDataNames{j}
@@ -47,16 +50,26 @@ for j=1:length(stimDataNames)
         cell_times = stim_cell_times;
     end
     
-     [stimdcoeffs, stimdlabels]=extract_features(cell_times, norm_cell_reflectance,[66 99],'stimulus');    
+    norm_cell_reflectance = norm_cell_reflectance( ~cellfun(@isempty,norm_cell_reflectance)  );
+    cell_times    = cell_times( ~cellfun(@isempty,cell_times) );
+    
+    thissig = norm_cell_reflectance{10};
+    
+    [stimdcoeffs, stimdlabels, varNames]=extract_features_v2(cell_times, norm_cell_reflectance,[66 132],'stimulus');    
 
     % Remove the nan'd data.
     stimdlabels = stimdlabels( ~isnan(stimdcoeffs(:,1)) );
     stimdcoeffs = stimdcoeffs( ~isnan(stimdcoeffs(:,1)) ,:);
      
+    length(stimdcoeffs)
+    
     clear norm_cell_reflectance;
     allstimlabels{j} = [allstimlabels{j}; stimdlabels];
     allstimcoeffs{j} = [allstimcoeffs{j}; stimdcoeffs];
 end
+
+
+
 
 
 
@@ -125,19 +138,14 @@ else
     traininglabels = [conttraininglabels(1:size(stimtraininglabels,1),:); stimtraininglabels]; 
 end
 
-
-varNames = {'Affinity','AUC','Max_Deriv_Ampl', 'Pk_pk_std_dev', ...
-            'Mean_Abs_1D','Mean_Abs_2D','Mean_Abs_3D','Mean_Abs_4D','Mean_Abs_4A',...%'Mean_Abs_6D','Mean_Abs_7D','Mean_Abs_8D',...
-            'Mean_Power_1D','Mean_Power_2D','Mean_Power_3D','Mean_Power_4D','Mean_Power_4A',...%'Mean_Power_5D','Mean_Power_6D','Mean_Power_7D','Mean_Power_8D'...
-            'Std_Dev_1D','Std_Dev_2D','Std_Dev_3D','Std_Dev_4D','Std_Dev_4A',...%'Std_Dev_5D','Std_Dev_6D','Std_Dev_7D','Std_Dev_8D',...
-            'Coeff_Ratio_1D2D','Coeff_Ratio_2D3D','Coeff_Ratio_3D4D','Coeff_Ratio_4D4A','Training_Labels'};
-
 trainingTable = [array2table(trainingcoeff) cell2table(traininglabels)];
 trainingTable.Properties.VariableNames = varNames;
 validationTable = [array2table(validationcoeff), cell2table(validationlabels)];
 validationTable.Properties.VariableNames = varNames;
 % Train the classifers
 
+svm_classifier= trainedClassifier;
+save(['trained_classifier_' date '.mat'],'svm_classifier','trainingControlFiles','trainingStimFiles');
 %% SVM
 
 SVMModel = fitcsvm(trainingcoeff,traininglabels,'KernelFunction','polynomial','PolynomialOrder',2,...
@@ -188,3 +196,5 @@ confusionmat(validationlabels,predictions)
 
 randforest_classifier = randforest;
 save(['trained_classifier_' date '.mat'],'randforest_classifier','svm_classifier','trainingControlFiles','trainingStimFiles');
+
+%
