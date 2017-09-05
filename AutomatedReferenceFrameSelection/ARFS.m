@@ -13,12 +13,13 @@ STRIP_SIZE = 40;
 locInd=1; % Location index
 
 % For Debug
-mov_path = {pwd,...
-            pwd,...
-            pwd};
-stack_fname = {'NC_11049_20170629_confocal_OD_0000_0003_desinusoided.avi',...
-               'NC_11049_20170629_avg_OD_0000_desinusoided.avi',...
-               'NC_11049_20170629_split_det_OD_0000_desinusoided.avi'};
+mov_path = {pwd}; %,...
+            %pwd,...
+            %pwd};
+stack_fname = {'NC_11028_20160601_OD_confocal_0011_desinusoided.avi'};
+% {'NC_11049_20170629_confocal_OD_0000_0003_desinusoided.avi',...
+%                'NC_11049_20170629_avg_OD_0000_desinusoided.avi',...
+%                'NC_11049_20170629_split_det_OD_0000_desinusoided.avi'};
 
 for modalityInd=1 : 1%length(stack_fname) 
     vidReader = VideoReader( fullfile(mov_path{locInd,modalityInd}, stack_fname{locInd, modalityInd}) );
@@ -40,8 +41,12 @@ for modalityInd=1 : 1%length(stack_fname)
 
     strip_inds = 0:STRIP_SIZE:size(image_stack(:,:,1, 1),2);
     strip_inds(1) = 1;
-    if strip_inds(end) ~= size(image_stack(1:40,:,93,modalityInd),2)
-        strip_inds = [strip_inds size(image_stack(:,:,1,modalityInd),2)];
+    if strip_inds(end) ~= size(image_stack,2)
+        if (size(image_stack,2)-strip_inds(end)) > STRIP_SIZE/2
+            strip_inds = [strip_inds size(image_stack,2)];
+        else
+            strip_inds(end) = size(image_stack,2);
+        end
     end
     num_strips = length(strip_inds)-1;
     
@@ -104,8 +109,8 @@ for modalityInd=1 : 1%length(stack_fname)
         % Make a mask to remove any edge effects.
         [maskdistx, maskdisty] = meshgrid( 1:(size(frm1,2)*2)-1, 1:(size(frm1,1)*2)-1);
         
-        maskdistx = maskdistx-(size(maskdistx,2)/2);
-        maskdisty = maskdisty-(size(maskdistx,1)/2);
+        maskdistx = maskdistx-(size(maskdistx,2)/2)-STRIP_SIZE;
+        maskdisty = maskdisty-(size(maskdistx,1)/2)-STRIP_SIZE;
         
         xcorr_mask = sqrt(maskdistx.^2 + maskdisty.^2) <400;
         % Determine the number of pixels that will overlap between the two
@@ -155,43 +160,101 @@ for modalityInd=1 : 1%length(stack_fname)
         toc;
                 
         num_groups = max(frame_group);
-        ncc_offset(:,1) = ncc_offset(:,1)-size(contender_image_stack(:,:,1), 1);
-        ncc_offset(:,2) = ncc_offset(:,2)-size(contender_image_stack(:,:,1), 2);
-        
-        % Find the center-most frame in each group, and compare them to
+        ncc_offset(:,1) = ncc_offset(:,1)-size(contender_image_stack, 1);
+        ncc_offset(:,2) = ncc_offset(:,2)-size(contender_image_stack, 2);
+        %%
+        % Find the edge frames in each group, and compare them to
         % non-adjacent groups (because we already know non-adjacents don't
         % align)
         for i=1:num_groups
-            first_grp_inds = (frame_group == i);
-            first_grp_frms = contender_image_stack(:,:,first_grp_inds);
+            first_grp_inds = find(frame_group == i);
+            first_grp_inds = first_grp_inds(~isnan(ncc_offset(first_grp_inds,1)));
+             
+            first_grp_frms = double(contender_image_stack(:,:,first_grp_inds));
             first_grp_fft_frms = fft_ims(:,:,first_grp_inds);
             
-            first_group_offset = ncc_offset(first_grp_inds,:);            
-            first_group_offset(isnan(first_group_offset(:,1)),:) = [];
+            first_centered_offset = ncc_offset(first_grp_inds,:);                     
+            first_centered_offset = cumsum(first_centered_offset);
+            first_centered_offset = first_centered_offset- ( ones(size(first_centered_offset,1),1)*mean(first_centered_offset,1) );
             
-            first_group_offset = cumsum(first_group_offset);
+            [minoff, mininds] = min( first_centered_offset );
+            [maxoff, maxinds] = max( first_centered_offset );
             
-            [minoff, mininds] = min( first_group_offset );
-            [maxoff, maxinds] = max( first_group_offset );
-            
-            extremeinds = unique([mininds, maxinds]);
-            
-            for j=1:numgroups
-                if i~=j
-                    second_grp_inds = (frame_group == i);
-                    second_grp_frms = fft_ims(:,:,second_grp_inds);
+            first_extremeinds = unique([mininds, maxinds]);
+            first_centered_offset = first_centered_offset(first_extremeinds,:);
+            for j=1:num_groups
+                if j>i %This prevents us from double checking an offset we already know. 
+                    second_grp_inds = find(frame_group == j);
+                    second_grp_inds = second_grp_inds(~isnan(ncc_offset(second_grp_inds,1)));
+                    
+                    second_grp_frms = double(contender_image_stack(:,:,second_grp_inds));
                     second_grp_fft_frms = fft_ims(:,:,second_grp_inds);
                     
-                    [this_ncc, ncc_ind_offset, peakmaskedncc]  = auto_ref_ncc(frm1, fft_frm1, frm2, fft_frm2, numberOfOverlapPixels, xcorr_mask);
+                    second_centered_offset = ncc_offset(second_grp_inds,:);                                        
+                    second_centered_offset = cumsum(second_centered_offset);
+                    second_centered_offset = second_centered_offset- ( ones(size(second_centered_offset,1),1)*mean(second_centered_offset,1) );
+
+                    [minoff, mininds] = min( second_centered_offset );
+                    [maxoff, maxinds] = max( second_centered_offset );
+                    
+                    second_extremeinds = unique([mininds, maxinds]);
+                    second_centered_offset = second_centered_offset(second_extremeinds,:);
+                    
+                    ncc_ind_offset = zeros(length(first_extremeinds)*length(second_extremeinds),2);
+                    
+                    for f=1:length(first_extremeinds)                        
+                        for s=1:length(second_extremeinds)
+                            ind = ((f-1)*(length(first_extremeinds))+s);
+                            [this_ncc, ncc_ind_offset(ind ,:), peakmaskedncc]  = auto_ref_ncc(first_grp_frms(:,:,first_extremeinds(f)), first_grp_fft_frms(:,:,first_extremeinds(f)),... 
+                                                                                      second_grp_frms(:,:,second_extremeinds(s)), second_grp_fft_frms(:,:,second_extremeinds(s)),...
+                                                                                      numberOfOverlapPixels, xcorr_mask);
+                              ncc_ind_offset(ind,1) = ncc_ind_offset(ind,1)-size(contender_image_stack, 1);
+                              ncc_ind_offset(ind,2) = ncc_ind_offset(ind,2)-size(contender_image_stack, 2);
+                              
+                              
+%                               if any(~isnan(ncc_ind_offset(s,:)))
+%                               figure(1); imagesc(peakmaskedncc); axis image;
+%                               transim = imtranslate(second_grp_frms(:,:,second_extremeinds(s)),[ncc_ind_offset(s,2), ncc_ind_offset(s,1)],'FillValues',0);
+%                               figure(s+1); imshowpair(transim,first_grp_frms(:,:,first_extremeinds(f)));
+%                               end
+                            % Make all alignments relative to the first
+                            % group.
+                            ncc_ind_offset(ind,:) = second_centered_offset(s,:)-ncc_ind_offset(ind,:)-first_centered_offset(f,:);
+                        end
+                        ncc_ind_offset
+                        
+                    end
+                    
+                    pause;
+                    
+                    % Remove the NaNs (failures to align).
+                    ncc_ind_offset = ncc_ind_offset(~isnan(ncc_ind_offset(:,1)),:);
+
+                    % If the offset isn't empty after that check, then
+                    % find the translations closest together, average
+                    % them, and add this group's indices to the first group.
+                    if ~isempty(ncc_ind_offset)
+                        
+                        
+                    end
                     
                 end
             end
         end
+        %%
+%         for f=2:length(ncc_offset)
+%             if ~isnan(ncc_offset(f,1)) 
+%             transim = imtranslate(contender_image_stack(:,:,f),[ncc_offset(f,2), ncc_offset(f,1)],'FillValues',0);        
+%             figure(2);imshowpair(transim,contender_image_stack(:,:,f-1));
+%             title(num2str([ncc_offset(f,2), ncc_offset(f,1)]));
+%             end
+%             
+%         end
         
         
         %% Filter by neighbor NCC
         % When calculating the ncc threshold, only use sequential frames (further separated in time isn't fair).
-        sequential_frames = diff( frame_contenders ) == 1;
+        sequential_frames = [true; diff( frame_contenders ) == 1];
         ncc_threshold = median(ncc(sequential_frames & ~isnan(ncc) ));
         
         seq_ncc = ncc(sequential_frames);
@@ -199,14 +262,10 @@ for modalityInd=1 : 1%length(stack_fname)
         hist(seq_ncc,20); hold on; plot([ncc_threshold ncc_threshold],[0 10],'r'); hold off;
                 
          
-        
-%         absolute_offsets = cumsum(ncc_offset);
-        
         rem_voting = nan(size(frame_contenders));
         voting_capacity = zeros(size(frame_contenders));               
         % Move a sliding window along the ncc values and determine which
-        % frames consistently have poor NCC with their surrounding
-        % neighbors.
+        % frames have poor NCC with their neighbors.
         % Reminder: Each NCC value is a comparison between two frames
         for f=1:length(ncc)
             if (f-1 ~= 0) && (frame_contenders(f)-frame_contenders(f-1) == 1) % Between f-1 and f
@@ -277,12 +336,7 @@ for modalityInd=1 : 1%length(stack_fname)
 
         
         
-        for f=2:length(ncc_offset)            
-            transim = imtranslate(contender_image_stack(:,:,f),[ncc_offset(f-1,2), ncc_offset(f-1,1)],'FillValues',0);        
-            figure(2);imshowpair(transim,contender_image_stack(:,:,f-1));
-            title(num2str(this_ncc(f-1)));
-            pause;
-        end
+        
         
         
         
