@@ -8,9 +8,9 @@
 clear;
 close all;
 
-STRIP_SIZE = 40; % The size of the strip at which we'll analyze the distortion
-bad_strip_treshold = 0; % Having more bad strips than this will result in a frame's removal from consideration.
-numfrm_cutoff=20; % A group must have more than this number of frames otherwise it will be dropped from consideration
+STRIP_SIZE = 40;
+bad_strip_treshold = 1; % Having more bad strips than this will result in a frame's removal from consideration.
+numfrm_cutoff=10; % A group must have more than this number of f
 
 locInd=1; % Location index
 
@@ -87,9 +87,6 @@ for modalityInd=1 : 1%length(stack_fname)
                 % garbage- remove it for our purposes.
                 pwr_spect = log10(pwr_spect(:,[1:256 258:512]));
                 
-                pwr_spect(isnan(pwr_spect(:))) =0;
-                pwr_spect(isinf(pwr_spect(:))) =0;
-                
                 % Threshold is set using the upper 2 std devs
                 thresh_pwr_spect = ( pwr_spect>(mean(pwr_spect(:))+2*std(pwr_spect(:))) );
                 
@@ -98,16 +95,15 @@ for modalityInd=1 : 1%length(stack_fname)
                 % Determine the minimum and maximum FWHM
                 halfmax = repmat(max(radoned)./2,[727 1]);
                 fwhm = sum(radoned>halfmax);
-
+                
                 radon_bandwidth(f,s) = max(fwhm)-min(fwhm);
-
             end
         end        
         
-        threshold = ceil(mean(radon_bandwidth(:))+ 2*std(radon_bandwidth(:)));
+        threshold = mean(radon_bandwidth(:))+ 2*std(radon_bandwidth(:));
         % After thresholding and removal, update the contenders list. One
         % bad strip is not enough to kick out the frame.
-        frame_contenders = frame_contenders(~(sum(radon_bandwidth > threshold,2)>bad_strip_treshold) );        
+        frame_contenders = frame_contenders(~ (sum(radon_bandwidth > threshold,2)>bad_strip_treshold) );        
         
         disp(['Filtered by Radon FWHM... ' num2str(length(frame_contenders)) ' frames remain.']);
         
@@ -281,7 +277,7 @@ for modalityInd=1 : 1%length(stack_fname)
         seq_ncc = seq_ncc(~to_remove);
         seq_ncc_offset = seq_ncc_offset(~to_remove,:);     
         
-        groups = unique(frame_group);
+        groups = unique(frame_group)
         
         fprintf('Removed %d groups from contention because they contained less than %d frames.\n', ...
                  length(groups_b4)-length(groups), numfrm_cutoff)
@@ -289,6 +285,7 @@ for modalityInd=1 : 1%length(stack_fname)
         %% Filter by neighbor NCC
 
         % When calculating the ncc threshold for a given group, only use sequential frames (further separated in time isn't fair).
+
         sequential_frames = [true; diff( frame_contenders) == 1];
         ncc_threshold = median(seq_ncc(sequential_frames & ~isnan(seq_ncc) ));
 
@@ -373,31 +370,31 @@ for modalityInd=1 : 1%length(stack_fname)
         % reference frames.
         % Only take frames with a minimal amount of movement between frames,
         % if possible.
-        average_offset = mean(abs( seq_ncc_offset(~isnan(seq_ncc_offset(:,1)),:) ));
-        std_offset = std(abs(seq_ncc_offset(~isnan(seq_ncc_offset(:,1)),:) ));
-        keep_list = [];
-        for g=1:length(groups)
-            
-            groupind = find(groups(g) == frame_group);
-            
-            % If the absolute average offset is below the global threshold,
-            % then include the frames.
-            to_retain = sum( abs(seq_ncc_offset(groupind,:)) < repmat(average_offset, size(seq_ncc_offset(groupind,:),1),1), 2) == 2;
-            
-            % If by doing this we completely eradicate this group,
-            % reconsider the removal by relaxing the offset to 1 std over
-            % the mean.
-            if sum(to_retain) == 0
-                to_retain = sum( abs(seq_ncc_offset(groupind,:)) < repmat(average_offset+std_offset, size(seq_ncc_offset(groupind,:),1),1), 2) == 2;
-                
-                % If we still don't have anything, then remove the frames
-                % from consideration anyway as they're probably unreliable.                                
-            end
-            % Keep track of which indexes are worth keeping.
-            keep_list = [keep_list; groupind(to_retain)];
-        end
+%         average_offset = mean(abs( seq_ncc_offset(~isnan(seq_ncc_offset(:,1)),:) ));
+%         std_offset = std(abs(seq_ncc_offset(~isnan(seq_ncc_offset(:,1)),:) ));
+%         keep_list = [];
+%         for g=1:length(groups)
+%             
+%             groupind = find(groups(g) == frame_group);
+%             
+%             % If the absolute average offset is below the global threshold,
+%             % then include the frames.
+%             to_retain = sum( abs(seq_ncc_offset(groupind,:)) < repmat(average_offset, size(seq_ncc_offset(groupind,:),1),1), 2) == 2;
+%             
+%             % If by doing this we completely eradicate this group,
+%             % reconsider the removal by relaxing the offset to 1 std over
+%             % the mean.
+%             if sum(to_retain) == 0
+%                 to_retain = sum( abs(seq_ncc_offset(groupind,:)) < repmat(average_offset+std_offset, size(seq_ncc_offset(groupind,:),1),1), 2) == 2;
+%                 
+%                 % If we still don't have anything, then remove the frames
+%                 % from consideration anyway as they're probably unreliable.                                
+%             end
+%             % Keep track of which indexes are worth keeping.
+%             keep_list = [keep_list; groupind(to_retain)];
+%         end
         %%
-%         keep_list = true(size(frame_group));
+        keep_list = true(size(frame_group));
         
         frame_group = frame_group(keep_list);
         frame_contenders = frame_contenders(keep_list);
@@ -406,8 +403,6 @@ for modalityInd=1 : 1%length(stack_fname)
         seq_ncc = seq_ncc(keep_list);
         seq_ncc_offset = seq_ncc_offset(keep_list,:);   
 
-        groups = unique(frame_group)
-        
         for g=1:length(groups)
             groupind = find(groups(g) == frame_group);
             
@@ -415,7 +410,7 @@ for modalityInd=1 : 1%length(stack_fname)
             open(vidObj);
             
             for v=1:length(groupind)
-                writeVideo(vidObj, image_stack(:,:,frame_contenders(groupind(v))) );
+                writeVideo(vidObj, contender_image_stack(:,:,groupind(v)));
             end
             
             close(vidObj);

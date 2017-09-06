@@ -54,11 +54,11 @@ function [ ncc, ncc_offset, ncc_map ] = auto_ref_ncc( frm1, fft_frm1, frm2, fft_
 
     % Method from the Salmon paper
     peakmaskedncc = ncc_map;
-%     peakmaskedncc( (roff-10):(roff+10),(coff-10):(coff+10)) = 0; % Mask out the found peak
+    peakmaskedncc( (roff-10):(roff+10),(coff-10):(coff+10)) = 0; % Mask out the found peak
     peakmaskedncc( peakmaskedncc > (ncc*(1-1/2.71)) )  = 1;
     peakmaskedncc( peakmaskedncc < (ncc*(1-1/2.71)) )  = 0;
 
-    comps = bwconncomp(imdilate(peakmaskedncc,ones(11)));
+    comps = bwconncomp(peakmaskedncc);
     
     if comps.NumObjects > 1 % There's multiple peaks; so massage the data a little more until to remove noise.
                
