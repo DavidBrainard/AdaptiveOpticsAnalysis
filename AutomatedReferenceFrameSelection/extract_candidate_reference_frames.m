@@ -1,49 +1,24 @@
-% Rob Cooper 06-30-2017
-%
-% This script is an implementation of the algorithm outlined by Salmon et
-% al 2017: "An Automated Reference Frame Selection (ARFS) Algorithm for 
-% Cone Imaging with Adaptive Optics Scanning Light Ophthalmoscopy"
-%
+function [ reference_frames ] = extract_candidate_reference_frames( fName, pName, STRIP_SIZE, BAD_STRIP_THRESHOLD, NUM_FRM_PER_GROUP )
+%EXTRACT_CANDIDATE_REFERENCE_FRAMES Extracts a list of candidate reference
+% frames from a input video.
+%   [reference_frames] = EXTRACT_CANDIDATE_REFERENCE_FRAMES( fName, pName, STRIP_SIZE, BAD_STRIP_THRESHOLD, NUM_FRM_PER_GROUP )
 
-clear;
-close all;
 
-STRIP_SIZE = 40; % The size of the strip at which we'll analyze the distortion
-bad_strip_treshold = 0; % Having more bad strips than this will result in a frame's removal from consideration.
-numfrm_cutoff=20; % A group must have more than this number of frames otherwise it will be dropped from consideration
-
-locInd=1; % Location index
-
-% For Debug
-% mov_path = {pwd}; %,...
-            %pwd,...
-            %pwd};
-% stack_fname = {'NC_11028_20160601_OD_confocal_0011_desinusoided.avi'};
-% {'NC_11049_20170629_confocal_OD_0000_0003_desinusoided.avi',...
-%                'NC_11049_20170629_avg_OD_0000_desinusoided.avi',...
-%                'NC_11049_20170629_split_det_OD_0000_desinusoided.avi'};
-
-[stack_fname, mov_path] = uigetfile(fullfile(pwd,'*.avi'));
-
-stack_fname = {stack_fname};
-mov_path = {mov_path};
-
-for modalityInd=1 : 1%length(stack_fname) 
-    vidReader = VideoReader( fullfile(mov_path{locInd,modalityInd}, stack_fname{locInd, modalityInd}) );
+    vidReader = VideoReader( fullfile(pName, fName) );
     
     i=1;
     while(hasFrame(vidReader))
-        image_stack(:,:,i,modalityInd) = uint8(readFrame(vidReader));        
-        frame_mean(i,modalityInd) = mean2(image_stack(:,:,i,modalityInd));
+        image_stack(:,:,i) = uint8(readFrame(vidReader));        
+        frame_mean(i) = mean2(image_stack(:,:,i));
         i = i+1;
     end
     numFrames = i-1;
     
     % Get some basic heuristics from each modality.
-    mode_mean(modalityInd) = mean(frame_mean(:,modalityInd));
-    mode_dev(modalityInd) = std(frame_mean(:,modalityInd));
+    mode_mean = mean(frame_mean(:));
+    mode_dev = std(frame_mean(:));
 
-    frame_contenders(:,modalityInd) = (1:numFrames);
+    frame_contenders = (1:numFrames);
     
 
     strip_inds = 0:STRIP_SIZE:size(image_stack(:,:,1, 1),2);
@@ -60,11 +35,11 @@ for modalityInd=1 : 1%length(stack_fname)
     %% Filter by image mean
     mean_contenders = false(1,numFrames);
     for f=1:numFrames        
-        mean_contenders(f) =  (frame_mean(f,modalityInd) < mode_mean(modalityInd)+2*mode_dev(modalityInd));% &&...
+        mean_contenders(f) =  (frame_mean(f) < mode_mean+2*mode_dev);% &&...
                               %(frame_mean(f,modalityInd) > mode_mean(modalityInd)-2*mode_dev(modalityInd));
     end
     
-    frame_contenders = frame_contenders(mean_contenders,modalityInd);
+    frame_contenders = frame_contenders(mean_contenders);
     
     numFrames = length(frame_contenders);
     
@@ -77,7 +52,7 @@ for modalityInd=1 : 1%length(stack_fname)
         %% Filter by Radon transform FWHM
         parfor f=1:numFrames
             
-            frame_ind=frame_contenders(f,modalityInd);
+            frame_ind=frame_contenders(f);
             
             for s=1:num_strips
     
@@ -107,13 +82,13 @@ for modalityInd=1 : 1%length(stack_fname)
         threshold = ceil(mean(radon_bandwidth(:))+ 2*std(radon_bandwidth(:)));
         % After thresholding and removal, update the contenders list. One
         % bad strip is not enough to kick out the frame.
-        frame_contenders = frame_contenders(~(sum(radon_bandwidth > threshold,2)>bad_strip_treshold) );        
+        frame_contenders = frame_contenders(~(sum(radon_bandwidth > threshold,2)>BAD_STRIP_THRESHOLD) );        
         
         disp(['Filtered by Radon FWHM... ' num2str(length(frame_contenders)) ' frames remain.']);
         
         %% Determine NCC between pairs of frames.
         
-        contender_image_stack = image_stack(:,:, frame_contenders(:, modalityInd), modalityInd);
+        contender_image_stack = image_stack(:,:, frame_contenders);
         
         frm1 = double( contender_image_stack(:,:,1) );
         [m, n] = size(frm1);
@@ -150,7 +125,7 @@ for modalityInd=1 : 1%length(stack_fname)
         % This is NOT sped up by multithreading.
         % Flipping the 2nd frame to the first halves the number of dfts we
         % calculate.
-        tic;
+        
         for f=2:length(frame_contenders)
             
             frm2 = double(contender_image_stack(:,:,f));
@@ -173,7 +148,9 @@ for modalityInd=1 : 1%length(stack_fname)
             fft_frm1 = fft_frm2;
             frm1 = frm2;            
         end
-        toc;
+        
+        disp(['Determined pairwise NCC. Grouping frames...']);
+        
         clear frm1 frm2 padfrm1 padfrm2 fft_frm1 fft_frm2;
                 
         num_groups = max(frame_group);
@@ -258,17 +235,13 @@ for modalityInd=1 : 1%length(stack_fname)
                 end
             end            
         end
-        
-%         for l=1:size(contender_image_stack,3)
-%             figure(1); imagesc(contender_image_stack(:,:,l)); axis image; colormap gray;
-%             pause;
-%         end
+
         
         groups = unique(frame_group);
         groups_b4 = groups;
         to_remove = false(length(frame_group),1);
         for g=1:length(groups)
-            to_remove(groups(g) == frame_group) = (sum(groups(g) == frame_group)<numfrm_cutoff);
+            to_remove(groups(g) == frame_group) = (sum(groups(g) == frame_group)<NUM_FRM_PER_GROUP);
         end
         
         
@@ -284,12 +257,12 @@ for modalityInd=1 : 1%length(stack_fname)
         groups = unique(frame_group);
         
         fprintf('Removed %d groups from contention because they contained less than %d frames.\n', ...
-                 length(groups_b4)-length(groups), numfrm_cutoff)
+                 length(groups_b4)-length(groups), NUM_FRM_PER_GROUP)
         
         %% Filter by neighbor NCC
 
         % When calculating the ncc threshold for a given group, only use sequential frames (further separated in time isn't fair).
-        sequential_frames = [true; diff( frame_contenders) == 1];
+        sequential_frames = [true, diff(frame_contenders) == 1]';
         ncc_threshold = median(seq_ncc(sequential_frames & ~isnan(seq_ncc) ));
 
 %         histogram(seq_ncc,20); hold on; plot([ncc_threshold ncc_threshold],[0 10],'r'); hold off;
@@ -397,7 +370,6 @@ for modalityInd=1 : 1%length(stack_fname)
             keep_list = [keep_list; groupind(to_retain)];
         end
         %%
-%         keep_list = true(size(frame_group));
         
         frame_group = frame_group(keep_list);
         frame_contenders = frame_contenders(keep_list);
@@ -408,6 +380,24 @@ for modalityInd=1 : 1%length(stack_fname)
 
         groups = unique(frame_group)
         
+        [seq_ncc, sortinds] =sort(seq_ncc,1,'descend');
+        
+        % Sort the images based on their sequential NCC
+        frame_group = frame_group(sortinds);
+        frame_contenders = frame_contenders(sortinds);
+        contender_image_stack= contender_image_stack(:,:,sortinds);
+        fft_ims= fft_ims(:,:,sortinds);
+        
+        seq_ncc_offset = seq_ncc_offset(sortinds,:);
+        
+        ref_size =0;
+        for g=1:length(groups)
+            groupind = find(groups(g) == frame_group);
+            ref_size = max([length(groupind) ref_size]);
+        end
+        
+        reference_frames = zeros(ref_size, length(groups));
+        
         for g=1:length(groups)
             groupind = find(groups(g) == frame_group);
             
@@ -416,28 +406,15 @@ for modalityInd=1 : 1%length(stack_fname)
             
             for v=1:length(groupind)
                 writeVideo(vidObj, image_stack(:,:,frame_contenders(groupind(v))) );
+                reference_frames(v,g) = frame_contenders(groupind(v));
             end
             
             close(vidObj);
         end
-
-
-%         for f=1:length(frame_contenders)-1
-%             frame_ind=frame_contenders(f,modalityInd);
-%             frm1 = double(image_stack(:,:,frame_ind,modalityInd));
-%             frm2 = double(image_stack(:,:,frame_ind+1,modalityInd));
-%             xcored(f) = std2( ( ((frm2-mean2(frm2))./std2(frm2)) - ((frm1-mean2(frm1))./std2(frm1))) );
-%         end
-%         hist(xcored,20);
         
     else
         % NOP for now.
     end
-    toc;
+
 end
 
-
-    
-
-
-                
