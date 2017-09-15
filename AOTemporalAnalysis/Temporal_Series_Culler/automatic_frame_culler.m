@@ -45,7 +45,14 @@ for k=1:length(confocal_fname)
             confocal_fname_out = comb_str;
         elseif i==8
             acceptable_frame_fname = comb_str;
-            break;
+            if exist([confocal_fname{k}(1:confind-1) acceptable_frame_fname '_acceptable_frames.csv'],'file')
+                break;
+            end
+        elseif i==9
+            acceptable_frame_fname = comb_str;
+            if exist([confocal_fname{k}(1:confind-1) acceptable_frame_fname '_acceptable_frames.csv'],'file')
+                break;
+            end
         end
 
         comb_str = [comb_str '_' tok];
