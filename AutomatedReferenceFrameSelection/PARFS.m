@@ -27,7 +27,7 @@ locInd=1; % Location index
 for m=1 : length(stack_fname) 
     tic;
     
-    refs{m} = extract_candidate_reference_frames(stack_fname{m}, mov_path, STRIP_SIZE, BAD_STRIP_THRESHOLD, MIN_NUM_FRAMES_PER_GROUP)
+    refs{m} = extract_candidate_reference_frames(stack_fname{m}, mov_path, STRIP_SIZE, BAD_STRIP_THRESHOLD, MIN_NUM_FRAMES_PER_GROUP);
     
     toc;
 end
