@@ -2,17 +2,9 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="682567ea-b1fd-4708-9b76-35f668da804f" name="Default" comment="">
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/.idea/vcs.xml" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/../../AOSLO_Frame_Distortion_Repair.m" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/../../AOSLO_Video_Distortion_Repair.m" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/../../Distortion_Exporter.py" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/../../Eye_Motion_Distortion_Repair.m" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/../../Static_Distortion_Repair.m" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/../../read_folder_contents.m" afterPath="" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../../../AOTemporalAnalysis/Half-field_Analysis/Aggregate_Analyses_TwoSource.m" afterPath="$PROJECT_DIR$/../../../AOTemporalAnalysis/Half-field_Analysis/Aggregate_Analyses_TwoSource.m" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../../../AOTemporalAnalysis/Half-field_Analysis/Aggregate_Multiple_Temporal_Analyses.m" afterPath="$PROJECT_DIR$/../../../AOTemporalAnalysis/Half-field_Analysis/Aggregate_Multiple_Temporal_Analyses.m" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../../../AOTemporalAnalysis/Half-field_Analysis/Temporal_Reflectivity_Analysis.m" afterPath="$PROJECT_DIR$/../../../AOTemporalAnalysis/Half-field_Analysis/Temporal_Reflectivity_Analysis.m" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../../../AutomatedReferenceFrameSelection/PARFS.m" afterPath="$PROJECT_DIR$/../../../AutomatedReferenceFrameSelection/PARFS.m" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="TRACKING_ENABLED" value="true" />
@@ -26,8 +18,8 @@
       <file leaf-file-name="Scanner_Distortion_Removal.py" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/Scanner_Distortion_Removal.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="299">
-              <caret line="97" column="25" lean-forward="true" selection-start-line="97" selection-start-column="25" selection-end-line="97" selection-end-column="25" />
+            <state relative-caret-position="163">
+              <caret line="149" column="38" lean-forward="true" selection-start-line="149" selection-start-column="38" selection-end-line="149" selection-end-column="38" />
               <folding>
                 <element signature="e#578#656#0" expanded="true" />
               </folding>
@@ -70,7 +62,7 @@
       </list>
     </option>
   </component>
-  <component name="ProjectFrameBounds" extendedState="7">
+  <component name="ProjectFrameBounds" extendedState="6">
     <option name="x" value="324" />
     <option name="y" value="148" />
     <option name="width" value="1400" />
@@ -156,13 +148,13 @@
     <servers />
   </component>
   <component name="ToolWindowManager">
-    <frame x="324" y="148" width="1920" height="1145" extended-state="7" />
+    <frame x="324" y="148" width="1920" height="1145" extended-state="6" />
     <editor active="true" />
     <layout>
       <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.15884861" sideWeight="0.5" order="0" side_tool="false" content_ui="combo" />
       <window_info id="TODO" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="6" side_tool="false" content_ui="tabs" />
       <window_info id="Event Log" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.39941406" sideWeight="0.50208336" order="7" side_tool="true" content_ui="tabs" />
-      <window_info id="Run" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.32867134" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
+      <window_info id="Run" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.32867134" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
       <window_info id="Version Control" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
       <window_info id="Python Console" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.32910156" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
       <window_info id="Structure" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.25" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
@@ -355,8 +347,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/Scanner_Distortion_Removal.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="299">
-          <caret line="97" column="25" lean-forward="true" selection-start-line="97" selection-start-column="25" selection-end-line="97" selection-end-column="25" />
+        <state relative-caret-position="163">
+          <caret line="149" column="38" lean-forward="true" selection-start-line="149" selection-start-column="38" selection-end-line="149" selection-end-column="38" />
           <folding>
             <element signature="e#578#656#0" expanded="true" />
           </folding>

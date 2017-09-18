@@ -1,3 +1,4 @@
+function [written_file, written_path]=Automatic_Frame_Culler_Pipl(confocal_fname, pathname)
 % Robert F Cooper 16-19-2017
 %
 % This script enables a user to remove poor frames from a temporal confocal
@@ -6,12 +7,12 @@
 % file. With the inclusion of the shutter, there is no need to track
 % visible frames.
 
-clear
-close all force
-clc
 
-%% Filename determination and handling
-[confocal_fname, pathname] = uigetfile('*.avi', 'Select the confocal temporal video', 'MultiSelect','on');
+if ~exist('confocal_fname','var')
+    %% Filename determination and handling
+    [confocal_fname, pathname] = uigetfile('*.avi', 'Select the confocal temporal video', 'MultiSelect','on');
+
+end
 
 if ~iscell(confocal_fname)
     confocal_fname={confocal_fname};
@@ -45,12 +46,12 @@ for k=1:length(confocal_fname)
             confocal_fname_out = comb_str;
         elseif i==8
             acceptable_frame_fname = comb_str;
-            if exist([confocal_fname{k}(1:confind-1) acceptable_frame_fname '_acceptable_frames.csv'],'file')
+            if exist([confocal_fname{k}(1:confind-1) acceptable_frame_fname '_repaired_acceptable_frames.csv'],'file')
                 break;
             end
         elseif i==9
             acceptable_frame_fname = comb_str;
-            if exist([confocal_fname{k}(1:confind-1) acceptable_frame_fname '_acceptable_frames.csv'],'file')
+            if exist([confocal_fname{k}(1:confind-1) acceptable_frame_fname '_repaired_acceptable_frames.csv'],'file')
                 break;
             end
         end
@@ -60,19 +61,19 @@ for k=1:length(confocal_fname)
         i=i+1;
     end
     % Create our expected acceptable frame filenames
-    acceptable_frame_fname = [confocal_fname{k}(1:confind-1) acceptable_frame_fname '_acceptable_frames.csv'];
+    acceptable_frame_fname = [confocal_fname{k}(1:confind-1) acceptable_frame_fname '_repaired_acceptable_frames.csv'];
 
     if ~exist(fullfile(pathname, acceptable_frame_fname),'file')
-        reply = input('Unable to find acceptable frames csv! Search for it? Y/N [Y]:','s');
-        if isempty(reply)
-           reply = 'Y';
-        end
-
-        if strcmpi(reply,'Y')
-            [acceptable_frame_fname, af_pathname] = uigetfile(fullfile(pathname, '*.csv'), 'Select the acceptable frames csv.');
-        else
+%         reply = input('Unable to find acceptable frames csv! Search for it? Y/N [Y]:','s');
+%         if isempty(reply)
+%            reply = 'Y';
+%         end
+% 
+%         if strcmpi(reply,'Y')
+%             [acceptable_frame_fname, af_pathname] = uigetfile(fullfile(pathname, '*.csv'), 'Select the acceptable frames csv.');
+%         else
             error('Unable to find acceptable frames csv!');
-        end
+%         end
     end
 
     acceptable_frame_fname_out = [confocal_fname{k}(1:confind-1) confocal_fname_out '_crop_affine'];
@@ -471,35 +472,42 @@ for k=1:length(confocal_fname)
 
     end
 
-    outfolder = 'region_cropped';
-    mkdir(pathname, outfolder);
-
     frmcount = ['_n' num2str(size(confocal_vid_out,3))];
 
-    dlmwrite( fullfile(pathname, outfolder,[acceptable_frame_fname_out frmcount '_acceptable_frames.csv']),acc_frame_list);
-    confocal_vidobj = VideoWriter( fullfile(pathname, outfolder, [confocal_fname_out frmcount '.avi']), 'Grayscale AVI' );
+    dlmwrite( fullfile(pathname, [acceptable_frame_fname_out frmcount '_acceptable_frames.csv']),acc_frame_list);
+    delete(fullfile(pathname,acceptable_frame_fname));
+    
+    confocal_vidobj = VideoWriter( fullfile(pathname, [confocal_fname_out frmcount '.avi']), 'Grayscale AVI' );
 
-%     if loadsplit
-%         split_vidobj = VideoWriter( fullfile(pathname, outfolder, [split_fname_out frmcount '.avi']), 'Grayscale AVI' );
-%     end
+    if loadsplit
+        split_vidobj = VideoWriter( fullfile(pathname, [split_fname_out frmcount '.avi']), 'Grayscale AVI' );
+    end
 
 
     open(confocal_vidobj);
     writeVideo(confocal_vidobj,confocal_vid_out);
     close(confocal_vidobj);
 
-%     if loadsplit
-%         open(split_vidobj);
-%         writeVideo(split_vidobj,split_vid_out);
-%         close(split_vidobj);
-%     end
+    if loadsplit
+        open(split_vidobj);
+        writeVideo(split_vidobj,split_vid_out);
+        close(split_vidobj);
+    end
 
     % Write the average images.
-    imwrite(uint8(sum(confocal_vid_out,3)./sum_map), fullfile(pathname, outfolder, [confocal_fname_out frmcount '_AVG.tif']) );
+    imwrite(uint8(sum(confocal_vid_out,3)./sum_map), fullfile(pathname, [confocal_fname_out frmcount '_AVG.tif']) );
 
-    if loadsplit
-        imwrite(uint8(sum(split_vid_out,3)./sum_map), fullfile(pathname, outfolder, [split_fname_out frmcount '_AVG.tif']) );
+    written_file = [confocal_fname_out frmcount '_AVG.tif'];
+    written_path = pathname;
+    
+    if loadsplit        
+        imwrite(uint8(sum(split_vid_out,3)./sum_map), fullfile(pathname, [split_fname_out frmcount '_AVG.tif']) );
+        %Delete data from the last step of the pipeline.
+        delete(fullfile(pathname,split_fname));
     end
+    %Delete data from the last step of the pipeline.
+    delete(fullfile(pathname,confocal_fname{k}));
+    
     
     close all;
 end
