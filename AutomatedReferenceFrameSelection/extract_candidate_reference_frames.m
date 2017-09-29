@@ -1,14 +1,15 @@
-function [ reference_frames ] = extract_candidate_reference_frames( fName, pName, STRIP_SIZE, BAD_STRIP_THRESHOLD, NUM_FRM_PER_GROUP )
+function [ reference_frames ] = extract_candidate_reference_frames( fPathName, desinusoid_matrix, STRIP_SIZE, BAD_STRIP_THRESHOLD, NUM_FRM_PER_GROUP )
 %EXTRACT_CANDIDATE_REFERENCE_FRAMES Extracts a list of candidate reference
 % frames from a input video.
-%   [reference_frames] = EXTRACT_CANDIDATE_REFERENCE_FRAMES( fName, pName, STRIP_SIZE, BAD_STRIP_THRESHOLD, NUM_FRM_PER_GROUP )
+%   [reference_frames] = EXTRACT_CANDIDATE_REFERENCE_FRAMES( fName, pName,desinusoid_matrix, STRIP_SIZE, BAD_STRIP_THRESHOLD, NUM_FRM_PER_GROUP )
 
 
-    vidReader = VideoReader( fullfile(pName, fName) );
+    vidReader = VideoReader( fPathName );
     
     i=1;
     while(hasFrame(vidReader))
-        image_stack(:,:,i) = uint8(readFrame(vidReader));        
+        image_stack(:,:,i) = uint8(double(readFrame(vidReader))* desinusoid_matrix);
+        
         frame_mean(i) = mean2(image_stack(:,:,i));
         i = i+1;
     end
@@ -21,13 +22,13 @@ function [ reference_frames ] = extract_candidate_reference_frames( fName, pName
     frame_contenders = (1:numFrames);
     
 
-    strip_inds = 0:STRIP_SIZE:size(image_stack(:,:,1, 1),2);
+    strip_inds = 0:STRIP_SIZE:size(image_stack(:,:,1),1);
     strip_inds(1) = 1;
-    if strip_inds(end) ~= size(image_stack,2)
-        if (size(image_stack,2)-strip_inds(end)) > STRIP_SIZE/2
-            strip_inds = [strip_inds size(image_stack,2)];
+    if strip_inds(end) ~= size(image_stack,1)
+        if (size(image_stack,1)-strip_inds(end)) > STRIP_SIZE/2
+            strip_inds = [strip_inds size(image_stack,1)];
         else
-            strip_inds(end) = size(image_stack,2);
+            strip_inds(end) = size(image_stack,1);
         end
     end
     num_strips = length(strip_inds)-1;
@@ -378,7 +379,7 @@ function [ reference_frames ] = extract_candidate_reference_frames( fName, pName
         seq_ncc = seq_ncc(keep_list);
         seq_ncc_offset = seq_ncc_offset(keep_list,:);   
 
-        groups = unique(frame_group)
+        groups = unique(frame_group);
         
         [seq_ncc, sortinds] =sort(seq_ncc,1,'descend');
         
@@ -396,20 +397,20 @@ function [ reference_frames ] = extract_candidate_reference_frames( fName, pName
             ref_size = max([length(groupind) ref_size]);
         end
         
-        reference_frames = zeros(ref_size, length(groups));
+        reference_frames = -ones(ref_size, length(groups));
         
         for g=1:length(groups)
             groupind = find(groups(g) == frame_group);
             
-            vidObj = VideoWriter(['Group_' num2str(g) '.avi']);
-            open(vidObj);
+%             vidObj = VideoWriter(['Group_' num2str(g) '.avi']);
+%             open(vidObj);
             
             for v=1:length(groupind)
-                writeVideo(vidObj, image_stack(:,:,frame_contenders(groupind(v))) );
+%                 writeVideo(vidObj, image_stack(:,:,frame_contenders(groupind(v))) );
                 reference_frames(v,g) = frame_contenders(groupind(v));
             end
             
-            close(vidObj);
+%             close(vidObj);
         end
         
     else

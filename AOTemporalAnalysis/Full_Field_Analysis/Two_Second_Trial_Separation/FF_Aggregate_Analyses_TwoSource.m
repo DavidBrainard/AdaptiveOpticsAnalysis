@@ -1,6 +1,6 @@
-function [fitCharacteristics]=Aggregate_Analyses_TwoSource(stimRootDir, controlRootDir)
+function [fitCharacteristics]=FF_Aggregate_Analyses_TwoSource(stimRootDir, controlRootDir)
 % Robert F Cooper
-% 12-31-2015
+% 06-20-2017
 % This script calculates pooled variance across a set of given signals.
 
 if ~exist('stimRootDir','var')
@@ -16,7 +16,7 @@ thatstimmax=0;
 thatcontrolmax=0;
 %% Code for determining variance across all signals at given timepoint
 
-allmax=249;
+allmax=400;
 num_control_cones = 0;
 num_stim_cones =0;
 max_cones = 0;
@@ -30,8 +30,8 @@ for j=1:length(profileCDataNames)
     load(fullfile(controlRootDir,profileCDataNames{j}));
     
     % Remove empty cells
-    norm_control_cell_reflectance = norm_control_cell_reflectance( ~cellfun(@isempty,norm_control_cell_reflectance)  );
-    control_cell_times            = control_cell_times( ~cellfun(@isempty,control_cell_times) );
+    norm_control_cell_reflectance = norm_cell_reflectance( ~cellfun(@isempty,norm_cell_reflectance)  );
+    control_cell_times            = cell_times( ~cellfun(@isempty,cell_times) );
 
     
     num_control_cones = num_control_cones+length(control_cell_times);
@@ -69,8 +69,8 @@ for j=1:length(profileSDataNames)
     load(fullfile(stimRootDir,profileSDataNames{j}));
     
     % Remove the empty cells
-    norm_stim_cell_reflectance = norm_stim_cell_reflectance( ~cellfun(@isempty,norm_stim_cell_reflectance) );
-    stim_cell_times            = stim_cell_times(  ~cellfun(@isempty,stim_cell_times) );
+    norm_stim_cell_reflectance = norm_cell_reflectance( ~cellfun(@isempty,norm_cell_reflectance) );
+    stim_cell_times            = cell_times(  ~cellfun(@isempty,cell_times) );
 
     num_stim_cones = num_stim_cones+length(stim_cell_times);
     
@@ -103,12 +103,12 @@ for j=1:length(profileSDataNames)
 end
 hold off;axis([0 16 0 4])
 
-% if (length(stim_cell_times) + length(control_cell_times)) < min_cones
-%     min_cones = (length(stim_cell_times) + length(control_cell_times));
-% end
-% if (length(stim_cell_times) + length(control_cell_times)) > max_cones
-%     max_cones = (length(stim_cell_times) + length(control_cell_times));
-% end
+if (length(stim_cell_times) + length(control_cell_times)) < min_cones
+    min_cones = (length(stim_cell_times) + length(control_cell_times));
+end
+if (length(stim_cell_times) + length(control_cell_times)) > max_cones
+    max_cones = (length(stim_cell_times) + length(control_cell_times));
+end
 
 pooled_variance_stim = zeros(allmax,1);
 pooled_variance_stim_count = zeros(allmax,1);
@@ -145,10 +145,10 @@ for i=1:length(pooled_variance_control)
     pooled_variance_control(i) = pooled_variance_control(i)/pooled_variance_control_count(i);
 end
 
-% For structure: /stuff/id/intensity/time/region_cropped/data
+% For structure: /stuff/id/intensity/time/data
 [remain kid] = getparent(stimRootDir);
 
-[remain region] = getparent(remain);
+% [remain region] = getparent(remain);
 [remain stim_time] = getparent(remain);
 [remain stim_intensity] = getparent(remain);
 [remain stimwave] = getparent(remain);
@@ -209,8 +209,7 @@ saveas(gcf, fullfile(pwd, [outFname '_wfit.svg']), 'svg' );
 
 fitCharacteristics.min_cones = min_cones;
 fitCharacteristics.max_cones = max_cones;
-fitCharacteristics.avg_num_control_cones = num_control_cones/length(profileCDataNames);
-fitCharacteristics.avg_num_stimulus_cones = num_stim_cones/length(profileSDataNames);
+fitCharacteristics.avg_num_cones = num_control_cones/length(profileSDataNames);
 fitCharacteristics.num_pooled = length(profileSDataNames);
 fitCharacteristics.subject = id;
 fitCharacteristics.stim_intensity = stim_intensity;

@@ -39,7 +39,7 @@ tforms = cell(length(trial_im),length(trial_im));
 % reg_ims = cell(length(trial_im),length(trial_im));
 % Find the transform from each image to every other
 % for i=1:length(trial_im)
-ref_im = 1;
+ref_im = 2;
 i=ref_im;
     for j=1:length(trial_im)
         if i~=j
@@ -66,7 +66,7 @@ imwrite(reg_ims(:,:,ref_im), fullfile(pathname, stk_name) );
 for j=1:length(trial_im)
     if j ~= ref_im
         reg_ims(:,:,j) = imwarp(trial_im{j}, imref2d(size(trial_im{j})), tforms{ref_im,j}, 'OutputView', imref2d(size(trial_im{ref_im})) );
-        imwrite(reg_ims(:,:,j),stk_name,'WriteMode','append');
+        imwrite(reg_ims(:,:,j),fullfile(pathname, stk_name),'WriteMode','append');
 %         figure(1); imshowpair(trial_im{ref_im}, reg_ims(:,:,j)); pause(.5)
         
     end
@@ -110,7 +110,7 @@ for i=1:length(confocal_fname)
     end
     close(confocal_vidout);
     
-    delete(mov_name_in);
+    %delete(mov_name_in);
     
 end
 

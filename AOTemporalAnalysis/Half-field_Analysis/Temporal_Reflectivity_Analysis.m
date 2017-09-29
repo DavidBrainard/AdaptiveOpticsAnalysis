@@ -6,7 +6,7 @@ function []=Temporal_Reflectivity_Analysis(mov_path, ref_image_fname)
 gui=false;
 
 profile_method = 'box';
-norm_type = 'regional_norm_prestimminusdiv'; %prestimminusdiv
+norm_type = 'regional_norm_prestimminusdiv';%'regional_norm_prestimminusdiv';
 cutoff = 0.9; % The percentage of time a cone must be stimulated relative to all stimulus in order to be included for analysis
 
 % mov_path=pwd;
@@ -458,13 +458,6 @@ if ~isempty( strfind( norm_type, 'scaled_control_norm') )
     s_ref_mean = s_ref_mean./mean(mean_ratio);
 end
 
-figure(9); plot(c_ref_mean,'b'); hold on; plot(s_ref_mean,'r'); plot(a_ref_mean,'g'); hold off; title('Stimulus mean vs control mean');
-legend('Control mean','Stimulus mean','Global mean')
-if ~exist( fullfile(mov_path, 'Frame_Mean_Plots'), 'dir' )
-    mkdir(fullfile(mov_path, 'Frame_Mean_Plots'))
-end
-saveas(gcf, fullfile(mov_path, 'Frame_Mean_Plots' , [ref_image_fname(1:end - length('_AVG.tif') ) '_' profile_method '_cutoff_' norm_type '_' num2str(cutoff*100) '_mean_plot.svg' ] ) );
-
 figure(90); plot(c_ref_std,'b'); hold on; plot(s_ref_std,'r'); hold off; title('Stimulus std dev vs control std dev');
 legend('Control std dev','Stimulus std dev')
 if ~exist( fullfile(mov_path, 'Frame_Stddev_Plots'), 'dir' )
@@ -578,7 +571,7 @@ if ~isempty( strfind(norm_type, 'prestimminusdiv'))
 %     std(prestim_std_control(~isnan(prestim_std_control)))
     
     
-    mean(prestim_std_stim(~isnan(prestim_std_stim)))-mean(prestim_std_control(~isnan(prestim_std_control)))
+%     mean(prestim_std_stim(~isnan(prestim_std_stim)))-mean(prestim_std_control(~isnan(prestim_std_control)))
     
 %     hold off; plot(prestim_std_control,'b'); hold on; plot(prestim_std_stim,'r'); hold off;
 elseif ~isempty( strfind(norm_type, 'prestimminus'))
@@ -772,6 +765,18 @@ hz=16.6;
 % prestim_mean = mean(ref_stddev_stim(times<=3.96))
 
 
+figure(9); plot(ref_times/hz,100*((s_ref_mean-s_ref_mean(1))./s_ref_mean(1)),'r'); axis([0 15 -100 100]);
+%plot(c_ref_mean,'b'); hold on; 
+%plot(a_ref_mean,'g'); hold off; 
+%title('Stimulus mean vs control mean');
+%legend('Control mean','Stimulus mean','Global mean')
+if ~exist( fullfile(mov_path, 'Frame_Mean_Plots'), 'dir' )
+    mkdir(fullfile(mov_path, 'Frame_Mean_Plots'))
+end
+saveas(gcf, fullfile(mov_path, 'Frame_Mean_Plots' , [ref_image_fname(1:end - length('_AVG.tif') ) '_' profile_method '_cutoff_' norm_type '_' num2str(cutoff*100) '_mean_plot.svg' ] ) );
+
+
+
 figure(10); hold off;
 if ~isempty(ref_stddev_stim)
     plot( ref_times/hz,ref_stddev_stim,'r'); hold on;
@@ -804,10 +809,10 @@ if ~isempty(stim_times)
     prestim_ref = ref_stddev_stim(ref_times<stim_locs(1) & ~isnan( ref_stddev_stim ));
     prestim_ratio = mean_ratio( ref_times<stim_locs(1) & ~isnan(ref_stddev_stim) )-1;
     save(fullfile(mov_path, 'Mat_Profile_Data' ,[ref_image_fname(1:end - length('_AVG.tif') ) '_' profile_method '_cutoff_' norm_type '_' num2str(cutoff*100) '_profiledata.mat']), 'stim_cell_times', 'norm_stim_cell_reflectance', ...
-      'control_cell_times', 'norm_control_cell_reflectance','stimcellinds','contcellinds','mean_ratio','prestim_ref','prestim_ratio','c_ref_mean','s_ref_mean' );
+      'control_cell_times', 'norm_control_cell_reflectance','stimcellinds','mean_ratio','prestim_ref','prestim_ratio','c_ref_mean','s_ref_mean' );
 else
     save(fullfile(mov_path, 'Mat_Profile_Data' ,[ref_image_fname(1:end - length('_AVG.tif') ) '_' profile_method '_cutoff_' norm_type '_' num2str(cutoff*100) '_profiledata.mat']), 'stim_cell_times', 'norm_stim_cell_reflectance', ...
-      'control_cell_times', 'norm_control_cell_reflectance','stimcellinds','contcellinds','mean_ratio','c_ref_mean','s_ref_mean' );
+      'control_cell_times', 'norm_control_cell_reflectance','stimcellinds','mean_ratio','c_ref_mean','s_ref_mean' );
 end
 
 
@@ -821,12 +826,12 @@ control_cell_times            = control_cell_times( ~cellfun(@isempty,control_ce
 % stim_coords_used           = stim_coords_used( ~cellfun(@isempty,stim_cell_times),:);
 % control_coords_used        = control_coords_used(~cellfun(@isempty,control_cell_times),:);
 
-
+length(norm_control_cell_reflectance)
 figure(11);
 if ~isempty(ref_stddev_control)
     for i=1:length(norm_control_cell_reflectance) % Plot raw
     %     i
-        plot(control_cell_times{i}, norm_control_cell_reflectance{i}-norm_control_cell_reflectance{i}(1),'b' ); hold on;
+        plot(control_cell_times{i}/hz, norm_control_cell_reflectance{i}-norm_control_cell_reflectance{i}(1),'b' ); hold on;
     %     axis([0 250 -15 15]);
     %     plot([0 length(cell_times{i})], [1+2*pstddev 1+2*pstddev],'r');
     %     plot([0 length(cell_times{i})], [1-2*pstddev 1-2*pstddev],'r');
@@ -841,7 +846,8 @@ end
 norm_stim_cell_reflectance = norm_stim_cell_reflectance( ~cellfun(@isempty,norm_stim_cell_reflectance) );
 stim_cell_times            = stim_cell_times(  ~cellfun(@isempty,stim_cell_times) );
 
-figure(11);
+length(norm_stim_cell_reflectance)
+figure(11); hold on;
 if ~isempty(ref_stddev_stim)
     for i=1:length(norm_stim_cell_reflectance) % Plot raw
     %     i
@@ -849,13 +855,17 @@ if ~isempty(ref_stddev_stim)
     %     axis([0 250 -15 15]);
 
     %     temporal_stack( stim_coords_used(45-4:45-4,1), stim_coords_used(45-4:45-4,2),:)
-        plot(stim_cell_times{i}, norm_stim_cell_reflectance{i}-norm_stim_cell_reflectance{i}(1),'r' ); hold on;
-%         plot(control_cell_times{i}, control_cell_reflectance{i},'b' ); hold on;
+    
+        plot(stim_cell_times{i}/hz, norm_stim_cell_reflectance{i}-norm_stim_cell_reflectance{i}(1),'r' ); 
+%         plot(stim_cell_times{i}/hz, norm_stim_cell_reflectance{i},'r' ); 
+
     %     plot([0 length(cell_times{i})], [1+2*pstddev 1+2*pstddev],'r');
     %     plot([0 length(cell_times{i})], [1-2*pstddev 1-2*pstddev],'r');
     %     plot(stim_locs, 2*ones(size(stim_ locs)),'r*'); hold off;
-    %     pause;
+    
+%         pause;
     end
+%     axis([0 16 -15 25])
 end
 % hold off;
 
@@ -863,7 +873,7 @@ end
 if ~exist( fullfile(mov_path, 'Raw_Plots'), 'dir' )
     mkdir(fullfile(mov_path, 'Raw_Plots'))
 end
-saveas(gcf, fullfile(mov_path,  'Raw_Plots' ,[ref_image_fname(1:end - length('_AVG.tif') ) '_' profile_method  '_cutoff_' norm_type '_' num2str(cutoff*100) '_raw_plot.png' ] ) );
+saveas(gcf, fullfile(mov_path,  'Raw_Plots' ,[ref_image_fname(1:end - length('_AVG.tif') ) '_' profile_method  '_cutoff_' norm_type '_' num2str(cutoff*100) '_raw_plot.svg' ] ) );
 
 
 % plot([0 length(cell_times{i})], [1+2*pstddev 1+2*pstddev],'r');

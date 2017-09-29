@@ -18,8 +18,11 @@ allmax=0;
 num_cones = 0;
 max_cones = 0;
 min_cones = 10000000000000;
+num_control_cones=0;
+num_stim_cones=0;
 mean_control_reflectance = zeros(500,1);
-
+avg_means = zeros(250,1);
+avg_means_counts = zeros(250,1);
 for j=1:length(profileDataNames)
     clear mean_ratio;
     profileDataNames{j}
@@ -39,6 +42,9 @@ for j=1:length(profileDataNames)
     end
     
     num_cones = num_cones+length(stim_cell_times) + length(control_cell_times);
+    
+    num_control_cones = num_control_cones+length(control_cell_times);
+    num_stim_cones = num_stim_cones+length(stim_cell_times);
     
     if (length(stim_cell_times) + length(control_cell_times)) < min_cones
         min_cones = (length(stim_cell_times) + length(control_cell_times));
@@ -118,11 +124,27 @@ for j=1:length(profileDataNames)
             end
         end
     end
-      
-
+    
+    percent_mean_change = 100*((s_ref_mean-s_ref_mean(1))./s_ref_mean(1));
+    
+    avg_means_counts(ref_stim_times{j}) = avg_means_counts(ref_stim_times{j})+1;
+    avg_means(ref_stim_times{j}) = avg_means(ref_stim_times{j})+percent_mean_change';
+    
+    figure(19); hold on; plot(ref_stim_times{j}/16.66666, percent_mean_change,'r'); hold off; 
 end
 figure(8); hold off;
 figure(9); hold off;
+
+figure(19);hold on;
+times = (0:249)/16.66666;
+% times(avg_means_counts==0) = [];
+plot(times, avg_means./avg_means_counts)
+axis([0 15 -100 100]);
+% if ~exist( fullfile(mov_path, 'Frame_Mean_Plots'), 'dir' )
+%     mkdir(fullfile(mov_path, 'Frame_Mean_Plots'))
+% end
+% saveas(gcf, fullfile(pwd,'mean_avg_plot') );
+
 
 pooled_variance_stim = zeros(allmax,1);
 pooled_variance_stim_count = zeros(allmax,1);
@@ -268,7 +290,9 @@ end
 
 fitCharacteristics.min_cones = min_cones;
 fitCharacteristics.max_cones = max_cones;
-fitCharacteristics.avg_num_cones = num_cones/length(profileDataNames);
+% fitCharacteristics.avg_num_cones = num_cones/length(profileDataNames);
+fitCharacteristics.avg_num_control_cones = num_control_cones/length(profileDataNames);
+fitCharacteristics.avg_num_stimulus_cones = num_stim_cones/length(profileDataNames);
 fitCharacteristics.num_pooled = length(profileDataNames);
 fitCharacteristics.subject = id;
 fitCharacteristics.stim_intensity = stim_intensity;
