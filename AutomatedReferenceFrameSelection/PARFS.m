@@ -8,7 +8,7 @@
 % Frame Selection"
 
 clear;
-close all;
+close all force;
 
 
 NUM_REF_OUTPUT = 3;
@@ -88,7 +88,7 @@ desinusoid_matrix = vertical_fringes_desinusoid_matrix';
 % mov_path = mov_path;
 h=waitbar(0,'Finding reference frames...');
 
-bestrefs=zeros(size(stack_fname,1), 11);
+bestrefs=[];
 
 delete(fullfile(mov_path{1},'Reference_Frames.csv'));
 
@@ -100,24 +100,29 @@ for f=1 : size(stack_fname,1)
     
     try
         for m=1 : size(stack_fname,2) 
-            tic;
-
-            refs{f,m} = extract_candidate_reference_frames(stack_fname{f,m}, desinusoid_matrix, STRIP_SIZE, BAD_STRIP_THRESHOLD, MIN_NUM_FRAMES_PER_GROUP);
-
-            toc;
+            
+            if ~isempty(stack_fname{f,m})
+                tic;
+                refs{f,m} = extract_candidate_reference_frames(stack_fname{f,m}, desinusoid_matrix, STRIP_SIZE, BAD_STRIP_THRESHOLD, MIN_NUM_FRAMES_PER_GROUP);
+                toc;
+            end
+            
         end
-    catch
-        warn(['Failed to find a reference frame in:' stack_fname{f,m}])
+    catch ex        
+        warning(['Failed to find a reference frame in:' stack_fname{f,m}])
+        warning(ex.message)
+        warning(['From file: ' ex.stack(1).name ' Line: ' num2str(ex.stack(1).line)]);
     end
     
     % Look for correspondence between all of the modalities.
     
     %% NEED TO ADD GROUP SUPPORT!
-    intersected = refs{f,1};
-    for m=2 : size(stack_fname,2)  
-        intersected = union(intersected, refs{f,m});    
+    intersected = [];
+
+    for m=1 : size(stack_fname,2)  
+        intersected = union(intersected, refs{f,m});
     end
-    
+
     intersected(intersected==-1) = [];
 
     average_rank = nan(length(intersected),1);
@@ -134,14 +139,68 @@ for f=1 : size(stack_fname,1)
         average_rank(r) = sum(whichind);
     end
 
-    [rankings, rankinds ] = sort(average_rank,2,'ascend');
+    [rankings, rankinds ] = sort(average_rank,1,'ascend');
 
     intersected = intersected(rankinds);
-
-    vidnum = stack_fname{f,1}(end-7:end-4);
-    bestrefs(f,:) = [str2double(vidnum) intersected(1:10)'];
     
-    dlmwrite(fullfile(mov_path{1},'Reference_Frames.csv'), bestrefs(f,:), 'delimiter',',','-append');
+    % Go through each intersected value and determine which group its in;
+    % make separate rows in bestrefs for disparate groups.
+    grps = -ones(length(intersected),size(stack_fname,2));
+    for i=1:length(intersected)
+        for m=1 : size(stack_fname,2)
+            [~, grp] = ind2sub( size(refs{f,m}), find(intersected(i)==refs{f,m}) );
+            if ~isempty(grp)
+                grps(i,m) = grp;
+            end
+        end
+    end
+
+    newrefs = cell(1,100);    
+    for m=1:size(grps,2)
+        max_grp = max(grps(:,m));
+        for g=1:max_grp
+            
+            ingrp = intersected( grps(:,m)==g );
+            for n=1:length(newrefs)                
+                if isempty(newrefs{n})
+                    newrefs{n} = ingrp;
+                    break;
+                elseif ~isempty( intersect(newrefs{n}, ingrp ) )                    
+                    newrefs{n} = [newrefs{n}; setdiff(ingrp,cell2mat(newrefs'))]; % If it already has been called into any other group, then don't include it in this one.
+                    break;
+                end
+            end
+             
+        end
+    end
+
+    newrefs = newrefs(~cellfun(@isempty,newrefs));
+    
+    % Re-rank them based on their location in the intersected list.
+    for g=1:length(newrefs)
+        theserefs = newrefs{g};
+        rankedrefs = -ones(size(theserefs));
+        for i=1:length(theserefs)
+            rankedrefs(i) = find(intersected==theserefs(i));
+        end
+        [rankings, rankinds ] = sort(rankedrefs);
+        newrefs{g} = theserefs(rankinds);
+      
+        vidnum = stack_fname{f,1}(end-7:end-4);
+                
+        
+        if length(newrefs{g})>=10
+            bestrefs = [bestrefs; [str2double(vidnum) newrefs{g}(1:10)']];
+            dlmwrite(fullfile(mov_path{1},'Reference_Frames.csv'), [str2double(vidnum) newrefs{g}(1:10)'], 'delimiter',',','-append');
+
+        else        
+            bestrefs = [bestrefs; [str2double(vidnum) padarray(newrefs{g},[10-length(newrefs{g}) 0], -1,'post')']];
+            dlmwrite(fullfile(mov_path{1},'Reference_Frames.csv'), [str2double(vidnum) padarray(newrefs{g},[10-length(newrefs{g}) 0], -1,'post')'], 'delimiter',',','-append');
+        end
+    end
+
+    
+    
 end
 close(h);
 

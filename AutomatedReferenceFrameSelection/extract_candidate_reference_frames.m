@@ -50,7 +50,7 @@ function [ reference_frames ] = extract_candidate_reference_frames( fPathName, d
     
     
     if exist('parfor','builtin') == 5 % If we can multithread it, do it!
-        %% Filter by Radon transform FWHM
+        %% Filter by Radon transform FWHM        
         parfor f=1:numFrames
             
             frame_ind=frame_contenders(f);
@@ -72,7 +72,7 @@ function [ reference_frames ] = extract_candidate_reference_frames( fPathName, d
                 radoned = radon( thresh_pwr_spect );                
 
                 % Determine the minimum and maximum FWHM
-                halfmax = repmat(max(radoned)./2,[727 1]);
+                halfmax = repmat(max(radoned)./2,[size(radoned,1) 1]);
                 fwhm = sum(radoned>halfmax);
 
                 radon_bandwidth(f,s) = max(fwhm)-min(fwhm);
@@ -86,10 +86,12 @@ function [ reference_frames ] = extract_candidate_reference_frames( fPathName, d
         frame_contenders = frame_contenders(~(sum(radon_bandwidth > threshold,2)>BAD_STRIP_THRESHOLD) );        
         
         disp(['Filtered by Radon FWHM... ' num2str(length(frame_contenders)) ' frames remain.']);
+        clear radon_bandwidth;
         
         %% Determine NCC between pairs of frames.
         
         contender_image_stack = image_stack(:,:, frame_contenders);
+        clear image_stack;
         
         frm1 = double( contender_image_stack(:,:,1) );
         [m, n] = size(frm1);
@@ -251,7 +253,8 @@ function [ reference_frames ] = extract_candidate_reference_frames( fPathName, d
         frame_group = frame_group(~to_remove);
         frame_contenders = frame_contenders(~to_remove);
         contender_image_stack= contender_image_stack(:,:,~to_remove);
-        fft_ims= fft_ims(:,:,~to_remove);
+%         fft_ims= fft_ims(:,:,~to_remove);
+        clear fft_ims;
         seq_ncc = seq_ncc(~to_remove);
         seq_ncc_offset = seq_ncc_offset(~to_remove,:);     
         
@@ -338,7 +341,7 @@ function [ reference_frames ] = extract_candidate_reference_frames( fPathName, d
         frame_group = frame_group(to_retain);
         frame_contenders = frame_contenders(to_retain);
         contender_image_stack= contender_image_stack(:,:,to_retain);
-        fft_ims= fft_ims(:,:,to_retain);
+%         fft_ims= fft_ims(:,:,to_retain);
         seq_ncc = seq_ncc(to_retain);
         seq_ncc_offset = seq_ncc_offset(to_retain,:);            
 
@@ -375,7 +378,7 @@ function [ reference_frames ] = extract_candidate_reference_frames( fPathName, d
         frame_group = frame_group(keep_list);
         frame_contenders = frame_contenders(keep_list);
         contender_image_stack= contender_image_stack(:,:,keep_list);
-        fft_ims= fft_ims(:,:,keep_list);
+%         fft_ims= fft_ims(:,:,keep_list);
         seq_ncc = seq_ncc(keep_list);
         seq_ncc_offset = seq_ncc_offset(keep_list,:);   
 
@@ -387,7 +390,7 @@ function [ reference_frames ] = extract_candidate_reference_frames( fPathName, d
         frame_group = frame_group(sortinds);
         frame_contenders = frame_contenders(sortinds);
         contender_image_stack= contender_image_stack(:,:,sortinds);
-        fft_ims= fft_ims(:,:,sortinds);
+%         fft_ims= fft_ims(:,:,sortinds);
         
         seq_ncc_offset = seq_ncc_offset(sortinds,:);
         
