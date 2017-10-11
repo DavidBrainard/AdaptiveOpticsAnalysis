@@ -44,14 +44,9 @@ for k=1:length(confocal_fname)
 
         if i==5
             confocal_fname_out = comb_str;
-        elseif i==8
+        elseif i>=8
             acceptable_frame_fname = comb_str;
-            if exist([confocal_fname{k}(1:confind-1) acceptable_frame_fname '_repaired_acceptable_frames.csv'],'file')
-                break;
-            end
-        elseif i==9
-            acceptable_frame_fname = comb_str;
-            if exist([confocal_fname{k}(1:confind-1) acceptable_frame_fname '_repaired_acceptable_frames.csv'],'file')
+            if 2==exist(fullfile(pathname, [confocal_fname{k}(1:confind-1) acceptable_frame_fname '_repaired_acceptable_frames.csv']),'file')
                 break;
             end
         end
@@ -72,7 +67,7 @@ for k=1:length(confocal_fname)
 %         if strcmpi(reply,'Y')
 %             [acceptable_frame_fname, af_pathname] = uigetfile(fullfile(pathname, '*.csv'), 'Select the acceptable frames csv.');
 %         else
-            error('Unable to find acceptable frames csv!');
+            error(['Unable to find acceptable frames csv: ' fullfile(pathname, acceptable_frame_fname)]);
 %         end
     end
 
@@ -360,7 +355,7 @@ for k=1:length(confocal_fname)
             % jump, use the surrounding transforms to force some stablility on
             % the registration.
             tfo = tforms(:,:,f);
-            t=1;
+            t=0;
             theend = false;
             while abs(tfo(:)'*mean_tforms(:)) > max_frob_dist
                 tfo = tforms(:,:,f-t);
@@ -374,8 +369,7 @@ for k=1:length(confocal_fname)
 
             if theend % If we reached the end in that direction, check the other direction
                 t=1;
-                while abs(tfo(:)'*mean_tforms(:)) > frob_dist  && (f+t) < length(im_only_vid)
-    %                 f
+                while abs(tfo(:)'*mean_tforms(:)) > max_frob_dist  && (f+t) < length(im_only_vid)
                     tfo = tforms(:,:,f+t);
                     t=t+1;
                 end
@@ -474,7 +468,7 @@ for k=1:length(confocal_fname)
 
     frmcount = ['_n' num2str(size(confocal_vid_out,3))];
 
-    dlmwrite( fullfile(pathname, [acceptable_frame_fname_out frmcount '_acceptable_frames.csv']),acc_frame_list);
+    dlmwrite( fullfile(pathname, [acceptable_frame_fname_out frmcount '_piped_acceptable_frames.csv']),acc_frame_list);
     delete(fullfile(pathname,acceptable_frame_fname));
     
     confocal_vidobj = VideoWriter( fullfile(pathname, [confocal_fname_out frmcount '.avi']), 'Grayscale AVI' );

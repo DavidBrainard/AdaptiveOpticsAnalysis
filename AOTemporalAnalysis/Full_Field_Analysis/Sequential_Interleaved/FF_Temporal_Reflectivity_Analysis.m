@@ -104,7 +104,7 @@ else
     section_times = [1 size(temporal_data,3)];
 end
 
-for s=1:size(section_times,2)
+for s=1:size(section_times,1)
 
     temporal_stack = temporal_data(:,:,section_times(s,1):section_times(s,2));
     if s == 1
@@ -143,80 +143,21 @@ for s=1:size(section_times,2)
     for i=1:size(ref_coords,1)
 
         waitbar(i/size(ref_coords,1),wbh, ['Segmenting coordinate ' num2str(i)]);
+        
+        roiradius = 1;
 
+        if (ref_coords(i,1) - roiradius) > 1 && (ref_coords(i,1) + roiradius) < size(ref_image,2) &&...
+           (ref_coords(i,2) - roiradius) > 1 && (ref_coords(i,2) + roiradius) < size(ref_image,1)
 
-        switch( profile_method )
-            case 'segmentation'
-                roiradius = 8;
+            [R, C ] = meshgrid((ref_coords(i,2) - roiradius) : (ref_coords(i,2) + roiradius), ...
+                               (ref_coords(i,1) - roiradius) : (ref_coords(i,1) + roiradius));
 
-                if (ref_coords(i,1) - roiradius) > 1 && (ref_coords(i,1) + roiradius) < size(ref_image,2) &&...
-                   (ref_coords(i,2) - roiradius) > 1 && (ref_coords(i,2) + roiradius) < size(ref_image,1)
+            cellseg_inds{i} = sub2ind( size(ref_image), R, C );
 
-                    roi = var_ref_image(ref_coords(i,2) - roiradius : ref_coords(i,2) + roiradius, ref_coords(i,1) - roiradius : ref_coords(i,1) + roiradius);
+            cellseg_inds{i} = cellseg_inds{i}(:);
 
-                    polarroi = imcart2pseudopolar(roi,.25,2);
+            ref_image(cellseg_inds{i})= -1;
 
-
-                    diffpim = diff(polarroi,1,2);
-
-                    diffpim = diffpim - min(diffpim(:));
-
-                    [pad_roi, adj, rowcol]=segment_splitcell(diffpim);
-
-                    dg = digraph(adj);        
-
-                    shortpath = shortestpath(dg,sub2ind(size(pad_roi), 1, ceil(size(pad_roi,2)/3)), ...
-                                                sub2ind(size(pad_roi), size(pad_roi,1), ceil(size(pad_roi,2)/3)) );
-
-                    cone_edge_pol = rowcol(shortpath,:);
-
-                    cone_edge_pol = cone_edge_pol((cone_edge_pol(:,1) > 3 & cone_edge_pol(:,1) < 360),:);
-
-                    [x,y] = pol2cart( cone_edge_pol(1:end,1)*pi/180 , ...
-                                      cone_edge_pol(1:end,2)/4 );
-
-                    conv_inds = convhull(ceil(x),ceil(y));
-
-                    cellseg{i} = [x(conv_inds)+ref_coords(i,1), y(conv_inds)+ref_coords(i,2)];
-
-                    cellseg_mask = roipoly(ref_image, (cellseg{i}(:,1))+1, (cellseg{i}(:,2)));
-                    cellseg_inds{i} = find(cellseg_mask~=0);
-
-                    ref_image(cellseg_inds{i})= -1;
-
-                    figure(10); imagesc(ref_image); axis image;
-                end
-            case 'box'
-                roiradius = 1;
-
-                if (ref_coords(i,1) - roiradius) > 1 && (ref_coords(i,1) + roiradius) < size(ref_image,2) &&...
-                   (ref_coords(i,2) - roiradius) > 1 && (ref_coords(i,2) + roiradius) < size(ref_image,1)
-
-                    [R, C ] = meshgrid((ref_coords(i,2) - roiradius) : (ref_coords(i,2) + roiradius), ...
-                                       (ref_coords(i,1) - roiradius) : (ref_coords(i,1) + roiradius));
-
-                    cellseg_inds{i} = sub2ind( size(ref_image), R, C );
-
-                    cellseg_inds{i} = cellseg_inds{i}(:);
-
-                    ref_image(cellseg_inds{i})= -1;
-
-                end
-            case 'cross'
-                roiradius = 2;
-
-                if (ref_coords(i,1) - roiradius) > 1 && (ref_coords(i,1) + roiradius) < size(ref_image,2) &&...
-                   (ref_coords(i,2) - roiradius) > 1 && (ref_coords(i,2) + roiradius) < size(ref_image,1)
-
-                    cellseg_inds{i} = sub2ind( size(ref_image), (ref_coords(i,2) - roiradius) : (ref_coords(i,2) + roiradius), repmat(ref_coords(i,1), [1 2*roiradius+1]) );
-
-                    cellseg_inds{i} = [cellseg_inds{i} sub2ind( size(ref_image), repmat(ref_coords(i,2), [1 2*roiradius+1]) , ref_coords(i,1) - roiradius : ref_coords(i,1) + roiradius) ];
-
-                    cellseg_inds{i} = cellseg_inds{i}(:);
-
-                    ref_image(cellseg_inds{i})= -1;
-
-                end
         end
 
     end
@@ -285,7 +226,7 @@ for s=1:size(section_times,2)
     cell_ref = cell2mat(cell_reflectance);
 
     cellinds = find( ~all(isnan(cell_ref),2) );
-    coords_used = coords_used(cellinds,:);
+%     coords_used = coords_used(cellinds,:);
     cell_ref = cell_ref( cellinds, :); % Remove any cells that have NaNs.
 
     %% Find the means / std devs
@@ -417,7 +358,7 @@ for s=1:size(section_times,2)
     end
     % Dump all the analyzed data to disk
     save(fullfile(mov_path, 'Profile_Data' ,[ref_image_fname(1:end - length('_AVG.tif') ) '_' profile_method '_' norm_type '_' vid_type '_profiledata.mat']), ...
-         'cell_times', 'norm_cell_reflectance','coords_used','ref_image','ref_mean','ref_stddev','vid_type' );
+         'cell_times', 'norm_cell_reflectance','ref_coords', 'coords_used','ref_image','ref_mean','ref_stddev','vid_type' );
 
 
     %% Remove the empty cells

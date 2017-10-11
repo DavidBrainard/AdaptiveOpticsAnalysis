@@ -3,8 +3,8 @@ function [ feature_coeffs, labels, varNames ] = extract_features_v2( cell_times,
     
 
     % Remove empty cells
-    norm_cell_reflectance = norm_cell_reflectance( ~cellfun(@isempty,norm_cell_reflectance)  );
-    cell_times    = cell_times( ~cellfun(@isempty,cell_times) );
+%     norm_cell_reflectance = norm_cell_reflectance( ~cellfun(@isempty,norm_cell_reflectance)  );
+%     cell_times    = cell_times( ~cellfun(@isempty,cell_times) );
     
     naners = ~cellfun(@any, cellfun(@isnan, norm_cell_reflectance, 'UniformOutput',false));
     norm_cell_reflectance = norm_cell_reflectance( naners );

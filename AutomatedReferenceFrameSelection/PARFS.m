@@ -192,7 +192,6 @@ for f=1 : size(stack_fname,1)
         if length(newrefs{g})>=10
             bestrefs = [bestrefs; [str2double(vidnum) newrefs{g}(1:10)']];
             dlmwrite(fullfile(mov_path{1},'Reference_Frames.csv'), [str2double(vidnum) newrefs{g}(1:10)'], 'delimiter',',','-append');
-
         else        
             bestrefs = [bestrefs; [str2double(vidnum) padarray(newrefs{g},[10-length(newrefs{g}) 0], -1,'post')']];
             dlmwrite(fullfile(mov_path{1},'Reference_Frames.csv'), [str2double(vidnum) padarray(newrefs{g},[10-length(newrefs{g}) 0], -1,'post')'], 'delimiter',',','-append');

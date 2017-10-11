@@ -8,76 +8,72 @@ stimBaseDir = fullfile(pwd,'2p0'); %uigetdir(pwd); %
 %%
 controlDataNames = read_folder_contents(controlBaseDir ,'mat');
 stimDataNames = read_folder_contents(stimBaseDir ,'mat');
+%%
+load(fullfile(controlBaseDir, controlDataNames{1}));
 
-allcontrollabels = cell(length(controlDataNames),1);
-allcontrolcoeffs = cell(length(controlDataNames),1);
-allstimlabels = cell(length(stimDataNames),1);
-allstimcoeffs = cell(length(stimDataNames),1);
+allcontrollabels = repmat({'control'},[length(norm_cell_reflectance),1]);
+allcontrolcoeffs = nan(length(norm_cell_reflectance), length(controlDataNames)*9);
+allcontrolcoords = coords_used;
 
 for j=1:length(controlDataNames)
     controlDataNames{j}
     load(fullfile(controlBaseDir, controlDataNames{j}));
     
-    % Legacy support
-    if ~exist('norm_cell_reflectance','var')
-        norm_cell_reflectance = norm_control_cell_reflectance;
-        cell_times = control_cell_times;
+    allcontrolcoords = union(allcontrolcoords, coords_used,'rows');
+    
+    % These all must be the same length! (Same coordinate set)
+    if size(norm_cell_reflectance,1) == size(allcontrolcoeffs,1)
+
+        [coeffs, labels, varNames]=extract_features_v2(cell_times, norm_cell_reflectance,[66 132],'control');
+
+        indme = ((j-1)*9)+1;
+        allcontrolcoeffs(:,indme:indme+8) = coeffs;
+    else
+        error('Dataset length doesn''t match!');
     end
-    norm_cell_reflectance = norm_cell_reflectance( ~cellfun(@isempty,norm_cell_reflectance)  );
-    cell_times    = cell_times( ~cellfun(@isempty,cell_times) );
-    
-    thissig = norm_cell_reflectance{1};
-    
-    [controlcoeffs, controllabels, varNames]=extract_features_v2(cell_times, norm_cell_reflectance,[66 132],'control');
-    
-    % Remove the nan'd data.
-    controllabels = controllabels(~isnan(controlcoeffs(:,1)));
-    controlcoeffs = controlcoeffs( ~isnan(controlcoeffs(:,1)) ,:);
-    
-    clear norm_cell_reflectance;
-    allcontrollabels{j} = [allcontrollabels{j}; controllabels];
-    allcontrolcoeffs{j} = [allcontrolcoeffs{j}; controlcoeffs];
 end
+
+tokeep  = all(~isnan(allcontrolcoeffs),2);
+
+allcontrolcoeffs = allcontrolcoeffs(tokeep,:);
+allcontrollabels = allcontrollabels(tokeep);
+allcontrolcoords = allcontrolcoords(tokeep,:);
+
+%%
+clear coords_used
+
+load(fullfile(stimBaseDir, stimDataNames{1}));
+allstimlabels = repmat({'stimulus'},[length(norm_cell_reflectance),1]);
+allstimcoeffs = nan(length(norm_cell_reflectance), length(stimDataNames)*9);
+allstimcoords = coords_used;
 
 for j=1:length(stimDataNames)
     stimDataNames{j}
     load(fullfile(stimBaseDir, stimDataNames{j}));
     
-    % Legacy support
-    if ~exist('norm_cell_reflectance','var')
-        
-        norm_cell_reflectance = norm_stim_cell_reflectance;
-        cell_times = stim_cell_times;
-    end
+    allstimcoords = union(allstimcoords, coords_used,'rows');
     
-    norm_cell_reflectance = norm_cell_reflectance( ~cellfun(@isempty,norm_cell_reflectance)  );
-    cell_times    = cell_times( ~cellfun(@isempty,cell_times) );
-    
-    thissig = norm_cell_reflectance{10};
-    
-    [stimdcoeffs, stimdlabels, varNames]=extract_features_v2(cell_times, norm_cell_reflectance,[66 132],'stimulus');    
+    % These all must be the same length! (Same coordinate set)
+    if size(norm_cell_reflectance,1) == size(allstimcoeffs,1) && size(allstimcoords,1) == size(allstimcoeffs,1)
 
-    % Remove the nan'd data.
-    stimdlabels = stimdlabels( ~isnan(stimdcoeffs(:,1)) );
-    stimdcoeffs = stimdcoeffs( ~isnan(stimdcoeffs(:,1)) ,:);
-     
-    length(stimdcoeffs)
-    
-    clear norm_cell_reflectance;
-    allstimlabels{j} = [allstimlabels{j}; stimdlabels];
-    allstimcoeffs{j} = [allstimcoeffs{j}; stimdcoeffs];
+        [coeffs, labels, varNames]=extract_features_v2(cell_times, norm_cell_reflectance,[66 132],'stimulus');
+        
+        indme = ((j-1)*9)+1;
+        allstimcoeffs(:,indme:indme+8) = coeffs;
+    else
+        error('Dataset length doesn''t match!');
+    end
 end
 
+tokeep  = all(~isnan(allstimcoeffs),2);
 
-
-
-
-
-
+allstimcoeffs = allstimcoeffs(tokeep,:);
+allstimlabels = allstimlabels(tokeep);
+allstimcoords = allstimcoords(tokeep,:);
 
 %% Train our models.
 % Pick a random set from each type to fit from
-numtrainingsets = 4;
+numtrainingsets = 2;
 controlSetInds = randperm( length(allcontrollabels), min( numtrainingsets, length(allcontrollabels)) )
 stimSetInds = randperm( length(allstimlabels), min( numtrainingsets, length(allstimlabels)) )
 

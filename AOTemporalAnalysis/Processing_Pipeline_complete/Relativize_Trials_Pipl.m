@@ -33,27 +33,43 @@ for i=1:length(confocal_fname)
 end
 
 [optimizer, metric]  = imregconfig('multimodal');
+optimizer.InitialRadius = 1.5e-03;
+
 [monooptimizer, monometric]  = imregconfig('monomodal');
 
 tforms = cell(length(trial_im),length(trial_im));
-% reg_ims = cell(length(trial_im),length(trial_im));
+
 % Find the transform from each image to every other
 % for i=1:length(trial_im)
 ref_im = 2;
+confocal_fname{ref_im}
+
 i=ref_im;
     for j=1:length(trial_im)
         if i~=j
+            %%
             tic;
-            tforms{i,j} = imregtform(trial_im{j},trial_im{ref_im},... % First get close
-                                     'rigid',optimizer,metric, 'PyramidLevels',3);
-            tforms{i,j} = imregtform(trial_im{j},trial_im{ref_im},... % Then tweak for affine
+            confocal_fname{j}
+%             tforms{i,j} = imregtform(trial_im{j},trial_im{ref_im},... 
+%                                      'rigid',optimizer,metric, 'PyramidLevels',3);
+            % First get close via ncc
+            [xcorr_map , ~] = normxcorr2_general(trial_im{j}, trial_im{ref_im}, prod(mean([imsize(j,:);imsize(ref_im,:)])/2) );
+            
+            [~, ncc_ind] = max(xcorr_map(:));
+            [roff, coff]= ind2sub(size(xcorr_map), ncc_ind );
+            roff = roff-size(trial_im{j},1);
+            coff = coff-size(trial_im{j},2);
+            
+            tforms{i,j} = affine2d([1 0 0; 0 1 0; coff roff 1]);
+            
+            tforms{i,j} = imregtform( trial_im{j}, trial_im{ref_im},... % Then tweak for affine
                                      'affine',monooptimizer,monometric, 'PyramidLevels',1,'InitialTransformation',tforms{i,j});
             toc;
 
-%             tforms{i,j}.T
-%             reg_ims(:,:,j) = imwarp(trial_im{j}, imref2d(size(trial_im{j})), tforms{1,j},'OutputView', imref2d(size(trial_im{1})) );
-%             figure(1);imshowpair(trial_im{1},reg_ims(:,:,j));
 
+%             reg = imwarp(trial_im{j}, imref2d(size(trial_im{j})), tforms{ref_im,j},'OutputView', imref2d(size(trial_im{ref_im})) );
+%             figure(1);imshowpair(trial_im{ref_im},reg);
+ 
         end
     end
 % end
@@ -66,10 +82,13 @@ imwrite(reg_ims(:,:,ref_im), fullfile(pathname, stk_name) );
 for j=1:length(trial_im)
     if j ~= ref_im
         reg_ims(:,:,j) = imwarp(trial_im{j}, imref2d(size(trial_im{j})), tforms{ref_im,j}, 'OutputView', imref2d(size(trial_im{ref_im})) );
-        imwrite(reg_ims(:,:,j),fullfile(pathname, stk_name),'WriteMode','append');
+        imwrite(reg_ims(:,:,j),fullfile(pathname, stk_name),'WriteMode','append','Description',confocal_fname{j});                
 %         figure(1); imshowpair(trial_im{ref_im}, reg_ims(:,:,j)); pause(.5)
+
         
     end
+    imwrite(reg_ims(:,:,j), fullfile(pathname,[confocal_fname{j}(1:end-8) '_piped_AVG.tif']) );
+%     delete(confocal_fname{j});
 end
 
 
@@ -93,7 +112,8 @@ imwrite(uint8(sum(double(reg_ims),3)./sum_map), fullfile(pathname,[confocal_fnam
 for i=1:length(confocal_fname)
     mov_name_in = fullfile(pathname,[confocal_fname{i}(1:end-8) '.avi']);
     mov_name_out = fullfile(pathname,[confocal_fname{i}(1:end-8) '_piped.avi']);
-    
+
+
     confocal_vidin = VideoReader( mov_name_in );
     confocal_vidout = VideoWriter( mov_name_out, 'Grayscale AVI' );
     
@@ -102,15 +122,15 @@ for i=1:length(confocal_fname)
         frm_in = readFrame(confocal_vidin);
         
         if ~isempty(tforms{ref_im,i})
-            writeVideo(confocal_vidout, imwarp(frm_in, imref2d(size(frm_in)), tforms{ref_im,i},...
-                                                       'OutputView', imref2d(size(trial_im{ref_im})) ));
+            writeVideo( confocal_vidout, imwarp(frm_in, imref2d(size(frm_in)), tforms{ref_im,i},...
+                                                'OutputView', imref2d(size(trial_im{ref_im}))) );
         else
-            writeVideo(confocal_vidout, frm_in);
+            writeVideo( confocal_vidout, frm_in );
         end
     end
     close(confocal_vidout);
     
-    %delete(mov_name_in);
+%     delete(mov_name_in);
     
 end
 
