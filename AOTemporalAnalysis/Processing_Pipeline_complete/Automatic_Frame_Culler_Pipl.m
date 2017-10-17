@@ -33,6 +33,14 @@ for k=1:length(confocal_fname)
     else
        loadsplit = 0;
     end
+    
+    visible_fname = strrep(confocal_fname{k}, 'confocal', 'visible');
+
+    if exist(fullfile(pathname,visible_fname),'file')
+       loadvisible = 1;
+    else
+       loadvisible = 0;
+    end
 
     % Find where the filename should be cut off in the confocal videos, and
     % determine our acceptable frame filename.
@@ -78,6 +86,11 @@ for k=1:length(confocal_fname)
         split_fname_out = [confocal_fname{k}(1:confind-1) confocal_fname_out '_crop_affine'];
         split_fname_out = strrep(split_fname_out, 'confocal', 'split_det');
     end
+    
+    if loadvisible
+        vis_fname_out = [confocal_fname{k}(1:confind-1) confocal_fname_out '_crop_affine'];
+        vis_fname_out = strrep(vis_fname_out, 'confocal', 'visible');
+    end
 
     % Create our confocal output filename - affine will need to be done outside
     % MATLAB.
@@ -87,6 +100,9 @@ for k=1:length(confocal_fname)
 
     if loadsplit
         split_vidobj = VideoReader( fullfile(pathname, split_fname) );
+    end
+    if loadvisible
+        vis_vidobj = VideoReader( fullfile(pathname, visible_fname) );
     end
 
     %% File loading
@@ -101,6 +117,10 @@ for k=1:length(confocal_fname)
         split_vid = cell(1, vid_length);
         split_f_mean = zeros(vid_length,1);
     end
+    if loadvisible
+        vis_vid = cell(1, vid_length);
+        vis_f_mean = zeros(vid_length,1);
+    end
 
     i=1;
     while hasFrame(confocal_vidobj)
@@ -111,6 +131,11 @@ for k=1:length(confocal_fname)
             split_vid{i} = readFrame(split_vidobj);
             split_f_mean(i) = mean(double(split_vid{i}(split_vid{i}~=0)));
         end
+        if loadvisible
+            vis_vid{i} = readFrame(vis_vidobj);
+            vis_f_mean(i) = mean(double(vis_vid{i}(vis_vid{i}~=0)));
+        end
+        
         frame_nums{i} = ['Frame ' num2str(i) ' of: ' num2str(size(confocal_vid,2))];
         i=i+1;
     end
@@ -133,14 +158,14 @@ for k=1:length(confocal_fname)
         split_mean = mean(split_f_mean);
         split_dev = std(split_f_mean);
     end
+    if loadvisible
+        vis_mean = mean(vis_f_mean);
+        vis_dev = std(vis_f_mean);
+    end
 
     contenders = false(1,length(frame_nums));
     for n=1:length(frame_nums)        
         contenders(n) =  (confocal_f_mean(n) > confocal_mean-2*confocal_dev);
-
-        if loadsplit
-           contenders(n) = contenders(n) & (split_f_mean(n) > split_mean-2*split_dev); 
-        end
     end
 
     % Remove frames from contention.
@@ -148,6 +173,9 @@ for k=1:length(confocal_fname)
     acc_frame_list = acc_frame_list(contenders);
     if loadsplit
         split_vid = split_vid(contenders);
+    end
+    if loadvisible
+        vis_vid = vis_vid(contenders);
     end
 
 
@@ -209,15 +237,21 @@ for k=1:length(confocal_fname)
     % Pull out the divided frames and see how workable they are.
     div_confocal_vid = confocal_vid(div_frms);
     div_acc_frame_list = acc_frame_list(div_frms);
-    if loadsplit
-        div_split_vid = split_vid(div_frms);
-    end
+%     if loadsplit
+%         div_split_vid = split_vid(div_frms);
+%     end
+%     if loadvisible
+%         div_vis_vid = vis_vid(div_frms);
+%     end
 
     % Remove the divided frames from contention (for now).
     confocal_vid = confocal_vid(contenders);
     acc_frame_list = acc_frame_list(contenders);
     if loadsplit
         split_vid = split_vid(contenders);
+    end
+    if loadvisible
+        vis_vid = vis_vid(contenders);
     end
 
     %% Make the ideal area mask from the unregistered videos.
@@ -241,15 +275,16 @@ for k=1:length(confocal_fname)
     cropregion = floor(cropregion.BoundingBox);
     % Bound our crop region to where the sum_map actually exists
     cropregion(cropregion<1) = 1;
-    if cropregion(4)>size(sum_map,1)
-        cropregion(4) = size(sum_map,1);
+    if cropregion(4)>=size(sum_map,1)
+        cropregion(4) = size(sum_map,1)-1;
     end
-    if cropregion(3)>size(sum_map,2)
-        cropregion(3) = size(sum_map,2);
+    if cropregion(3)>=size(sum_map,2)
+        cropregion(3) = size(sum_map,2)-1;
     end    
     
     maxcropregion = [cropregion(1:2), cropregion(1)+cropregion(3), cropregion(2)+cropregion(4)];
 
+    
     average_frm_mask = sum_map > ceil(mean(sum_map(:)));
     % Find the largest incribed rectangle in this mask.
     [C, h, w, largest_rect] =FindLargestRectangles(average_frm_mask,[1 1 0], [300 150]);
@@ -263,11 +298,11 @@ for k=1:length(confocal_fname)
 
     % Bound our crop region to where the sum_map actually exists
     cropregion(cropregion<1) = 1;
-    if cropregion(4)>size(sum_map,1)
-        cropregion(4) = size(sum_map,1);
+    if cropregion(4)>=size(sum_map,1)
+        cropregion(4) = size(sum_map,1)-1;
     end
-    if cropregion(3)>size(sum_map,2)
-        cropregion(3) = size(sum_map,2);
+    if cropregion(3)>=size(sum_map,2)
+        cropregion(3) = size(sum_map,2)-1;
     end
 
     sum_map_crop = sum_map(cropregion(2):cropregion(4),cropregion(1):cropregion(3));
@@ -280,6 +315,7 @@ for k=1:length(confocal_fname)
     im_only_vid = cell(length(confocal_vid),1);
     im_only_vid_ref = cell(length(confocal_vid),1);
     split_im_only_vid = cell(length(confocal_vid),1);
+    vis_im_only_vid = cell(length(confocal_vid),1);
 
     for n=1:length(confocal_vid)
 
@@ -293,6 +329,10 @@ for k=1:length(confocal_fname)
         if loadsplit
             split_im_only_vid{n} = split_vid{n}( cropregion(2):cropregion(4),cropregion(1):cropregion(3) );
         end
+        if loadvisible
+            vis_im_only_vid{n} = vis_vid{n}( cropregion(2):cropregion(4),cropregion(1):cropregion(3) );
+        end
+        
         reg_only_vid{n} = confocal_vid{n}( maxcropregion(2):maxcropregion(4),maxcropregion(1):maxcropregion(3) );
     end
 
@@ -346,6 +386,7 @@ for k=1:length(confocal_fname)
     %%
     reg_confocal_vid = cell(length(confocal_vid),1);
     reg_split_vid = cell(length(confocal_vid),1);
+    reg_vis_vid = cell(length(confocal_vid),1);
 
     for f=1:length(im_only_vid)    
 
@@ -380,17 +421,18 @@ for k=1:length(confocal_fname)
             if loadsplit
                 reg_split_vid{f}= imwarp(split_im_only_vid{f}, affine2d(tfo),'OutputView', imref2d(size(im_only_vid{1})) );
             end
-    %         if f == 42
-    %             figure(1); imagesc(im_only_vid{f}); axis image; colormap gray;
-    %             figure(2); imagesc(reg_confocal_vid{f}); axis image; colormap gray;
-    %             drawnow;
-    %         end        
-
+            if loadvisible
+                reg_vis_vid{f}= imwarp(vis_im_only_vid{f}, affine2d(tfo),'OutputView', imref2d(size(im_only_vid{1})) );
+            end
+     
 
         else
             reg_confocal_vid{f}= im_only_vid{f};
             if loadsplit
                 reg_split_vid{f}= split_im_only_vid{f};
+            end
+            if loadvisible
+                reg_vis_vid{f}= vis_im_only_vid{f};
             end
         end
     end
@@ -455,6 +497,9 @@ for k=1:length(confocal_fname)
     if loadsplit
         split_vid_out = uint8( zeros( size(reg_split_vid{1},1), size(reg_split_vid{1},2), length(confocal_vid) ));
     end
+    if loadvisible
+        vis_vid_out = uint8( zeros( size(reg_vis_vid{1},1), size(reg_vis_vid{1},2), length(confocal_vid) ));
+    end
 
     for i=1:length(confocal_vid)
 
@@ -462,6 +507,9 @@ for k=1:length(confocal_fname)
 
         if loadsplit
             split_vid_out(:,:,i) = uint8( reg_split_vid{i} );
+        end
+        if loadvisible
+            vis_vid_out(:,:,i) = uint8( reg_vis_vid{i} );
         end
 
     end
@@ -476,6 +524,9 @@ for k=1:length(confocal_fname)
     if loadsplit
         split_vidobj = VideoWriter( fullfile(pathname, [split_fname_out frmcount '.avi']), 'Grayscale AVI' );
     end
+    if loadvisible
+        vis_vidobj = VideoWriter( fullfile(pathname, [vis_fname_out frmcount '.avi']), 'Grayscale AVI' );
+    end
 
 
     open(confocal_vidobj);
@@ -486,6 +537,12 @@ for k=1:length(confocal_fname)
         open(split_vidobj);
         writeVideo(split_vidobj,split_vid_out);
         close(split_vidobj);
+    end
+    if loadvisible
+        open(vis_vidobj);
+        writeVideo(vis_vidobj,vis_vid_out);
+        close(vis_vidobj);
+        delete(fullfile(pathname,visible_fname));
     end
 
     % Write the average images.

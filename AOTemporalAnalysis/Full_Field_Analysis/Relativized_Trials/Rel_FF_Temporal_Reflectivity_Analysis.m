@@ -1,5 +1,5 @@
-function []=FF_Temporal_Reflectivity_Analysis(mov_path, ref_image_fname, stimulus_frames, vid_type)
-% []=FF_Temporal_Reflectivity_Analysis_twosource(mov_path, ref_image_fname)
+function []=Rel_FF_Temporal_Reflectivity_Analysis(mov_path, ref_image_fname, stimulus_frames, vid_type)
+% []=Rel_FF_Temporal_Reflectivity_Analysis_twosource(mov_path, ref_image_fname)
 % Robert F Cooper 06-20-2017
 %
 % @param mov_path - The path to the video which stores the reflectance
@@ -38,7 +38,7 @@ if ~exist('mov_path','var') || ~exist('ref_image_fname','var')
     [ref_image_fname, mov_path]  = uigetfile(fullfile(pwd,'*.tif'));
     stimulus_frames=[67 99];
     
-    rply = input('Stimulus (s) or Control (c)? [s]','s');
+    rply = input('Stimulus (s) or Control (c)? [s]: ','s');
     if isempty(rply) || strcmpi(rply,'s')
         vid_type='stimulus';
     elseif strcmpi(rply,'c')
