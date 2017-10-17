@@ -82,7 +82,7 @@ for thisfile in os.listdir(dmp_folder_path):
             pickle_file.close()
 
             # Find the dmp's matching image(s).
-            modalities = ('confocal', 'split_det', 'avg')
+            modalities = ('confocal', 'split_det', 'avg', 'visible')
 
             images_to_fix =[]
             # Find all images in our folder that this dmp applies to.
@@ -158,18 +158,22 @@ for thisfile in os.listdir(dmp_folder_path):
                 for image in images_to_fix:
                     # progo.configure("Removing distortion from :"+image +"...")
                     print("Removing distortion from: "+image +"...")
-                    writtenfile = mat_engi.Eye_Motion_Distortion_Repair_Pipl(image_folder_path, image, pick['strip_cropping_ROI_2'][-1],
+                    anchorfile = mat_engi.Eye_Motion_Distortion_Repair_Pipl(image_folder_path, image, pick['strip_cropping_ROI_2'][-1],
                                                           shift_array.tolist(), static_distortion,nargout=2)
+                    if "confocal" in anchorfile[0]:
+                         writtenfile = anchorfile
 
 
                 # progo.step()
                 np.savetxt(os.path.join(writtenfile[1], thisfile[0:-4] + "_repaired_acceptable_frames.csv"),
                            pick['acceptable_frames'],
                            delimiter=',', fmt='%f')
-                print("Culling excess frames from: " + writtenfile[0] + "...")
-                writtenfile = mat_engi.Automatic_Frame_Culler_Pipl(writtenfile[0], writtenfile[1], nargout=2)
-                fixed_images += [ writtenfile[0] ]
-                THEpath = writtenfile[1]
+                
+                if "confocal" in writtenfile[0]:
+                     print("Culling excess frames from: " + writtenfile[0] + "...")
+                     writtenfile = mat_engi.Automatic_Frame_Culler_Pipl(writtenfile[0], writtenfile[1], nargout=2)
+                     fixed_images += [ writtenfile[0] ]
+                     THEpath = writtenfile[1]
 
 
         except(ValueError, RuntimeError) as err:
