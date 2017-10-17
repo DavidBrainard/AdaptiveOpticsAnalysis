@@ -63,14 +63,16 @@ for k=1:length(fname)
     fname_out_second_piece = [fname{k}(1:end-4) '_' num2str(split+1) '_' num2str(vid_length) '.avi'];
 
     
-    vidobj_1 = VideoWriter( fullfile(pathname, fname_out_first_piece), 'Grayscale AVI' );
+    vidobj_1 = VideoWriter( fullfile(pathname, fname_out_first_piece), 'Grayscale AVI');
+    vidobj_1.FrameRate=16.6666;
 
     open(vidobj_1);
     writeVideo(vidobj_1,uint8(first_piece));
     close(vidobj_1);
     
-    vidobj_2 = VideoWriter( fullfile(pathname, fname_out_second_piece), 'Grayscale AVI' );
-
+    vidobj_2 = VideoWriter( fullfile(pathname, fname_out_second_piece), 'Grayscale AVI');
+    vidobj_2.FrameRate=16.6666;
+    
     open(vidobj_2);
     writeVideo(vidobj_2,uint8(second_piece));
     close(vidobj_2);

@@ -10,7 +10,27 @@
 #
 #
 
-import matlab.engine # This needs to be imported first for some stupid reason.
+try:
+    import matlab.engine # This needs to be imported first for some stupid reason.
+except:
+    import Tkinter as tk
+    import Tkconstants, tkFileDialog, tkMessageBox
+    import os, sys, ctypes
+    import subprocess
+    import socket
+    
+    options = {}
+    options['title'] = 'Please select your [MATLABROOT]\extern\engines\python folder to link to MATLAB.'
+    matlab_folder_path = tkFileDialog.askdirectory(**options)
+
+    ctypes.windll.shell32.ShellExecuteW(None, u"runas",  unicode("C:\\Python27\\python.exe"), u"setup.py install", unicode(matlab_folder_path), 1)   
+
+    try:
+        import matlab.engine
+    except:
+        tkMessageBox.showerror("Linking (should be) successful!", "If the console did not display any errors, then linking successful! Please restart this script.")
+        sys.exit(0)
+
 import os, pickle
 import Tkinter as tk
 import Tkconstants, tkFileDialog, tkMessageBox
