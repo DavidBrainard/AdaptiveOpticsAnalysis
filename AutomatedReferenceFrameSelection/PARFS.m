@@ -23,9 +23,10 @@ fNames=[];
 mov_path=[];
 addanother=1;
 
+sel_path=pwd;
 while addanother ~= 0
 
-    sel_path = uigetdir(pwd,'Select the folder containing the movies you wish to examine:');
+    sel_path = uigetdir(sel_path,'Select the folder containing the movies you wish to examine:');
 
     if sel_path == 0
        break; 
@@ -96,8 +97,13 @@ delete(fullfile(mov_path{1},'Reference_Frames.csv'));
 refs = cell(size(stack_fname));
 
 for f=1 : size(stack_fname,1)
-    waitbar(f/size(stack_fname,1),h,['Processing video #' num2str(stack_fname{f,1}(end-7:end-4)) '...']);
-    
+    for m=1:size(stack_fname,2)
+        if ~isempty(stack_fname{f,m})
+            waitbar(f/size(stack_fname,1),h,['Processing video #' num2str(stack_fname{f,m}(end-7:end-4)) '...']);
+            break;
+        end
+    end
+        
     try
         for m=1 : size(stack_fname,2) 
             
@@ -176,6 +182,13 @@ for f=1 : size(stack_fname,1)
 
     newrefs = newrefs(~cellfun(@isempty,newrefs));
     
+    for m=1:size(stack_fname,2)
+        if ~isempty(stack_fname{f,m})
+            vidnum = stack_fname{f,m}(end-7:end-4);
+            break;
+        end
+    end
+    
     % Re-rank them based on their location in the intersected list.
     for g=1:length(newrefs)
         theserefs = newrefs{g};
@@ -186,12 +199,11 @@ for f=1 : size(stack_fname,1)
         [rankings, rankinds ] = sort(rankedrefs);
         newrefs{g} = theserefs(rankinds);
       
-        vidnum = stack_fname{f,1}(end-7:end-4);
-                
         
         if length(newrefs{g})>=10
             bestrefs = [bestrefs; [str2double(vidnum) newrefs{g}(1:10)']];
             dlmwrite(fullfile(mov_path{1},'Reference_Frames.csv'), [str2double(vidnum) newrefs{g}(1:10)'], 'delimiter',',','-append');
+
         else        
             bestrefs = [bestrefs; [str2double(vidnum) padarray(newrefs{g},[10-length(newrefs{g}) 0], -1,'post')']];
             dlmwrite(fullfile(mov_path{1},'Reference_Frames.csv'), [str2double(vidnum) padarray(newrefs{g},[10-length(newrefs{g}) 0], -1,'post')'], 'delimiter',',','-append');
