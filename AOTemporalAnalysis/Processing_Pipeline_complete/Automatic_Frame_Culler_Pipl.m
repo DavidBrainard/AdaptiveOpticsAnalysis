@@ -201,13 +201,26 @@ for k=1:length(confocal_fname)
 
         small_comps = frm_rp{n}(~big_comps);
 
+        if n==110
+            size(confocal_vid{n})
+        end
+        
         % Mask out any small noisy areas
         for c=1:length(small_comps)
             maskbox = small_comps(c).BoundingBox;
-            maskbox = round(maskbox);
+            maskbox = ceil(maskbox);
+            % Bound our mask region to where the sum_map actually exists
+            maskbox(maskbox<1) = 1;
+            if (maskbox(2)+maskbox(4))>=size(confocal_vid{n},1)
+                maskbox(4) = size(confocal_vid{n},1)-maskbox(2);
+            end
+            if (maskbox(1)+maskbox(3))>=size(confocal_vid{n},2)
+                maskbox(3) = size(confocal_vid{n},2)-maskbox(1);
+            end
+                        
             confocal_vid{n}(maskbox(2):(maskbox(2)+maskbox(4)), maskbox(1):(maskbox(1)+maskbox(3)) ) = 0;
         end
-
+        
         % Remove the small areas from consideration.
         frm_rp{n} = frm_rp{n}(big_comps);
         cc_areas{n} = cc_areas{n}(big_comps);
@@ -218,7 +231,7 @@ for k=1:length(confocal_fname)
 
     for n=1:length(cc_areas)
 
-        imagesc( imclose(confocal_vid{n}>0, ones(5)) ); colormap gray;
+%         imagesc( imclose(confocal_vid{n}>0, ones(5)) ); colormap gray;
         % Remove components that aren't more than mu-2std dev pixels in area    
         big_enough_comps = cc_areas{n} > mean_cc_area-std_cc_area;
 
@@ -264,7 +277,8 @@ for k=1:length(confocal_fname)
     sum_map = zeros(size(confocal_vid{1}));
 
     for n=1:length(confocal_vid)
-        frm_nonzeros = imclose((confocal_vid{n}>0), ones(5)); 
+        frm_nonzeros = imclose((confocal_vid{n}>0), ones(5));
+
         sum_map = sum_map+frm_nonzeros;
     end
     % imagesc(sum_map); axis image;
@@ -273,17 +287,17 @@ for k=1:length(confocal_fname)
     [C, h, w, max_largest_rect] =FindLargestRectangles(max_frm_mask,[1 1 0], [300 150]);
     cropregion = regionprops(max_largest_rect,'BoundingBox');
     cropregion = floor(cropregion.BoundingBox);
-    % Bound our crop region to where the sum_map actually exists
-    cropregion(cropregion<1) = 1;
-    if cropregion(4)>=size(sum_map,1)
-        cropregion(4) = size(sum_map,1)-1;
-    end
-    if cropregion(3)>=size(sum_map,2)
-        cropregion(3) = size(sum_map,2)-1;
-    end    
     
     maxcropregion = [cropregion(1:2), cropregion(1)+cropregion(3), cropregion(2)+cropregion(4)];
-
+    
+    % Bound our crop region to where the sum_map actually exists
+    maxcropregion(maxcropregion<1) = 1;
+    if maxcropregion(4)>size(sum_map,1)
+        maxcropregion(4) = size(sum_map,1);
+    end
+    if maxcropregion(3)>size(sum_map,2)
+        maxcropregion(3) = size(sum_map,2);
+    end    
     
     average_frm_mask = sum_map > ceil(mean(sum_map(:)));
     % Find the largest incribed rectangle in this mask.
@@ -292,17 +306,17 @@ for k=1:length(confocal_fname)
     % Find the coordinates for each corner of the rectangle, and
     % return them
     cropregion = regionprops(largest_rect,'BoundingBox');
-    cropregion = round(cropregion.BoundingBox);
+    cropregion = ceil(cropregion.BoundingBox);
 
     cropregion = [cropregion(1:2), cropregion(1)+cropregion(3), cropregion(2)+cropregion(4)];
 
     % Bound our crop region to where the sum_map actually exists
     cropregion(cropregion<1) = 1;
     if cropregion(4)>=size(sum_map,1)
-        cropregion(4) = size(sum_map,1)-1;
+        cropregion(4) = size(sum_map,1);
     end
     if cropregion(3)>=size(sum_map,2)
-        cropregion(3) = size(sum_map,2)-1;
+        cropregion(3) = size(sum_map,2);
     end
 
     sum_map_crop = sum_map(cropregion(2):cropregion(4),cropregion(1):cropregion(3));
