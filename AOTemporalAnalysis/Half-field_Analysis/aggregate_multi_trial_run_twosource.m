@@ -1,3 +1,25 @@
+%   Aggregate_Recursive_Run_Twosource
+%
+%   Recursively calculates the pooled variance across a set of pre-analyzed 
+%   signals from stimulus and control trials, performs the subtraction
+%   between their standard deviations, and performs a piecewise fit of the 
+%   resulting subtraction.
+%
+%   If it cannot find a control video, then it simply runs the default
+%   "Aggregate_Multiple_Temporal_Analyses", which assumes that one mat file
+%   has valid stimulus and control data.
+%
+% Outputs:
+%
+%   A date-stamped file containing information about the fit, named:
+%   "Aggregate_Summary_[date].csv"
+%
+% Created by Robert F Cooper 12-31-2015
+%
+% The analyses performed by this script are from Cooper et al. "Non-invasive 
+% assessment of human cone photoreceptor function", and
+% encompassed in Figures 4B/5A, Equation 3.
+
 
 clear;
 close all force;

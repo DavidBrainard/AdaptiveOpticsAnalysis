@@ -21,8 +21,12 @@ function []=Temporal_Reflectivity_Analysis(mov_path, ref_image_fname)
 %       ref_image_fname: The name of the averaged image (ending in _AVG.tif)                        
 %
 %
-
 % Created by Robert F Cooper 11-3-2015 10:40AM
+% 
+% 
+% The analyses performed in this script are from Cooper et al. "Non-invasive 
+% assessment of human cone photoreceptor function", and
+% encompassed in Figures 1-4A, Equations 1-2.
 
 profile_method = 'box';
 norm_type = 'regional_norm_prestimminusdiv'; % The normalization approach.
