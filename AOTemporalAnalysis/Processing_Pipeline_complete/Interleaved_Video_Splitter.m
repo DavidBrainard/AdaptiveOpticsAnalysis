@@ -67,6 +67,8 @@ for k=1:length(fname)
     vidobj_1.FrameRate=16.6666;
 
     open(vidobj_1);
+    % **** Add a dummy frame so that the bug in Alf's software is ignored.
+    first_piece = cat(3, zeros(vidobj.Height,vidobj.Width), first_piece);
     writeVideo(vidobj_1,uint8(first_piece));
     close(vidobj_1);
     
@@ -74,6 +76,8 @@ for k=1:length(fname)
     vidobj_2.FrameRate=16.6666;
     
     open(vidobj_2);
+    % **** Add a dummy frame so that the bug in Alf's software is ignored.
+    second_piece = cat(3, zeros(vidobj.Height,vidobj.Width), second_piece);
     writeVideo(vidobj_2,uint8(second_piece));
     close(vidobj_2);
 

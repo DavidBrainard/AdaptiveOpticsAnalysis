@@ -130,6 +130,31 @@ for i=1:length(confocal_fname)
     end
     close(confocal_vidout);
     
+    split_name_in = [confocal_fname{i}(1:end-8) '.avi'];    
+    split_name_in = fullfile(pathname, strrep(split_name_in, 'confocal', 'split_det'));
+    
+    if exist(split_name_in,'file')
+        split_name_out = [confocal_fname{i}(1:end-8) '_piped.avi'];
+        split_name_out = fullfile(pathname, strrep(split_name_out, 'confocal', 'split_det'));
+        
+        split_vidin = VideoReader( split_name_in );
+        split_vidout = VideoWriter( split_name_out, 'Grayscale AVI' );
+        split_vidout.FrameRate = 16.6;
+        open(split_vidout);    
+        while hasFrame(split_vidin)
+            frm_in = readFrame(split_vidin);
+
+            if ~isempty(tforms{ref_im,i})
+                writeVideo( split_vidout, imwarp(frm_in, imref2d(size(frm_in)), tforms{ref_im,i},...
+                                                    'OutputView', imref2d(size(trial_im{ref_im}))) );
+            else
+                writeVideo( split_vidout, frm_in );
+            end
+        end
+        close(split_vidout);
+        
+    end
+    
     vis_name_in = [confocal_fname{i}(1:end-8) '.avi'];    
     vis_name_in = fullfile(pathname, strrep(vis_name_in, 'confocal', 'visible'));
     

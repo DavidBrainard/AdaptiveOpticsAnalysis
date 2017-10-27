@@ -2,11 +2,11 @@
 # 9-15-2017
 # This script removes residual distortion from a strip-registered dataset.
 # It requires:
-#    * A *functioning* MATLAB runtime, that has been set up to link to Python (instructions are on MATLAB's website).
+#    * A *functioning* MATLAB runtime, that has been set up to link to Python (optional).
 #    * The .dmp file output from Alfredo Dubra's Demotion software suite. **I realize this makes it VERY specific-
-#      I do not promise any amazing things happening as result of using this software!
+#      I do not promise any amazing things happening as result of using this software!**
 #    * The 'mat' file corresponding to the grid calibration- also using Alf Dubra's script.
-#    * An image that you wish de-distorted.
+#    * The dataset you wish to put through the temporal analysis pipeline.
 #
 #
 

@@ -1,4 +1,4 @@
-function [written_file, written_path]=Automatic_Frame_Culler_Pipl(confocal_fname, pathname)
+function [written_file, written_path]=Automatic_Frame_Culler_Pipl(video_fname, pathname)
 % Robert F Cooper 16-19-2017
 %
 % This script enables a user to remove poor frames from a temporal confocal
@@ -8,95 +8,117 @@ function [written_file, written_path]=Automatic_Frame_Culler_Pipl(confocal_fname
 % visible frames.
 
 
-if ~exist('confocal_fname','var')
+if ~exist('video_fname','var')
     %% Filename determination and handling
-    [confocal_fname, pathname] = uigetfile('*.avi', 'Select the confocal temporal video', 'MultiSelect','on');
+    [video_fname, pathname] = uigetfile('*.avi', 'Select the temporal video', 'MultiSelect','on');
 
 end
 
-if ~iscell(confocal_fname)
-    confocal_fname={confocal_fname};
+if ~iscell(video_fname)
+    video_fname={video_fname};
 end
 
-for k=1:length(confocal_fname)
+for k=1:length(video_fname)
 
-    confind = strfind(confocal_fname{k},'confocal');
+    confind = strfind(video_fname{k},'confocal');
 
-    if isempty(confind)
-       error('Could not find confocal in the filename. Needed for proper function of this script!'); 
-    end
-
-    split_fname = strrep(confocal_fname{k}, 'confocal', 'split_det');
+    split_fname = strrep(video_fname{k}, 'confocal', 'split_det');
 
     if exist(fullfile(pathname,split_fname),'file')
-       loadsplit = 1;
+       loadsplit = 1;       
     else
        loadsplit = 0;
     end
     
-    visible_fname = strrep(confocal_fname{k}, 'confocal', 'visible');
+    visible_fname = strrep(video_fname{k}, 'confocal', 'visible');
 
     if exist(fullfile(pathname,visible_fname),'file')
        loadvisible = 1;
     else
        loadvisible = 0;
     end
+    
+    
+    
+    if ~isempty(confind)
+%        error('Could not find confocal in the filename. Needed for proper function of this script!'); 
+%         end
+        % Find where the filename should be cut off in the confocal videos, and
+        % determine our acceptable frame filename.
+        i=1;
+        [comb_str remain] = strtok(video_fname{k}(confind:end), '_');
+        acceptable_frame_fname = [];
+        while ~isempty(remain)
+            [tok remain] = strtok( remain, '_');
 
-    % Find where the filename should be cut off in the confocal videos, and
-    % determine our acceptable frame filename.
-    i=1;
-    [comb_str remain] = strtok(confocal_fname{k}(confind:end), '_');
-    acceptable_frame_fname = [];
-    while ~isempty(remain)
-        [tok remain] = strtok( remain, '_');
-
-        if i==5
-            confocal_fname_out = comb_str;
-        elseif i>=8
-            acceptable_frame_fname = comb_str;
-            if 2==exist(fullfile(pathname, [confocal_fname{k}(1:confind-1) acceptable_frame_fname '_repaired_acceptable_frames.csv']),'file')
-                break;
+            if i==5
+                confocal_fname_out = comb_str;
+            elseif i>=8
+                acceptable_frame_fname = comb_str;
+                if 2==exist(fullfile(pathname, [video_fname{k}(1:confind-1) acceptable_frame_fname '_repaired_acceptable_frames.csv']),'file')
+                    break;
+                end
             end
+
+            comb_str = [comb_str '_' tok];
+
+            i=i+1;
         end
 
-        comb_str = [comb_str '_' tok];
-
-        i=i+1;
+        % Create our expected acceptable frame filenames
+        acceptable_frame_fname = [video_fname{k}(1:confind-1) acceptable_frame_fname '_repaired_acceptable_frames.csv'];
+        acceptable_frame_fname_out = [video_fname{k}(1:confind-1) confocal_fname_out '_crop_affine'];
     end
-    % Create our expected acceptable frame filenames
-    acceptable_frame_fname = [confocal_fname{k}(1:confind-1) acceptable_frame_fname '_repaired_acceptable_frames.csv'];
+    
+    if ~exist(fullfile(pathname, acceptable_frame_fname),'file') && loadsplit
+            
+        % Find where the filename should be cut off in the split videos, and
+        % determine our acceptable frame filename.
+        splitind = strfind(split_fname,'split_det');
+        i=1;
+        [comb_str remain] = strtok(split_fname(splitind:end), '_');
+        acceptable_frame_fname = [];
+        while ~isempty(remain)
+            [tok remain] = strtok( remain, '_');
+
+            if i==6
+                split_fname_out = comb_str;
+            elseif i>=8
+                acceptable_frame_fname = comb_str;
+                if 2==exist(fullfile(pathname, [split_fname(1:splitind-1) acceptable_frame_fname '_repaired_acceptable_frames.csv']),'file')
+                    break;
+                end
+            end
+
+            comb_str = [comb_str '_' tok];
+
+            i=i+1;
+        end
+
+        % Create our expected acceptable frame filenames
+        acceptable_frame_fname = [split_fname(1:splitind-1) acceptable_frame_fname '_repaired_acceptable_frames.csv'];
+        acceptable_frame_fname_out = [split_fname(1:splitind-1) split_fname_out '_crop_affine'];
+        split_fname_out = [split_fname(1:splitind-1) split_fname_out '_crop_affine'];
+    end
 
     if ~exist(fullfile(pathname, acceptable_frame_fname),'file')
-%         reply = input('Unable to find acceptable frames csv! Search for it? Y/N [Y]:','s');
-%         if isempty(reply)
-%            reply = 'Y';
-%         end
-% 
-%         if strcmpi(reply,'Y')
-%             [acceptable_frame_fname, af_pathname] = uigetfile(fullfile(pathname, '*.csv'), 'Select the acceptable frames csv.');
-%         else
-            error(['Unable to find acceptable frames csv: ' fullfile(pathname, acceptable_frame_fname)]);
-%         end
+        error(['Unable to find acceptable frames csv: ' fullfile(pathname, acceptable_frame_fname)]);
     end
 
-    acceptable_frame_fname_out = [confocal_fname{k}(1:confind-1) confocal_fname_out '_crop_affine'];
-
-
-    if loadsplit
-        split_fname_out = [confocal_fname{k}(1:confind-1) confocal_fname_out '_crop_affine'];
+    if loadsplit && ~exist('split_fname_out','var')
+        split_fname_out = [video_fname{k}(1:confind-1) confocal_fname_out '_crop_affine'];
         split_fname_out = strrep(split_fname_out, 'confocal', 'split_det');
     end
     
     if loadvisible
-        vis_fname_out = [confocal_fname{k}(1:confind-1) confocal_fname_out '_crop_affine'];
+        vis_fname_out = [video_fname{k}(1:confind-1) confocal_fname_out '_crop_affine'];
         vis_fname_out = strrep(vis_fname_out, 'confocal', 'visible');
     end
 
-    % Create our confocal output filename - affine will need to be done outside
-    % MATLAB.
-    confocal_fname_out = [confocal_fname{k}(1:confind-1) confocal_fname_out '_crop_affine'];
+    % Create our confocal output filename
+    confocal_fname_out = [video_fname{k}(1:confind-1) confocal_fname_out '_crop_affine'];
 
-    confocal_vidobj = VideoReader( fullfile(pathname, confocal_fname{k}) );
+    confocal_vidobj = VideoReader( fullfile(pathname, video_fname{k}) );
 
     if loadsplit
         split_vidobj = VideoReader( fullfile(pathname, split_fname) );
@@ -201,9 +223,9 @@ for k=1:length(confocal_fname)
 
         small_comps = frm_rp{n}(~big_comps);
 
-        if n==110
-            size(confocal_vid{n})
-        end
+%         if n==110
+%             size(confocal_vid{n})
+%         end
         
         % Mask out any small noisy areas
         for c=1:length(small_comps)
@@ -571,7 +593,7 @@ for k=1:length(confocal_fname)
         delete(fullfile(pathname,split_fname));
     end
     %Delete data from the last step of the pipeline.
-    delete(fullfile(pathname,confocal_fname{k}));
+    delete(fullfile(pathname,video_fname{k}));
     
     
     close all;
