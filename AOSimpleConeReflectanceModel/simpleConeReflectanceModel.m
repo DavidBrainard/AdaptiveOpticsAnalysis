@@ -37,7 +37,7 @@ lightWavelengthNm = 790;
 nCones = 10;
 
 % Length between reflecting surfaces
-reflectingSurfaceDifferenceNm = 10*1e3;
+reflectingSurfaceDifferenceNm = 30*1e3;
 
 % How much variation in the starting length between surfces is there
 % across cones (or trials within measurements for one cone), experessed as a
