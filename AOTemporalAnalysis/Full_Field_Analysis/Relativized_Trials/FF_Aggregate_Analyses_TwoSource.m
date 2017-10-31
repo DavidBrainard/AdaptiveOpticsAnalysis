@@ -149,8 +149,10 @@ end
 [remain kid] = getparent(stimRootDir);
 
 % [remain region] = getparent(remain);
-[remain stim_time] = getparent(remain);
+[remain stim_loc] = getparent(remain);
 [remain stim_intensity] = getparent(remain);
+[remain stim_time] = getparent(remain);
+
 [remain stimwave] = getparent(remain);
 [~, id] = getparent(remain);
 
@@ -187,22 +189,22 @@ plot(trainlocs, max(pooled_std_stim)*ones(size(trainlocs)),'r*'); hold off;
 ylabel('Pooled Standard deviation'); xlabel('Time (s)'); title( [stim_intensity ' ' stim_time 'pooled standard deviation of ' num2str(length(profileSDataNames)) ' signals.'] );
 axis([0 16 -1 3])
 hold off;
-% saveas(gcf, fullfile(pwd, [outFname '.png']), 'png' );
-saveas(gcf, fullfile(pwd, [outFname '.svg']), 'svg' );
+saveas(gcf, fullfile(pwd, [outFname '.png']), 'png' );
+% saveas(gcf, fullfile(pwd, [outFname '.svg']), 'svg' );
 
 % save( fullfile(pwd,['pooled_var_aggregate_' num2str(length(profileDataNames)) '_signals.mat' ] ), 'pooled_std_stim', 'timeBase' );
 
-dlmwrite(fullfile(pwd, [date '_all_plots.csv']), [ [str2double(id(4:end)), str2double(stim_intensity(1:3)), stimlen] ;[ timeBase sqrt(pooled_variance_stim) sqrt(pooled_variance_control) ] ]',...
-         '-append', 'delimiter', ',', 'roffset',1);
+% dlmwrite(fullfile(pwd, [date '_all_plots.csv']), [ [str2double(id(4:end)), str2double(stim_intensity(1:3)), stimlen] ;[ timeBase sqrt(pooled_variance_stim) sqrt(pooled_variance_control) ] ]',...
+%          '-append', 'delimiter', ',', 'roffset',1);
 
-% save thisshit.mat
+
 [fitCharacteristics, residuals] = modelFit(timeBase, pooled_std_stim);
 figure(2); hold on;
 plot(trainlocs, (.2+max(pooled_std_stim))*ones(size(trainlocs)),'y*'); hold off;
 
-% saveas(gcf, fullfile(pwd, [outFname '_wfit.png']) );
-saveas(gcf, fullfile(pwd, [outFname '_wfit.fig']) );
-saveas(gcf, fullfile(pwd, [outFname '_wfit.svg']), 'svg' );
+saveas(gcf, fullfile(pwd, [outFname '_wfit.png']) );
+% saveas(gcf, fullfile(pwd, [outFname '_wfit.fig']) );
+% saveas(gcf, fullfile(pwd, [outFname '_wfit.svg']), 'svg' );
 % figure(1);
 % saveas(gcf, fullfile(pwd, [outFname '_meanratio.svg']), 'svg' );
 % close(8);
@@ -215,33 +217,6 @@ fitCharacteristics.subject = id;
 fitCharacteristics.stim_intensity = stim_intensity;
 fitCharacteristics.stim_length = stimlen;
 fitCharacteristics.stim_wavelength = stimwave;
+fitCharacteristics.stim_loc = stim_loc;
 fitCharacteristics
-
-%% Mean ratio analyses
-% if exist('mean_ratio','var') && length(profileDataNames) == length(all_ratio_times)
-%     maxpts = cellfun(@max, all_ratio_times);
-%     maxlen = max(maxpts);
-%     mean_mean_ratios = nan(1,maxlen);
-% 
-%     for i=1:length(all_ratio_times)
-%         for j=1:length(all_ratio_times{i})
-% 
-%             if isnan( mean_mean_ratios( all_ratio_times{i}(j) ) )            
-%                 mean_mean_ratios( all_ratio_times{i}(j) ) = all_mean_ratio{i}(j);
-%             else
-%                 mean_mean_ratios( all_ratio_times{i}(j) ) = ( mean_mean_ratios( all_ratio_times{i}(j) ) + all_mean_ratio{i}(j) )/2;
-%             end
-%         end
-%         before(i) = mean(all_mean_ratio{i}(1:66));
-%         during(i) = mean(all_mean_ratio{i}( uint8(trainlocs*hz) ));
-%         after(i) = mean(all_mean_ratio{i}( uint8(trainlocs(end)*hz):end));
-%     end
-% %     figure(1); plot(mean_mean_ratios);
-% 
-%     minvals = min([before during after]);
-%     maxvals = max([before during after]);
-%     figure(1); plot(before,during,'r*',before,after,'b*' );
-%     dlmwrite( [stim_intensity '_' stim_time '_beforeduringafter.csv'],[before' during' after'],'-append','delimiter',',');
-% end
-
 

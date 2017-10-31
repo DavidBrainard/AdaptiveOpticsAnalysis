@@ -23,11 +23,11 @@ for i=1:length(dataPath)
 
     try 
         % Find the control match to the stim
-        [~, tail] = getparent(dataPath{i},1,'full');
-        [parent, ~] = getparent(dataPath{i},3,'full');
+        [~, tail] = getparent(dataPath{i},2,'full');
+        [parent, ~] = getparent(dataPath{i},4,'full');
         
         controlpath = fullfile(parent,'control',tail);
-        
+        controlpath;
         if any( cellfun(@(s)strcmp(controlpath,s),dataPath) ) && ...
            ~strcmp(controlpath,dataPath{i})
            
@@ -38,7 +38,7 @@ for i=1:length(dataPath)
             warning(['Not processing control video:' parent]);
         end
     catch ex
-       disp([dataPath{i} ' failed to analyze:']);
+       warning([dataPath{i} ' failed to analyze:']);
        disp([ex.message ' ' ex.stack(1).name ': line ' num2str(ex.stack(1).line)] );
     end
     
