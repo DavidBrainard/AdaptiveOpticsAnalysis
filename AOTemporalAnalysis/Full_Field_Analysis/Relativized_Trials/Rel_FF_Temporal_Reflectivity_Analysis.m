@@ -172,8 +172,8 @@ end
 
 %% Extract the raw reflectance of each cell.
 
-coords_used = ref_coords(~cellfun(@isempty,cellseg_inds), :);
-cellseg_inds = cellseg_inds(~cellfun(@isempty,cellseg_inds));
+% coords_used = ref_coords(~cellfun(@isempty,cellseg_inds), :);
+% cellseg_inds = cellseg_inds(~cellfun(@isempty,cellseg_inds));
 
 
 cell_reflectance = cell( length(cellseg_inds),1  );
@@ -185,6 +185,9 @@ if ~ishandle(wbh)
     wbh = waitbar(0, 'Creating reflectance profile for cell: 0');
 end
 
+vid_size = size(temporal_stack(:,:,1));
+
+
 for i=1:length(cellseg_inds)
     waitbar(i/length(cellseg_inds),wbh, ['Creating reflectance profile for cell: ' num2str(i)]);
 
@@ -194,28 +197,46 @@ for i=1:length(cellseg_inds)
     if any( capillary_mask(cellseg_inds{i}) ~= 1 )
         
         cell_reflectance{i} = nan(1,size(temporal_stack,3));
-    else
+    else                
         
-        for t=1:size(temporal_stack,3)
-            masked_timepoint = temporal_stack(:,:,t); 
-            if all( masked_timepoint(cellseg_inds{i}) ~= 0 )
-                cell_reflectance{i}(t) = mean( masked_timepoint(cellseg_inds{i}));
-            else            
-                cell_reflectance{i}(t) =  NaN;
-            end
-        end
+        [m,n] = ind2sub(vid_size, cellseg_inds{i});
+        
+        % Only works when using a box profile extraction!
+        thisstack = temporal_stack(min(m):max(m), min(n):max(n),:);
+        
+%         thisstack = zeros(max(m)-min(m)+1,max(n)-min(n)+1, size(temporal_stack,3));
+%         [s,t] = ind2sub([max(m)-min(m)+1,max(n)-min(n)+1], 1:length(cellseg_inds{i}));
+%         
+%         for k=1:length(cellseg_inds{i})
+%             thisstack(s(k),t(k),:) = temporal_stack(m(k),n(k),:);
+%         end
+        
+        thisstack(thisstack == 0) = NaN;
+        
+        thisstack = sum(thisstack,1);
+        thisstack = squeeze(sum(thisstack,2));
+        thisstack = thisstack./ (length(cellseg_inds{i})*ones(size(thisstack)));
+        
+        cell_reflectance{i} = thisstack';
+%         for t=1:size(temporal_stack,3)
+%             masked_timepoint = temporal_stack(:,:,t); 
+%             if all( masked_timepoint(cellseg_inds{i}) ~= 0 )
+%                 cell_reflectance{i}(t) = mean( masked_timepoint(cellseg_inds{i}));
+%             else            
+%                 cell_reflectance{i}(t) =  NaN;
+%             end
+%         end
+%         thisstack'
+%         cell_reflectance{i}
     end
 end
 close(wbh);
 
-
+%% Find the means / std devs
 cell_ref = cell2mat(cell_reflectance);
-
 cellinds = find( ~all(isnan(cell_ref),2) );
-coords_used = coords_used(cellinds,:);
 cell_ref = cell_ref( cellinds, :); % Remove any cells that have NaNs.
 
-%% Find the means / std devs
 for t=1:size(cell_ref,2)
     ref_mean(t) = mean(cell_ref( ~isnan(cell_ref(:,t)) ,t));        
     ref_hist(t,:) = hist(cell_ref( ~isnan(cell_ref(:,t)) ,t),255);    
@@ -238,6 +259,7 @@ saveas(gcf, fullfile(mov_path, 'Frame_Stddev_Plots' , [ref_image_fname(1:end - l
 
 %% Normalization to the mean
 norm_cell_reflectance = cell( size(cell_reflectance) );
+cell_prestim_mean = nan(size(cell_reflectance));
 
 for i=1:length( cell_reflectance )
     
@@ -250,11 +272,16 @@ for i=1:length( cell_reflectance )
         error('No normalization selected!')
     end
 
-    no_ref = ~isnan(norm_cell_reflectance{i});
+    % Store the mean value before the stimulus was delivered.
+    if ~isempty(cell_times{i})
+        cell_prestim_mean(i) = mean( cell_reflectance{i}( cell_times{i}<stim_times(1) & ~isnan( cell_reflectance{i} ) ) );
+    end
     
+    no_ref = ~isnan(norm_cell_reflectance{i});
+       
     norm_cell_reflectance{i} = norm_cell_reflectance{i}(no_ref);
     cell_times{i}       = cell_times{i}(no_ref);
-    
+       
 end
 
 
@@ -341,7 +368,7 @@ if ~exist( fullfile(mov_path, 'Profile_Data'), 'dir' )
 end
 % Dump all the analyzed data to disk
 save(fullfile(mov_path, 'Profile_Data' ,[ref_image_fname(1:end - length('_AVG.tif') ) '_' profile_method '_' norm_type '_' vid_type '_profiledata.mat']), ...
-     'cell_times', 'norm_cell_reflectance','coords_used','ref_image','ref_mean','ref_stddev','vid_type' );
+     'cell_times', 'norm_cell_reflectance','ref_coords','ref_image','ref_mean','ref_stddev','vid_type','cell_prestim_mean' );
 
   
 %% Remove the empty cells

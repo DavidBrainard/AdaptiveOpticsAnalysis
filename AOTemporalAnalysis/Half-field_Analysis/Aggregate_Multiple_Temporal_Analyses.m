@@ -263,7 +263,9 @@ timeBase = ((1:allmax)/hz)';
 dlmwrite(fullfile(pwd, [outFname '.csv']), [timeBase sqrt(pooled_variance_stim) sqrt(pooled_variance_control)], ',' );
 
 
-pooled_std_stim    = sqrt(pooled_variance_stim)-sqrt(pooled_variance_control);
+pooled_std_stim = pooled_variance_stim-pooled_variance_control;
+pooled_std_stim = sqrt(pooled_std_stim-min(pooled_std_stim));
+pooled_std_stim(imag(pooled_std_stim)>0) = pooled_std_stim(imag(pooled_std_stim)>0)*sqrt(-1);
 
 % Stim train
 stimlen = str2double( strrep(stim_time(1:3),'p','.') );

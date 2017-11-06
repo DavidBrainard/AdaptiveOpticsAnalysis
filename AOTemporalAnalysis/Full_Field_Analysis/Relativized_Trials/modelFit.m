@@ -10,57 +10,33 @@ function [fitCharacteristics, residual] = modelFit(timeBase, pooled_std_stim)
 % close all;
 
 %% Generate some simulated data for fitting
-% trueParams.type = '2xgammapdf';
-% trueParams.preStimValue = 0;
-% trueParams.stimOnsetTime = 2;
-% trueParams.responseDelay1 = 0.4;
-% trueParams.scale1 = 3;
-% trueParams.gammaA1 = 4;
-% trueParams.gammaB1 = 0.24;
-% trueParams.responseDelay2 = 1.5;
-% trueParams.scale2 = 3;
-% trueParams.gammaA2 = 4;
-% trueParams.gammaB2 = 0.24;
-% 
-% startTime = 0;
-% endTime = max(timeBase);
-% nTrueData = 200;
-% timeBase = linspace(startTime,endTime,nTrueData);
-% trueParams.noiseSd = 0;
-% theResponse = ComputeModelPreds(trueParams,timeBase);
-% trueParams.noiseSd = 0.3;
-% pooled_std_stim = ComputeModelPreds(trueParams,timeBase);
 
-%Remove values before cutoff time
+plotstuff = false;
+
+%Keep values before cutoff time
 cutofftime = 8;
-
-% timeBase = timeBase([1:79 84:end] );
-% pooled_std_stim = pooled_std_stim([1:79 84:end] );
-
-% 
-% %TEMP
-% goodtimes = find(timeBase>5.34 | (timeBase<4.56));
-% goodtimes = find(timeBase>3.5);
-% 
-% timeBase = timeBase(goodtimes);
-% pooled_std_stim = pooled_std_stim(goodtimes);
 
 pretime = timeBase <= cutofftime;
 timeBase = timeBase(pretime);
 pooled_std_stim = pooled_std_stim(pretime);
 
 
+% pooled_std_stim = medfilt1(pooled_std_stim,5);
+
+
 %% Start plot
-thePlot = figure(2); clf; hold on;
-% set(gca,'FontName','Helvetica','FontSize',14);
-plot(timeBase,pooled_std_stim,'ro','MarkerFaceColor','r','MarkerSize',6);
-% figure(thePlot); plot(timeBase,theResponse,'r','LineWidth',4);
-xlim([0 16]);
-ylim([-1 3]);
-xlabel('Time (secs)','FontSize',18);
-ylabel('Pooled Standard deviation','FontSize',18);
-title('Pooled standard deviation data and fit');
-drawnow;
+if plotstuff
+    thePlot = figure(2); clf; hold on;
+    % set(gca,'FontName','Helvetica','FontSize',14);
+    plot(timeBase,pooled_std_stim,'ro','MarkerFaceColor','r','MarkerSize',6);
+    % figure(thePlot); plot(timeBase,theResponse,'r','LineWidth',4);
+    xlim([0 16]);
+    ylim([-1 3]);
+    xlabel('Time (secs)','FontSize',18);
+    ylabel('Pooled Standard deviation','FontSize',18);
+    title('Pooled standard deviation data and fit');
+    drawnow;
+end
 
 
 %% Set up initial guess for fit parameters
@@ -160,7 +136,9 @@ end
 % fitParams0;
 % Add initial guess to the plot
 predictions0 = ComputeModelPreds(fitParams0,timeBase);
-figure(thePlot); hold on; plot(timeBase,predictions0,'k:','LineWidth',2); hold off;
+if plotstuff
+    figure(thePlot); hold on; plot(timeBase,predictions0,'k:','LineWidth',2); hold off;
+end
 
 %% Fit
 
@@ -225,18 +203,10 @@ predictions = ComputeModelPreds(fitParams,fitTimeBase);
 
 residual = mean((pooled_std_stim-predictions(1:length(pooled_std_stim))').^2);
 
+if plotstuff
+    figure(thePlot); hold on; plot(fitTimeBase,predictions,'g','LineWidth',2);
+end
 
-figure(thePlot); hold on; plot(fitTimeBase,predictions,'g','LineWidth',2);
-
-
-
-% legend({' Data', ' Initial Guess', ' Intermediate Fit' ' Final Fit' ' Residuals'},'FontSize',14,'Location','NorthEast');
-% hold off;
-
-
-
-% figure(3); plot(timeBase,pooled_std_stim-predictions');
-% title('Residuals');
 
 [max_ampl, max_ind ] = max(predictions);
 

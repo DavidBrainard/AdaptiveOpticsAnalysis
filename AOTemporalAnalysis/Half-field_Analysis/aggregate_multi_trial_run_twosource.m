@@ -54,9 +54,13 @@ for i=1:length(dataPath)
            ~strcmp(controlpath,dataPath{i})
            
             fitData = [fitData; Aggregate_Analyses_TwoSource(dataPath{i},controlpath)];
+            
+            fitData.amplitude
         elseif ~strcmp(controlpath,dataPath{i})
             warning(['Unable to find paired control video for,' parent]);
             fitData = [fitData; Aggregate_Multiple_Temporal_Analyses(dataPath{i})];
+            
+            fitData.amplitude
         else
             warning(['Not processing control video:' parent]);
         end

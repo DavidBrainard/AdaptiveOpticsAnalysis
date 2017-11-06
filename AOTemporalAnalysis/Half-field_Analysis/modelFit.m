@@ -32,7 +32,7 @@ function [fitCharacteristics, residual] = modelFit(timeBase, pooled_std_stim)
 % pooled_std_stim = ComputeModelPreds(trueParams,timeBase);
 
 %Remove values before cutoff time
-cutofftime = 8;
+% cutofftime = 8;
 
 % timeBase = timeBase([1:79 84:end] );
 % pooled_std_stim = pooled_std_stim([1:79 84:end] );
@@ -45,22 +45,14 @@ cutofftime = 8;
 % timeBase = timeBase(goodtimes);
 % pooled_std_stim = pooled_std_stim(goodtimes);
 
+pooled_std_stim = medfilt1(pooled_std_stim);
+
 pretime = timeBase <= cutofftime;
 timeBase = timeBase(pretime);
 pooled_std_stim = pooled_std_stim(pretime);
 
 
-%% Start plot
-thePlot = figure(2); clf; hold on;
-% set(gca,'FontName','Helvetica','FontSize',14);
-plot(timeBase,pooled_std_stim,'ro','MarkerFaceColor','r','MarkerSize',6);
-% figure(thePlot); plot(timeBase,theResponse,'r','LineWidth',4);
-xlim([0 16]);
-ylim([-1 3]);
-xlabel('Time (secs)','FontSize',18);
-ylabel('Pooled Standard deviation','FontSize',18);
-title('Pooled standard deviation data and fit');
-drawnow;
+
 
 
 %% Set up initial guess for fit parameters
@@ -76,7 +68,21 @@ maskout = ~isnan(pooled_std_stim);
 pooled_std_stim = pooled_std_stim(maskout);
 timeBase = timeBase(maskout);
 
-fitParams0.preStimValue = mean( pooled_std_stim( timeBase < fitParams0.stimOnsetTime ) );
+fitParams0.preStimValue = 0; %mean( pooled_std_stim( timeBase < fitParams0.stimOnsetTime ) );
+
+pooled_std_stim = pooled_std_stim-mean( pooled_std_stim( timeBase < fitParams0.stimOnsetTime ) );
+
+%% Start plot
+thePlot = figure(2); clf; hold on;
+% set(gca,'FontName','Helvetica','FontSize',14);
+plot(timeBase,pooled_std_stim,'ro','MarkerFaceColor','r','MarkerSize',6);
+% figure(thePlot); plot(timeBase,theResponse,'r','LineWidth',4);
+xlim([0 16]);
+ylim([-1 3]);
+xlabel('Time (secs)','FontSize',18);
+ylabel('Pooled Standard deviation','FontSize',18);
+title('Pooled standard deviation data and fit');
+drawnow;
 
 % Then rate parameter so that mode of distribution happens at
 % the time of maximum response;
