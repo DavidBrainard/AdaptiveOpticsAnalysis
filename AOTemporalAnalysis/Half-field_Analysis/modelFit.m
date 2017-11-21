@@ -31,8 +31,8 @@ function [fitCharacteristics, residual] = modelFit(timeBase, pooled_std_stim)
 % trueParams.noiseSd = 0.3;
 % pooled_std_stim = ComputeModelPreds(trueParams,timeBase);
 
-%Remove values before cutoff time
-% cutofftime = 8;
+%Remove values after cutoff time
+cutofftime = 8;
 
 % timeBase = timeBase([1:79 84:end] );
 % pooled_std_stim = pooled_std_stim([1:79 84:end] );

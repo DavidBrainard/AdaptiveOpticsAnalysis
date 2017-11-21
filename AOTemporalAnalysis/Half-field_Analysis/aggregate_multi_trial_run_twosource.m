@@ -60,7 +60,7 @@ for i=1:length(dataPath)
             warning(['Unable to find paired control video for,' parent]);
             fitData = [fitData; Aggregate_Multiple_Temporal_Analyses(dataPath{i})];
             
-            fitData.amplitude
+%             fitData.amplitude
         else
             warning(['Not processing control video:' parent]);
         end

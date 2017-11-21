@@ -187,10 +187,21 @@ figure(10);
 plot( timeBase,sqrt(pooled_variance_stim),'r'); hold on;
 plot( timeBase,sqrt(pooled_variance_control),'b');
 
+% Original (bugged, removed from Temporal_PreProcessing but carried over
+% erroneously
+pooled_std_stim = sqrt(pooled_variance_stim)-sqrt(pooled_variance_control);
 
-pooled_std_stim = pooled_variance_stim-pooled_variance_control;
-pooled_std_stim = sqrt(pooled_std_stim-min(pooled_std_stim));
-pooled_std_stim(imag(pooled_std_stim)>0) = pooled_std_stim(imag(pooled_std_stim)>0)*sqrt(-1);
+% Paper version (Negatives cause imaginary values/noisy prestim)
+pooled_std_stim = sqrt(pooled_variance_stim-pooled_variance_control);
+
+% Proposed version
+pooled_std_stim = sqrt(1+pooled_variance_stim-pooled_variance_control);
+
+
+% ALL GIVE SAME ACTION SPECTRUM ANSWER.
+
+
+% pooled_std_stim(imag(pooled_std_stim)>0) = NaN;
 plot( timeBase(~isnan(pooled_std_stim)), pooled_std_stim(~isnan(pooled_std_stim)),'k'); hold on;
 legend('Stimulus cones','Control cones','Subtraction');
 

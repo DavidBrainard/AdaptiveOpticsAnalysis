@@ -120,6 +120,8 @@ percentparula = parula(101);
 stim_cell_var = nan(size(allcoords,1), max_index);
 stim_trial_count = zeros(size(allcoords,1),1);
 
+ratioplotnums=[];
+
 for i=1:size(allcoords,1)
     waitbar(i/size(allcoords,1),THEwaitbar,'Processing stimulus signals...');
     
@@ -138,19 +140,23 @@ for i=1:size(allcoords,1)
             numposneg = sign(stim_cell_reflectance{j}{i}(stim_time_indexes{j}{i}>66));
             pos = sum(numposneg == 1);
 
-            subplot(2,1,1);hold on; plot(stim_time_indexes{j}{i}, (stim_cell_reflectance{j}{i}) );
-            xlabel('Frame #'); ylabel('Standardized reflectance'); title(num2str(i));
+%             subplot(2,1,1);hold on; plot(stim_time_indexes{j}{i}, (stim_cell_reflectance{j}{i}) );
+%             xlabel('Frame #'); ylabel('Standardized reflectance'); title(num2str(i));
 
             posnegatio = round(100*pos/length(numposneg))+1;
+            
+            
             if ~isnan(posnegatio) && ~isinf(posnegatio)
-                subplot(2,1,2);hold on; plot(j, stim_cell_prestim_mean{j}(i),'.','Color',percentparula(posnegatio,:),'MarkerSize', 15 );
-                axis([0 100 0 255]); xlabel('Trial #'); ylabel('Prestimulus reflectance (AU)');
+                ratioplotnums = [ratioplotnums;stim_cell_prestim_mean{j}(i) posnegatio];
+%                 subplot(2,1,2);hold on; plot(j, stim_cell_prestim_mean{j}(i),'.','Color',percentparula(posnegatio,:),'MarkerSize', 15 );
+%                 axis([0 100 0 255]); xlabel('Trial #'); ylabel('Prestimulus reflectance (AU)');
             end
         
             numtrials = numtrials+1;
             all_times_ref(j, stim_time_indexes{j}{i} ) = stim_cell_reflectance{j}{i};
         end
-    end    
+    end 
+%     pause;
     stim_trial_count(i) = numtrials;
     
 %     if i == 400
@@ -159,7 +165,7 @@ for i=1:size(allcoords,1)
 %     if numtrials > 75
 %         drawnow;
 %         frm = getframe(gcf);        
-%         imwrite(frm.cdata, 'Signal_vs_prestim_ref.tif','WriteMode','append');
+%         imwrite(frm.cdata, 'mean_vs_posnegratio.tif','WriteMode','append');
 %     end
 
     
@@ -180,6 +186,8 @@ for i=1:size(allcoords,1)
 end
 
 
+plot(ratioplotnums(:,1), ratioplotnums(:,2),'.'); hold on;
+
 
 %%
 control_cell_var = nan(size(allcoords,1), max_index);
@@ -195,10 +203,19 @@ for i=1:size(allcoords,1)
     all_times_ref = nan(length(profileCDataNames), max_index);
     for j=1:length(profileCDataNames)
                 
-        subplot(2,1,1);hold on; plot(control_time_indexes{j}{i}, control_cell_reflectance{j}{i} ); 
-        
-        subplot(2,1,2);hold on; plot(j, control_cell_prestim_mean{j}(i),'.','MarkerSize', 15 ); axis([0 100 0 255]);
-        
+        % Find out what percentage of time the signal spends negative
+        % or positive after stimulus delivery (66th frame)
+        numposneg = sign(control_cell_reflectance{j}{i}(control_time_indexes{j}{i}>66));
+        pos = sum(numposneg == 1);
+
+%         subplot(2,1,1);hold on; plot(control_time_indexes{j}{i}, (control_cell_reflectance{j}{i}) );
+%         xlabel('Frame #'); ylabel('Standardized reflectance'); title(num2str(i));
+
+        posnegatio = round(100*pos/length(numposneg))+1;
+%         if ~isnan(posnegatio) && ~isinf(posnegatio)
+%             subplot(2,1,2);hold on; plot(j, control_cell_prestim_mean{j}(i),'.','Color',percentparula(posnegatio,:),'MarkerSize', 15 );
+%             axis([0 100 0 255]); xlabel('Trial #'); ylabel('Prestimulus reflectance (AU)');
+%         end
         
         if ~isempty(control_cell_reflectance{j}{i})
             numtrials = numtrials+1;
@@ -208,6 +225,15 @@ for i=1:size(allcoords,1)
     control_trial_count(i) = numtrials;
 %     drawnow;
 %     saveas(gcf,['NC_11043_control_cone_' num2str(i) '_signals_' num2str(numtrials) '_trials.png']);
+
+%     if i == 400
+%             pause;
+%     end
+%     if numtrials > 75
+%         drawnow;
+%         frm = getframe(gcf);        
+%         imwrite(frm.cdata, 'Signal_vs_prestim_ref_controls.tif','WriteMode','append');
+%     end
     
     for j=1:size(control_cell_var,2)
         nonan_ref = all_times_ref(~isnan(all_times_ref(:,j)), j);
@@ -224,6 +250,8 @@ for i=1:size(allcoords,1)
 %     saveas(gcf,['NC_11043_control_cone_' num2str(i) '_stddev_' num2str(numtrials) '_trials.png']);
 end
 
+
+
 %% Calculate the pooled std deviation
 std_dev_sub = sqrt(stim_cell_var-control_cell_var);
 std_dev_sub(imag(std_dev_sub)>0) = std_dev_sub(imag(std_dev_sub)>0)*sqrt(-1);
@@ -239,6 +267,10 @@ for i=1:size(std_dev_sub,1)
     if ~all( isnan(thissig) ) && (stim_trial_count(i) > 50) && (control_trial_count(i) > 50)
         fitData = modelFit(timeBase, thissig');
         fitAmp(i) = fitData.amplitude;
+        
+        if i==163
+            pause;
+        end
         
     end
 end
@@ -303,77 +335,77 @@ numtrials;
 %% Output
 
 % For structure: /stuff/id/date/wavelength/time/intensity/location/data
-[remain kid] = getparent(stimRootDir);
-
-% [remain region] = getparent(remain);
-[remain stim_loc] = getparent(remain);
-[remain stim_intensity] = getparent(remain);
-[remain stim_time] = getparent(remain);
-[remain stimwave] = getparent(remain);
-[remain sessiondate] = getparent(remain);
-[~, id] = getparent(remain);
-
-outFname = [id '_' stimwave '_' stim_intensity '_' stim_time '_single_' num2str(size(allcoords,1)) '_signals_twosource'];
-
-figure(8);  title('All control signals'); xlabel('Frame #'); ylabel('Standard deviations'); %axis([0 249 -20 75]);
-saveas(gcf, fullfile(pwd, [outFname '_allcontrol.png']), 'png' );
-figure(9);  title('All stimulus signals'); xlabel('Frame #'); ylabel('Standard deviations'); %axis([0 249 -20 75]);
-saveas(gcf, fullfile(pwd, [outFname '_allstim.png']), 'png' );
-
-hz=16.66666666;
-timeBase = ((1:allmax)/hz)';
-
-dlmwrite(fullfile(pwd, [outFname '.csv']), [timeBase sqrt(pooled_variance_stim) sqrt(pooled_variance_control)], ',' );
-
-
-figure(10); 
-plot( timeBase,sqrt(pooled_variance_stim)-1,'r'); hold on;
-plot( timeBase,sqrt(pooled_variance_control)-1,'b');
-
-
-pooled_std_stim    = sqrt(pooled_variance_stim)-sqrt(pooled_variance_control);
-plot( timeBase(~isnan(pooled_std_stim)), pooled_std_stim(~isnan(pooled_std_stim)),'k'); hold on;
-legend('Stimulus cones','Control cones','Subtraction');
-
-
-% Stim train
-stimlen = str2double( strrep(stim_time(1:3),'p','.') );
-
-trainlocs = 66/hz:1/hz:(66/hz+stimlen);
-plot(trainlocs, max(pooled_std_stim)*ones(size(trainlocs)),'r*'); hold off;
-
-% plot(stim_locs, max([ref_variance_stim; ref_variance_control])*ones(size(stim_locs)),'r*'); hold off;
-ylabel('Pooled Standard deviation'); xlabel('Time (s)'); title( [stim_intensity ' ' stim_time 'pooled standard deviation of ' num2str(length(profileSDataNames)) ' signals.'] );
-axis([0 16 -1 3])
-hold off;
-saveas(gcf, fullfile(pwd, [outFname '.png']), 'png' );
-% saveas(gcf, fullfile(pwd, [outFname '.svg']), 'svg' );
-
-% save( fullfile(pwd,['pooled_var_aggregate_' num2str(length(profileDataNames)) '_signals.mat' ] ), 'pooled_std_stim', 'timeBase' );
-
-% dlmwrite(fullfile(pwd, [date '_all_plots.csv']), [ [str2double(id(4:end)), str2double(stim_intensity(1:3)), stimlen] ;[ timeBase sqrt(pooled_variance_stim) sqrt(pooled_variance_control) ] ]',...
-%          '-append', 'delimiter', ',', 'roffset',1);
-
-
-[fitCharacteristics, residuals] = modelFit(timeBase, pooled_std_stim);
-figure(2); hold on;
-plot(trainlocs, (.2+max(pooled_std_stim))*ones(size(trainlocs)),'y*'); hold off;
-
-saveas(gcf, fullfile(pwd, [outFname '_wfit.png']) );
-% saveas(gcf, fullfile(pwd, [outFname '_wfit.fig']) );
-% saveas(gcf, fullfile(pwd, [outFname '_wfit.svg']), 'svg' );
-% figure(1);
-% saveas(gcf, fullfile(pwd, [outFname '_meanratio.svg']), 'svg' );
-% close(8);
-
-fitCharacteristics.min_cones = min_cones;
-fitCharacteristics.max_cones = max_cones;
-fitCharacteristics.avg_num_cones = num_control_cones/length(profileSDataNames);
-fitCharacteristics.num_pooled = length(profileSDataNames);
-fitCharacteristics.subject = id;
-fitCharacteristics.stim_intensity = stim_intensity;
-fitCharacteristics.stim_length = stimlen;
-fitCharacteristics.stim_wavelength = stimwave;
-fitCharacteristics.stim_loc = stim_loc;
-fitCharacteristics
+% [remain kid] = getparent(stimRootDir);
+% 
+% % [remain region] = getparent(remain);
+% [remain stim_loc] = getparent(remain);
+% [remain stim_intensity] = getparent(remain);
+% [remain stim_time] = getparent(remain);
+% [remain stimwave] = getparent(remain);
+% [remain sessiondate] = getparent(remain);
+% [~, id] = getparent(remain);
+% 
+% outFname = [id '_' stimwave '_' stim_intensity '_' stim_time '_single_' num2str(size(allcoords,1)) '_signals_twosource'];
+% 
+% figure(8);  title('All control signals'); xlabel('Frame #'); ylabel('Standard deviations'); %axis([0 249 -20 75]);
+% saveas(gcf, fullfile(pwd, [outFname '_allcontrol.png']), 'png' );
+% figure(9);  title('All stimulus signals'); xlabel('Frame #'); ylabel('Standard deviations'); %axis([0 249 -20 75]);
+% saveas(gcf, fullfile(pwd, [outFname '_allstim.png']), 'png' );
+% 
+% hz=16.66666666;
+% timeBase = ((1:allmax)/hz)';
+% 
+% dlmwrite(fullfile(pwd, [outFname '.csv']), [timeBase sqrt(pooled_variance_stim) sqrt(pooled_variance_control)], ',' );
+% 
+% 
+% figure(10); 
+% plot( timeBase,sqrt(pooled_variance_stim)-1,'r'); hold on;
+% plot( timeBase,sqrt(pooled_variance_control)-1,'b');
+% 
+% 
+% pooled_std_stim    = sqrt(pooled_variance_stim)-sqrt(pooled_variance_control);
+% plot( timeBase(~isnan(pooled_std_stim)), pooled_std_stim(~isnan(pooled_std_stim)),'k'); hold on;
+% legend('Stimulus cones','Control cones','Subtraction');
+% 
+% 
+% % Stim train
+% stimlen = str2double( strrep(stim_time(1:3),'p','.') );
+% 
+% trainlocs = 66/hz:1/hz:(66/hz+stimlen);
+% plot(trainlocs, max(pooled_std_stim)*ones(size(trainlocs)),'r*'); hold off;
+% 
+% % plot(stim_locs, max([ref_variance_stim; ref_variance_control])*ones(size(stim_locs)),'r*'); hold off;
+% ylabel('Pooled Standard deviation'); xlabel('Time (s)'); title( [stim_intensity ' ' stim_time 'pooled standard deviation of ' num2str(length(profileSDataNames)) ' signals.'] );
+% axis([0 16 -1 3])
+% hold off;
+% saveas(gcf, fullfile(pwd, [outFname '.png']), 'png' );
+% % saveas(gcf, fullfile(pwd, [outFname '.svg']), 'svg' );
+% 
+% % save( fullfile(pwd,['pooled_var_aggregate_' num2str(length(profileDataNames)) '_signals.mat' ] ), 'pooled_std_stim', 'timeBase' );
+% 
+% % dlmwrite(fullfile(pwd, [date '_all_plots.csv']), [ [str2double(id(4:end)), str2double(stim_intensity(1:3)), stimlen] ;[ timeBase sqrt(pooled_variance_stim) sqrt(pooled_variance_control) ] ]',...
+% %          '-append', 'delimiter', ',', 'roffset',1);
+% 
+% 
+% [fitCharacteristics, residuals] = modelFit(timeBase, pooled_std_stim);
+% figure(2); hold on;
+% plot(trainlocs, (.2+max(pooled_std_stim))*ones(size(trainlocs)),'y*'); hold off;
+% 
+% saveas(gcf, fullfile(pwd, [outFname '_wfit.png']) );
+% % saveas(gcf, fullfile(pwd, [outFname '_wfit.fig']) );
+% % saveas(gcf, fullfile(pwd, [outFname '_wfit.svg']), 'svg' );
+% % figure(1);
+% % saveas(gcf, fullfile(pwd, [outFname '_meanratio.svg']), 'svg' );
+% % close(8);
+% 
+% fitCharacteristics.min_cones = min_cones;
+% fitCharacteristics.max_cones = max_cones;
+% fitCharacteristics.avg_num_cones = num_control_cones/length(profileSDataNames);
+% fitCharacteristics.num_pooled = length(profileSDataNames);
+% fitCharacteristics.subject = id;
+% fitCharacteristics.stim_intensity = stim_intensity;
+% fitCharacteristics.stim_length = stimlen;
+% fitCharacteristics.stim_wavelength = stimwave;
+% fitCharacteristics.stim_loc = stim_loc;
+% fitCharacteristics
 
