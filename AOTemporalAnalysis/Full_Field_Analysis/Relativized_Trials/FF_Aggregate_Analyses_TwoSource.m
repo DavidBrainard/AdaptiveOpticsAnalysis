@@ -204,7 +204,7 @@ plot( timeBase,sqrt(pooled_variance_stim)-1,'r'); hold on;
 plot( timeBase,sqrt(pooled_variance_control)-1,'b');
 
 
-pooled_std_stim    = sqrt(pooled_variance_stim-pooled_variance_control);
+pooled_std_stim    = sqrt(pooled_variance_stim)-sqrt(pooled_variance_control);
 plot( timeBase(~isnan(pooled_std_stim)), pooled_std_stim(~isnan(pooled_std_stim)),'k'); hold on;
 legend('Stimulus cones','Control cones','Subtraction');
 

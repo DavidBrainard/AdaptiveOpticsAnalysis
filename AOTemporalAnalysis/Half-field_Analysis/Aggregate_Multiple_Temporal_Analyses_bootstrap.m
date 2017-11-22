@@ -222,9 +222,8 @@ parfor b=1:1500
 %     plot( timeBase,sqrt(pooled_variance_stim),'r'); hold on;
 %     plot( timeBase,sqrt(pooled_variance_control),'b');
 
-    pooled_std_stim = pooled_variance_stim-pooled_variance_control;
-    pooled_std_stim = sqrt(pooled_std_stim-min(pooled_std_stim));
-    pooled_std_stim(imag(pooled_std_stim)>0) = pooled_std_stim(imag(pooled_std_stim)>0)*sqrt(-1);
+    pooled_std_stim = sqrt(pooled_variance_stim)-sqrt(pooled_variance_control);
+
 
 %     plot( timeBase(~isnan(pooled_std_stim)), pooled_std_stim(~isnan(pooled_std_stim)),'k'); hold on;
 %     legend('Stimulus cones','Control cones','Subtraction');

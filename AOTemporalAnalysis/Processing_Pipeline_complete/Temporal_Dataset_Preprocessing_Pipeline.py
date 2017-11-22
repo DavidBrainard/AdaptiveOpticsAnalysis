@@ -70,6 +70,9 @@ options['initialdir'] = dmp_folder_path
 
 image_folder_path = tkFileDialog.askdirectory(**options)
 
+stimend = 99
+stimbegin = 67
+
 # progo = ttk.Progressbar(root, length=len(os.listdir(dmp_folder_path)))
 # progo.pack()
 fixed_images = []
@@ -119,8 +122,17 @@ for thisfile in os.listdir(dmp_folder_path):
                                 images_to_fix.append(imagefile)
                     break
 
+            numgood = 0
+				
+            for index in pick['acceptable_frames']:
+                if index >= stimbegin and index <= stimend:
+                    numgood += 1
+                    
+            print("There are: "+str(numgood)+" image indices within the stimulus duration...")
+                    
             # If we don't have any accompanying images, just say fuck it and move on
-            if images_to_fix:
+            if images_to_fix and numgood >= (stimend-stimbegin)*0.6:
+                print("Enough to continue the pipeline.")
                 print("Using DMP file: " + thisfile)
 
                 minmaxpix = np.zeros((len(strip_translation_info), 2))
@@ -183,8 +195,7 @@ for thisfile in os.listdir(dmp_folder_path):
                     if "confocal" in anchorfile[0]:
                          writtenfile = anchorfile
 
-
-                # progo.step()
+                
                 np.savetxt(os.path.join(writtenfile[1], thisfile[0:-4] + "_repaired_acceptable_frames.csv"),
                            pick['acceptable_frames'],
                            delimiter=',', fmt='%f')
