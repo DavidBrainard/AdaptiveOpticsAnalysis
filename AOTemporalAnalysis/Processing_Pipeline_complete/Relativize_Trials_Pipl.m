@@ -40,8 +40,10 @@ optimizer.InitialRadius = 1.5e-03;
 tforms = cell(length(trial_im),length(trial_im));
 
 % Find the transform from each image to every other
-% for i=1:length(trial_im)
-ref_im = 2;
+
+thearea = prod(imsize,2);
+
+[~, ref_im] = max(thearea);
 confocal_fname{ref_im}
 
 i=ref_im;
