@@ -182,7 +182,6 @@ end
 [remain stim_loc] = getparent(remain);
 [remain stim_intensity] = getparent(remain);
 [remain stim_time] = getparent(remain);
-
 [remain stimwave] = getparent(remain);
 [~, id] = getparent(remain);
 

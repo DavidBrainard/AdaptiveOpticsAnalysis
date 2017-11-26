@@ -14,8 +14,9 @@ fPaths = read_folder_contents_rec(rootDir,'tif');
 wbh = waitbar(0,['Processing trial 0 of ' num2str(length(fPaths)) '.']);
 
 
-for i=1:size(fPaths,1)
-    tic;
+parfor i=1:size(fPaths,1)
+    i
+%     tic;
     [mov_path, ref_image_fname] = getparent(fPaths{i});
 
     if reprocess || ~exist(fullfile(mov_path,'Profile_Data',[ref_image_fname(1:end - length('AVG.tif') ) 'box_cutoff_regional_norm_prestimminusdiv_sub_90_profiledata.mat'] ), 'file' );
@@ -39,8 +40,8 @@ for i=1:size(fPaths,1)
 %     if mod(i,poolobj.NumWorkers) == 0
 %         for m=1:poolobj.NumWorkers
 %             fetchNext(f);
-            toc;
-            waitbar(i/length(fPaths), wbh, ['Finished trial ' ref_image_fname ' (' num2str(i) ' of ' num2str(length(fPaths)) ').']);        
+%             toc;
+%             waitbar(i/length(fPaths), wbh, ['Finished trial ' ref_image_fname ' (' num2str(i) ' of ' num2str(length(fPaths)) ').']);        
 %         end
 %         tic;
 %     end

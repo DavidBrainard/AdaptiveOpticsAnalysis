@@ -120,7 +120,7 @@ percentparula = parula(101);
 stim_cell_var = nan(size(allcoords,1), max_index);
 stim_trial_count = zeros(size(allcoords,1),1);
 
-ratioplotnums=[];
+% ratioplotnums=[];
 
 for i=1:size(allcoords,1)
     waitbar(i/size(allcoords,1),THEwaitbar,'Processing stimulus signals...');
@@ -146,11 +146,11 @@ for i=1:size(allcoords,1)
             posnegatio = round(100*pos/length(numposneg))+1;
             
             
-            if ~isnan(posnegatio) && ~isinf(posnegatio)
-                ratioplotnums = [ratioplotnums;stim_cell_prestim_mean{j}(i) posnegatio];
+%             if ~isnan(posnegatio) && ~isinf(posnegatio)
+%                 ratioplotnums = [ratioplotnums;stim_cell_prestim_mean{j}(i) posnegatio];
 %                 subplot(2,1,2);hold on; plot(j, stim_cell_prestim_mean{j}(i),'.','Color',percentparula(posnegatio,:),'MarkerSize', 15 );
 %                 axis([0 100 0 255]); xlabel('Trial #'); ylabel('Prestimulus reflectance (AU)');
-            end
+%             end
         
             numtrials = numtrials+1;
             all_times_ref(j, stim_time_indexes{j}{i} ) = stim_cell_reflectance{j}{i};
@@ -253,25 +253,22 @@ end
 
 
 %% Calculate the pooled std deviation
-std_dev_sub = sqrt(stim_cell_var-control_cell_var);
-std_dev_sub(imag(std_dev_sub)>0) = std_dev_sub(imag(std_dev_sub)>0)*sqrt(-1);
+std_dev_sub = sqrt(stim_cell_var)-sqrt(control_cell_var);
+% std_dev_sub(imag(std_dev_sub)>0) = std_dev_sub(imag(std_dev_sub)>0)*sqrt(-1);
 
-timeBase = ((1:max_index)/17.6)';
+timeBase = ((1:max_index)/16.6)';
 
-fitAmp = zeros(size(std_dev_sub,1),1);
+fitAmp = nan(size(std_dev_sub,1),1);
 
 for i=1:size(std_dev_sub,1)
     waitbar(i/size(std_dev_sub,1),THEwaitbar,'Fitting subtracted signals...');
     
     thissig = std_dev_sub(i,:);
-    if ~all( isnan(thissig) ) && (stim_trial_count(i) > 50) && (control_trial_count(i) > 50)
+    if ~all( isnan(thissig) ) && (stim_trial_count(i) >= 25) && (control_trial_count(i) >= 25)
         fitData = modelFit(timeBase, thissig');
         fitAmp(i) = fitData.amplitude;
         
-        if i==163
-            pause;
-        end
-        
+%       pause;  
     end
 end
 
@@ -287,7 +284,7 @@ close(THEwaitbar);
 % ylabel('Number of cones');
 
 figure(7);
-histogram( fitAmp(fitAmp~=0) ,'Binwidth',0.1);
+histogram( fitAmp(~isnan(fitAmp)) ,'Binwidth',0.1);
 title('Stim-Control per cone subtraction amplitudes');
 xlabel('Amplitude difference from control');
 ylabel('Number of cones');
@@ -308,7 +305,7 @@ percentmax = zeros(size(allcoords,1));
 
 for i=1:size(allcoords,1)
     
-%     if stim_amps(i) ~= 0
+    if ~isnan(fitAmp(i))
         percentmax(i) = fitAmp(i);
         
         if percentmax(i) > upper_thresh
@@ -324,27 +321,27 @@ for i=1:size(allcoords,1)
             patch(V(C{i},1),V(C{i},2),ones(size(V(C{i},1))),'FaceColor', thismap(thiscolorind,:));
 
         end
-%     end
+    end
 end
 colorbar
 axis([min(allcoords(:,1)) max(allcoords(:,1)) min(allcoords(:,2)) max(allcoords(:,2))])
 caxis([lower_thresh upper_thresh])
 set(gca,'Color','k'); hold off; drawnow;
 
-numtrials;
+
 %% Output
 
 % For structure: /stuff/id/date/wavelength/time/intensity/location/data
-% [remain kid] = getparent(stimRootDir);
-% 
-% % [remain region] = getparent(remain);
-% [remain stim_loc] = getparent(remain);
-% [remain stim_intensity] = getparent(remain);
-% [remain stim_time] = getparent(remain);
-% [remain stimwave] = getparent(remain);
+[remain kid] = getparent(stimRootDir);
+
+% [remain region] = getparent(remain);
+[remain stim_loc] = getparent(remain);
+[remain stim_intensity] = getparent(remain);
+[remain stim_time] = getparent(remain);
+[remain stimwave] = getparent(remain);
 % [remain sessiondate] = getparent(remain);
-% [~, id] = getparent(remain);
-% 
+[~, id] = getparent(remain);
+
 % outFname = [id '_' stimwave '_' stim_intensity '_' stim_time '_single_' num2str(size(allcoords,1)) '_signals_twosource'];
 % 
 % figure(8);  title('All control signals'); xlabel('Frame #'); ylabel('Standard deviations'); %axis([0 249 -20 75]);

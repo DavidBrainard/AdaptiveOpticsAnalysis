@@ -118,8 +118,10 @@ for thisfile in os.listdir(dmp_folder_path):
 
                         for imagefile in os.listdir(image_folder_path):
                             if (checkfile in imagefile) and (imagefile.endswith(".tif") or imagefile.endswith(".avi")):
-                                #print "Whoa! " + imagefile + " matched!"
+                               # print("Whoa! " + imagefile + " matched!")
                                 images_to_fix.append(imagefile)
+                            #else:
+                                #print("Whoa! " + imagefile + " didn't match " +checkfile)
                     break
 
             numgood = 0
@@ -127,7 +129,8 @@ for thisfile in os.listdir(dmp_folder_path):
             for index in pick['acceptable_frames']:
                 if index >= stimbegin and index <= stimend:
                     numgood += 1
-                    
+            
+            #print("There are: "+str(len(images_to_fix))+" images to fix")
             print("There are: "+str(numgood)+" image indices within the stimulus duration...")
                     
             # If we don't have any accompanying images, just say fuck it and move on
@@ -205,7 +208,8 @@ for thisfile in os.listdir(dmp_folder_path):
                      writtenfile = mat_engi.Automatic_Frame_Culler_Pipl(writtenfile[0], writtenfile[1], nargout=2)
                      fixed_images += [ writtenfile[0] ]
                      THEpath = writtenfile[1]
-
+            else:
+                print("Accompanying AVI not found, or not enough images in stimulus region to continue the pipeline.")
 
         except(ValueError, RuntimeError) as err:
             print(err)

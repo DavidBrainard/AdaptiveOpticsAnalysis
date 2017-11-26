@@ -50,6 +50,9 @@ end
 
 sdImage = exp( real(sqrt( sum(gausfiltImages,3)./(sum_map-1))) );
 
+sdImage(isinf(sdImage))=1;
+sdImage(isnan(sdImage))=1;
+
 edgemask = 15;
 sdImage(1:edgemask,:)=min(sdImage(:));
 sdImage(:,1:edgemask)=min(sdImage(:));
@@ -69,11 +72,12 @@ figure(1); imagesc( sdImagestretched ); colormap gray; axis image;
 
 threshold = mean(sdImagestretched(notmin))  + std(sdImagestretched(notmin));
 
-imageMask = imclose(sdImagestretched>threshold, strel('disk',7));
-imageMask(1:edgemask,:)=true;
-imageMask(:,1:edgemask)=true;
-imageMask(end-edgemask+1:end,:)=true;
-imageMask(:,end-edgemask+1:end)=true;
+capillary_mask = imclose(sdImagestretched>threshold, strel('disk',7));
+capillary_mask(1:edgemask,:)=true;
+capillary_mask(:,1:edgemask)=true;
+capillary_mask(end-edgemask+1:end,:)=true;
+capillary_mask(:,end-edgemask+1:end)=true;
 
 
-figure(2); imagesc( imageMask ); colormap gray; axis image;
+figure(2); imagesc( capillary_mask ); colormap gray; axis image;
+save('ALL_TRIALS_cap_map.mat','capillary_mask');

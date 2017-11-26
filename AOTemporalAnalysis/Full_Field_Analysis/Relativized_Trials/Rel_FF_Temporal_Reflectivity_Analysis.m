@@ -64,6 +64,8 @@ if ~exist(fullfile(mov_path,ref_coords_fname),'file')
     for i=1:length(tifnames)
         if ~isempty( strfind( tifnames{i}, 'ALL_TRIALS.tif'))
             ref_coords_fname = [tifnames{i}(1:end-4) '_coords.csv'];
+            load( fullfile(mov_path, [tifnames{i}(1:end-4) '_cap_map.mat']) );
+            capillary_mask = ~capillary_mask;
             break;
         end
     end
@@ -97,18 +99,14 @@ stim_inds = find(stimd_images>=stimulus_frames(1) & stimd_images<=stimulus_frame
 stim_times = stimd_images(stim_inds);
 
 
-%% Create the capillary mask- only use the data before the stimulus fires to do so.
-% if ~isempty(stim_inds)
-%     
-% else
-%     capillary_mask = double(~tam_etal_capillary_func( temporal_stack(:,:,1:66) ));
-% end
-
-capillary_mask = double(~tam_etal_capillary_func( temporal_stack ));
-
+%% Create the capillary mask, if we can't find the all trial based one.
+if ~exist('capillary_mask','var')
+    capillary_mask = double(~tam_etal_capillary_func( temporal_stack ));
+end
 if ~exist( fullfile(mov_path, 'Capillary_Maps'), 'dir' )
     mkdir(fullfile(mov_path, 'Capillary_Maps'))
 end
+   
 imwrite(uint8(capillary_mask*255), fullfile(mov_path, 'Capillary_Maps' ,[ref_image_fname(1:end - length('_AVG.tif') ) '_cap_map.png' ] ) );
 
 % Mask the images to exclude zones with capillaries on top of them.

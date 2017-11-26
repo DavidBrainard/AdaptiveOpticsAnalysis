@@ -34,8 +34,12 @@ end
 
 [optimizer, metric]  = imregconfig('multimodal');
 optimizer.InitialRadius = 1.5e-03;
+metric.NumberOfHistogramBins = 200;
 
 [monooptimizer, monometric]  = imregconfig('monomodal');
+monooptimizer.MaximumIterations = 250;
+monooptimizer.RelaxationFactor = 0.6;
+monooptimizer.GradientMagnitudeTolerance = 1e-5;
 
 tforms = cell(length(trial_im),length(trial_im));
 
