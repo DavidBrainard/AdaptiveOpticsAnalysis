@@ -33,6 +33,8 @@
 clear;
 close all;
 
+CUTOFF = 26;
+
 if ~exist('stimRootDir','var')
     close all force;
     stimRootDir = uigetdir(pwd, 'Select the directory containing the stimulus profiles');
@@ -118,8 +120,9 @@ end
 percentparula = parula(101);
 
 stim_cell_var = nan(size(allcoords,1), max_index);
+stim_cell_mean = nan(size(allcoords,1), max_index);
 stim_trial_count = zeros(size(allcoords,1),1);
-
+stim_posnegratio = nan(size(allcoords,1),max_index);
 % ratioplotnums=[];
 
 for i=1:size(allcoords,1)
@@ -133,7 +136,8 @@ for i=1:size(allcoords,1)
     all_times_ref = nan(length(profileSDataNames), max_index);
     for j=1:length(profileSDataNames)
         
-        if ~isempty(stim_cell_reflectance{j}{i})
+        if ~isempty(stim_cell_reflectance{j}{i}) && ...
+           sum(stim_time_indexes{j}{i} >= 67 & stim_time_indexes{j}{i} <=99) >= CUTOFF
             
             % Find out what percentage of time the signal spends negative
             % or positive after stimulus delivery (66th frame)
@@ -143,11 +147,9 @@ for i=1:size(allcoords,1)
 %             subplot(2,1,1);hold on; plot(stim_time_indexes{j}{i}, (stim_cell_reflectance{j}{i}) );
 %             xlabel('Frame #'); ylabel('Standardized reflectance'); title(num2str(i));
 
-            posnegatio = round(100*pos/length(numposneg))+1;
-            
-            
+            stim_posnegratio(i,j) = round(100*pos/length(numposneg))+1;                        
 %             if ~isnan(posnegatio) && ~isinf(posnegatio)
-%                 ratioplotnums = [ratioplotnums;stim_cell_prestim_mean{j}(i) posnegatio];
+% %                 ratioplotnums = [ratioplotnums;stim_cell_prestim_mean{j}(i) posnegatio];
 %                 subplot(2,1,2);hold on; plot(j, stim_cell_prestim_mean{j}(i),'.','Color',percentparula(posnegatio,:),'MarkerSize', 15 );
 %                 axis([0 100 0 255]); xlabel('Trial #'); ylabel('Prestimulus reflectance (AU)');
 %             end
@@ -156,42 +158,37 @@ for i=1:size(allcoords,1)
             all_times_ref(j, stim_time_indexes{j}{i} ) = stim_cell_reflectance{j}{i};
         end
     end 
-%     pause;
     stim_trial_count(i) = numtrials;
     
-%     if i == 400
-%         pause;
-%     end
-%     if numtrials > 75
-%         drawnow;
-%         frm = getframe(gcf);        
-%         imwrite(frm.cdata, 'mean_vs_posnegratio.tif','WriteMode','append');
-%     end
 
-    
     for j=1:size(stim_cell_var,2)
         nonan_ref = all_times_ref(~isnan(all_times_ref(:,j)), j);
         refcount = sum(~isnan(all_times_ref(:,j)));
         refmean = mean(nonan_ref);
         if ~isnan(refmean)
+            stim_cell_mean(i,j) = refmean;            
             stim_cell_var(i,j) = ( sum((nonan_ref-refmean).^2)./ (refcount-1) );
         end
     end
     
+%     plot(stim_cell_mean(i,:));
 %     figure(2); 
 %     hold on;
 %     clf;
-%     plot(stim_cell_stddev(i,:)); drawnow;
+%     plot(sqrt(stim_cell_var(i,:))); drawnow; hold off;
+
+%     if i == 400
+%         pause;
+%     end
 %     saveas(gcf,['NC_11043_stimulus_cone_' num2str(i) '_stddev_' num2str(numtrials) '_trials.png']);
 end
 
 
-plot(ratioplotnums(:,1), ratioplotnums(:,2),'.'); hold on;
-
-
 %%
 control_cell_var = nan(size(allcoords,1), max_index);
+control_cell_mean = nan(size(allcoords,1), max_index);
 control_trial_count = zeros(size(allcoords,1),1);
+control_posnegratio = nan(size(allcoords,1),max_index);
 
 for i=1:size(allcoords,1)
     waitbar(i/size(allcoords,1),THEwaitbar,'Processing control signals...');
@@ -211,13 +208,15 @@ for i=1:size(allcoords,1)
 %         subplot(2,1,1);hold on; plot(control_time_indexes{j}{i}, (control_cell_reflectance{j}{i}) );
 %         xlabel('Frame #'); ylabel('Standardized reflectance'); title(num2str(i));
 
-        posnegatio = round(100*pos/length(numposneg))+1;
+        control_posnegratio(i,j) = round(100*pos/length(numposneg))+1;
 %         if ~isnan(posnegatio) && ~isinf(posnegatio)
 %             subplot(2,1,2);hold on; plot(j, control_cell_prestim_mean{j}(i),'.','Color',percentparula(posnegatio,:),'MarkerSize', 15 );
 %             axis([0 100 0 255]); xlabel('Trial #'); ylabel('Prestimulus reflectance (AU)');
 %         end
         
-        if ~isempty(control_cell_reflectance{j}{i})
+        if ~isempty(control_cell_reflectance{j}{i}) && ...
+           sum(control_time_indexes{j}{i} >= 67 & control_time_indexes{j}{i} <=99) >=  CUTOFF
+       
             numtrials = numtrials+1;
             all_times_ref(j, control_time_indexes{j}{i} ) = control_cell_reflectance{j}{i};
         end
@@ -240,6 +239,7 @@ for i=1:size(allcoords,1)
         refcount = sum(~isnan(all_times_ref(:,j)));
         refmean = mean(nonan_ref);
         if ~isnan(refmean)
+            control_cell_mean(i,j) = refmean;
             control_cell_var(i,j) = ( sum((nonan_ref-refmean).^2)./ (refcount-1) );
         end
     end
@@ -268,13 +268,66 @@ for i=1:size(std_dev_sub,1)
         fitData = modelFit(timeBase, thissig');
         fitAmp(i) = fitData.amplitude;
         
-%       pause;  
+        if fitAmp(i) <=0
+            modelFit(timeBase, thissig',true)
+            fitAmp(i)
+%             pause;
+        end
+%         pause(1);
     end
 end
-
-
 close(THEwaitbar);
 
+%% Plot the individual reflectance profiles
+% figure(100); hold on;
+% delete('cone_ref_examples.tif')
+% for i=1:400%size(allcoords,1)
+%     clf;
+%     if ~isnan(fitAmp(i))
+%    
+%         subplot(4,1,1); plot(std_dev_sub(i,:),'-');
+%         xlabel('Frame #'); ylabel('Reflectance Response'); title(num2str(i));
+%         axis([0 180 -1 4]);
+%         
+%         subplot(4,1,2); plot(stim_cell_mean(i,:)-control_cell_mean(i,:));
+%         xlabel('Frame #'); ylabel('Mean Reflectance Response');
+%         axis([0 180 -3 3]);
+%               
+%         for j=1:length(profileSDataNames)
+%             subplot(4,1,3); hold on; plot(stim_time_indexes{j}{i}, (stim_cell_reflectance{j}{i}),'-' );
+%             xlabel('Frame #'); ylabel('Standardized reflectance'); %axis([0 165 -15 15]);
+%                              
+%             if ~isnan(stim_posnegratio(i,j)) && ~isinf(stim_posnegratio(i,j))
+%                 subplot(4,1,4);hold on; plot(j, stim_cell_prestim_mean{j}(i),'.','Color',percentparula(stim_posnegratio(i,j),:),'MarkerSize', 15 );
+%                 axis([0 length(profileSDataNames) 0 255]); xlabel('Trial #'); ylabel('Prestimulus reflectance (AU)');
+%             end
+%         end
+%         f=getframe(gcf);
+%         imwrite(f.cdata,'cone_ref_examples.tif','WriteMode','append');
+%     end
+% end
+
+%% Plot the pos/neg ratio of the mean vs the amplitude
+posnegratio=nan(size(allcoords,1),1);
+
+figure(101); clf; hold on;
+for i=1:size(allcoords,1)
+    if ~isnan(fitAmp(i))
+        % Find out what percentage of time the signal spends negative
+        % or positive after stimulus delivery (66th frame)
+        numposneg = sign(stim_cell_mean(i,:)-control_cell_mean(i,:));
+        pos = sum(numposneg == 1);
+
+        posnegratio(i) = 100*pos/length(numposneg);
+
+        plot( fitAmp(i),posnegratio(i),'k.');        
+    end
+end
+ylabel('Mean response % positive');
+xlabel('Reflectance response amplitude');
+title('Percent positive vs reflectance response amplitude')
+hold off;
+saveas(gcf,'posneg_vs_amp.png');
 %% Plot histograms of the amplitudes
 % figure(5); 
 % histogram( ( control_amps(~isnan(control_amps)) ),'Binwidth',0.1); hold on;
@@ -331,16 +384,18 @@ set(gca,'Color','k'); hold off; drawnow;
 
 %% Output
 
-% For structure: /stuff/id/date/wavelength/time/intensity/location/data
-[remain kid] = getparent(stimRootDir);
+fitAmp_nW = fitAmp; save('nW.mat','fitAmp_nW','allcoords','ref_image','control_cell_mean','control_cell_var','stim_cell_mean','stim_cell_var');
 
-% [remain region] = getparent(remain);
-[remain stim_loc] = getparent(remain);
-[remain stim_intensity] = getparent(remain);
-[remain stim_time] = getparent(remain);
-[remain stimwave] = getparent(remain);
-% [remain sessiondate] = getparent(remain);
-[~, id] = getparent(remain);
+% % For structure: /stuff/id/date/wavelength/time/intensity/location/data
+% [remain kid] = getparent(stimRootDir);
+% 
+% % [remain region] = getparent(remain);
+% [remain stim_loc] = getparent(remain);
+% [remain stim_intensity] = getparent(remain);
+% [remain stim_time] = getparent(remain);
+% [remain stimwave] = getparent(remain);
+% % [remain sessiondate] = getparent(remain);
+% [~, id] = getparent(remain);
 
 % outFname = [id '_' stimwave '_' stim_intensity '_' stim_time '_single_' num2str(size(allcoords,1)) '_signals_twosource'];
 % 

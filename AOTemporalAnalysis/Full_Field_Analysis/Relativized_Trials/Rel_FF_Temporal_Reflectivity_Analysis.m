@@ -64,8 +64,10 @@ if ~exist(fullfile(mov_path,ref_coords_fname),'file')
     for i=1:length(tifnames)
         if ~isempty( strfind( tifnames{i}, 'ALL_TRIALS.tif'))
             ref_coords_fname = [tifnames{i}(1:end-4) '_coords.csv'];
-            load( fullfile(mov_path, [tifnames{i}(1:end-4) '_cap_map.mat']) );
-            capillary_mask = ~capillary_mask;
+            if exist(fullfile(mov_path, [tifnames{i}(1:end-4) '_cap_map.mat']), 'file')
+                load( fullfile(mov_path, [tifnames{i}(1:end-4) '_cap_map.mat']) );
+                capillary_mask = ~capillary_mask;
+            end
             break;
         end
     end

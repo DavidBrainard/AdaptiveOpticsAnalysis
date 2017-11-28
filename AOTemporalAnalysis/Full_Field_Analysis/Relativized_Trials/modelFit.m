@@ -1,4 +1,4 @@
-function [fitCharacteristics, residual] = modelFit(timeBase, pooled_std_stim)
+function [fitCharacteristics, residual] = modelFit(timeBase, pooled_std_stim, plotstuff)
 % gammaFitTutorial
 %
 % Illustrates using fmincon to fit a gamma function to data.
@@ -10,8 +10,9 @@ function [fitCharacteristics, residual] = modelFit(timeBase, pooled_std_stim)
 % close all;
 
 %% Generate some simulated data for fitting
-
-plotstuff = false;
+if ~exist('plotstuff','var')
+    plotstuff = false;
+end
 
 %Keep values before cutoff time
 cutofftime = 8;
@@ -21,7 +22,7 @@ timeBase = timeBase(pretime);
 pooled_std_stim = pooled_std_stim(pretime);
 
 
-% pooled_std_stim = medfilt1(pooled_std_stim,5);
+pooled_std_stim = medfilt1(pooled_std_stim,5);
 
 
 %% Start plot
@@ -75,7 +76,7 @@ if ~isempty( strfind( fitParams0.type, 'gammapdf') )
     overPreStim = find( pooled_std_stim(timeBase > fitParams0.stimOnsetTime) > prestim_PI );
     
     % Supress the gamma function if there is no obvious response.
-    if ~isempty(overPreStim)
+    if length(overPreStim)>5
         fitParams0.scale1 = 1;
         fitParams0.gammaA1 = 1.25;
         fitParams0.gammaB1 = (maxTime - fitParams0.stimOnsetTime)/(fitParams0.gammaA1);
@@ -152,8 +153,8 @@ x0 = ParamsToX(fitParams0);
 % First seach on gammaA and scale only, and add to plot
 switch fitParams0.type
     case 'gammapdf'
-        vlb = [x0(1) 0.01 x0(3) 0.01];
-        vub = [x0(1) 100 x0(3) 100];     
+        vlb = [x0(1) 0.01 x0(3) -10];
+        vub = [x0(1) 10 x0(3) 10];     
     case '2xgammapdf'
         vlb = [x0(1) 0.01 x0(3) 0.01 x0(5) 0.01 x0(7) -6 0];%x0(9)];
         vub = [x0(1) 10   x0(3) 10   x0(5) 10   x0(7) 6   0];%x0(9)];
@@ -174,18 +175,18 @@ predictions1 = ComputeModelPreds(XToParams(x1,fitParams0),timeBase);
 % Then full search
 switch fitParams0.type
     case 'gammapdf'
-        vlb = [-2 0.1 0.1 0];
-        vub = [2  3 3 10];        
+        vlb = [-3 0 0 -10];
+        vub = [3  3 3 10];        
     case '2xgammapdf'
         vlb = [-2 0.1 0.1 0.001  0  1    1  -6   0];
         vub = [ 1 10    10    10   2  10   10  6   0];
     case 'gammapdfexp'
         if peaked
-            vlb = [-3 0.2 0.2   .1   0.01  0];
+            vlb = [-3 0.2 0.2   -2   0.01  0];
             vub = [ 3 3    3    20  2     3];
         else
-            vlb = [-1 0 0  0  0.01  0];
-            vub = [ 2 1 1  0   3    2];
+            vlb = [-3 0 0  -2  0.01  0];
+            vub = [ 3 3 3   1   2    3];
         end
 end
 
@@ -193,7 +194,6 @@ x = fmincon(@(x)FitModelErrorFunction(x,timeBase,pooled_std_stim,fitParams0),x1,
 
 % Extract fit parameters
 fitParams = XToParams(x,fitParams0);
-
 
 delta=min(diff(timeBase));
 fitTimeBase = 0:delta:max(timeBase);
@@ -207,8 +207,8 @@ if plotstuff
     figure(thePlot); hold on; plot(fitTimeBase,predictions,'g','LineWidth',2);
 end
 
-
-[max_ampl, max_ind ] = max(predictions);
+fitParams
+[max_ampl, max_ind ] = max(abs(predictions));
 
 threeQind = min( find( predictions > (max_ampl/2) ) );
 threeQval = predictions(threeQind);
@@ -217,7 +217,7 @@ threeQval = predictions(threeQind);
 % value- should help with quantization issues
 prestim_PI = fitParams0.preStimValue + 2*prestim_stddev;
 
-fitCharacteristics.amplitude = max_ampl-fitParams0.preStimValue;
+fitCharacteristics.amplitude = predictions(max_ind)-fitParams0.preStimValue;
 
 afterPIval = min( find( predictions > prestim_PI ) );
 
