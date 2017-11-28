@@ -90,6 +90,16 @@ load spd_phillybright
 spd_phillybright = SplineSpd(S_phillybright,spd_phillybright,S);
 photopicLuminancePhillyBrightCdM2 = T_xyz(2,:)*spd_phillybright;
 
+%% Estimate power near 790 in sunlight
+% Quick and dirty.  Set spd_phillybright so that there is power
+% in a band near 790 to the power measured at 780; 780 is the upper
+% limb of the radiance measurement we have.
+index780 = find(wls == 780);
+power780 = spd_phillybright(index780);
+indices = find(wls >= 770 & wls <= 810);
+spd_790bright = zeros(size(spd_phillybright));
+spd_790bright(indices) = power780;
+
 %% Compute irradiance to equivalent radiance
 %
 % This conversion depends on pupil area and eye length
@@ -164,6 +174,8 @@ fprintf('  * Analyzing light levels as input\n');
 fprintf('  * Stimulus radiance %0.1f log10 watts/[m2-sr], %0.1f log10 watts/[cm2-sr]\n',log10(sum(radianceWattsPerM2Sr)),log10(sum(radianceWattsPerCm2Sr)));
 fprintf('  * Stimulus luminance %0.1f candelas/m2\n',photopicLuminanceCdM2);
 fprintf('    * For comparison, sunlight in Philly: %0.1f cd/m2\n',photopicLuminancePhillyBrightCdM2);
+fprintf('    * For comparison, sunlight in Philly: %0.1f log10 watts/[m2-sr], %0.1f log10 watts/[cm2-sr]\n',log10(sum(spd_phillybright)),log10(sum(spd_phillybright/10000)));
+fprintf('    * For comparison, sunlight in Philly near 790 nm: %0.1f log10 watts/[m2-sr], %0.1f log10 watts/[cm2-sr]\n',log10(sum(spd_790bright)),log10(sum(spd_790bright/10000)));
 fprintf('  * Stimulus %0.0f (check val %0.0f) scotopic trolands, %0.0f photopic trolands (check val %0.0f)\n',irradianceScotTrolands,irradianceScotTrolands_check,...
     irradiancePhotTrolands,irradiancePhotTrolands_check);
 fprintf('  * Stimulus %0.1f log10 scotopic trolands, %0.1f log10 photopic trolands\n',log10(irradianceScotTrolands),log10(irradiancePhotTrolands));
