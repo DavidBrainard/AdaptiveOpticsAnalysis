@@ -3,6 +3,8 @@ clear;
 % close all;
 
 load('0nW.mat');
+
+
 load('50nW.mat');
 load('450nW.mat');
 
@@ -38,28 +40,36 @@ figure(1); histogram(fitAmp_0nW(valid),'BinWidth',0.1,'Normalization','probabili
 axis([-1 6 0 0.2]);
 title(['\bf0nW: \rmMean: ' num2str(mean(fitAmp_0nW(valid)))...
        ' Median: ' num2str(median(fitAmp_0nW(valid))) ...
-       ' %>0: ' num2str( sum(fitAmp_0nW(valid)>0)./ sum(valid) ) ]);
+       ' %>0: ' num2str( 100*sum(fitAmp_0nW(valid)>0)./ sum(valid) ) ]);
 xlabel('Amplitude (std devs)');
 ylabel('Probability');
 saveas(gcf, '0nW_histo.png');
+
+response_threshold = quantile(fitAmp_0nW(valid),0.95)
 
 figure(2); histogram(fitAmp_50nW(valid),'BinWidth',0.1,'Normalization','probability');
 axis([-1 6 0 0.12]); 
 title(['\bf50nW: \rmMean: ' num2str(mean(fitAmp_50nW(valid)))...
        ' Median: ' num2str(median(fitAmp_50nW(valid))) ...
-       ' %>0: ' num2str( 100*sum(fitAmp_50nW(valid)>0)./ sum(valid) ) ]);
+       ' %>95th: ' num2str( 100*sum(fitAmp_50nW(valid)>response_threshold)./ sum(valid) ) ]);
 xlabel('Amplitude (std devs)');
 ylabel('Probability');
 saveas(gcf, '50nW_histo.png');
+
 
 figure(3); histogram(fitAmp_450nW(valid),'BinWidth',0.1,'Normalization','probability');
 axis([-1 6 0 0.12]); 
 title(['\bf450nW: \rmMean: ' num2str(mean(fitAmp_450nW(valid)))...
        ' Median: ' num2str(median(fitAmp_450nW(valid))) ...
-       ' %>0: ' num2str( 100*sum(fitAmp_450nW(valid)>0)./ sum(valid) ) ]);
+       ' %>95th: ' num2str( 100*sum(fitAmp_450nW(valid)>response_threshold)./ sum(valid) ) ]);
 xlabel('Amplitude (std devs)');
 ylabel('Probability');
 saveas(gcf, '450nW_histo.png');
+
+
+disp([ num2str(100*sum(fitAmp_50nW(valid)>response_threshold) / sum(valid)) '% of 50nW cone responses are over the 95th percentile of the 0nW condition'])
+disp([ num2str(100*sum(fitAmp_450nW(valid)>response_threshold) / sum(valid)) '% of 450nW cone responses are over the 95th percentile of the 0nW condition'])
+
 %% Individual Spatal maps
 
 for j=1:size(allfits,2)
@@ -105,7 +115,7 @@ for j=1:size(allfits,2)
     set(gca,'Color','k'); 
     title(['Spatial map ' num2str(j-1)])
     hold off; drawnow;
-    saveas(gcf, ['spatial_map_' num2str(j-1) '.png']);
+%     saveas(gcf, ['spatial_map_' num2str(j-1) '.png']);
 end
 
 
@@ -151,7 +161,7 @@ for i=1:size(allcoords,1)
         vertices = V(C{i},:);
         
         if ~isnan(thiscolorind) && all(vertices(:,1)<max(allcoords(:,1))) && all(vertices(:,2)<max(allcoords(:,1))) ... % [xmin xmax ymin ymax] 
-                                && all(vertices(:,1)>0) && all(vertices(:,2)>0) %&& slopes(i)<0.1                
+                                && all(vertices(:,1)>0) && all(vertices(:,2)>0) %&& slopes(i)<0.05                
 %             plot(allcoords(i,1),allcoords(i,2),'.','Color', thismap(thiscolorind,:), 'MarkerSize', 15 );
             patch(V(C{i},1),V(C{i},2),ones(size(V(C{i},1))),'FaceColor', thismap(thiscolorind,:));
 

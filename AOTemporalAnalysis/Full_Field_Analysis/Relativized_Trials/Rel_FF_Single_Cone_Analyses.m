@@ -254,26 +254,33 @@ end
 
 %% Calculate the pooled std deviation
 std_dev_sub = sqrt(stim_cell_var)-sqrt(control_cell_var);
-% std_dev_sub(imag(std_dev_sub)>0) = std_dev_sub(imag(std_dev_sub)>0)*sqrt(-1);
+mean_sub = stim_cell_mean-control_cell_mean;
 
 timeBase = ((1:max_index)/16.6)';
 
 fitAmp = nan(size(std_dev_sub,1),1);
+fitMean = nan(size(std_dev_sub,1),1);
 
-for i=1:size(std_dev_sub,1)
-    waitbar(i/size(std_dev_sub,1),THEwaitbar,'Fitting subtracted signals...');
-    
+waitbar(1/size(std_dev_sub,1),THEwaitbar,'Fitting subtracted signals...');
+
+parfor i=1:size(std_dev_sub,1)
+
+    i
     thissig = std_dev_sub(i,:);
     if ~all( isnan(thissig) ) && (stim_trial_count(i) >= 25) && (control_trial_count(i) >= 25)
-        fitData = modelFit(timeBase, thissig');
+        fitData = modelFit_beta(timeBase, thissig', true);
         fitAmp(i) = fitData.amplitude;
-        
-        if fitAmp(i) <=0
-            modelFit(timeBase, thissig',true)
-            fitAmp(i)
-%             pause;
-        end
 %         pause(1);
+        fitData = modelFit_beta(timeBase, mean_sub(i,:)', true);
+%         pause(1);
+        fitMean(i) = fitData.amplitude;
+
+%         if fitAmp(i) <=0
+%             modelFit(timeBase, thissig',true)
+%             fitAmp(i)
+%             pause;
+%         end
+        
     end
 end
 close(THEwaitbar);
@@ -310,12 +317,14 @@ close(THEwaitbar);
 %% Plot the pos/neg ratio of the mean vs the amplitude
 posnegratio=nan(size(allcoords,1),1);
 
+
+
 figure(101); clf; hold on;
 for i=1:size(allcoords,1)
     if ~isnan(fitAmp(i))
         % Find out what percentage of time the signal spends negative
         % or positive after stimulus delivery (66th frame)
-        numposneg = sign(stim_cell_mean(i,:)-control_cell_mean(i,:));
+        numposneg = sign(mean_sub(i,:));
         pos = sum(numposneg == 1);
 
         posnegratio(i) = 100*pos/length(numposneg);
