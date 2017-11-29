@@ -3,8 +3,6 @@ clear;
 % close all;
 
 load('0nW.mat');
-
-
 load('50nW.mat');
 load('450nW.mat');
 
@@ -13,6 +11,18 @@ allfits = [fitAmp_0nW fitAmp_50nW fitAmp_450nW];
 valid = all(~isnan(allfits),2);
 
 intensities = repmat( [0 log10(50) log10(450)],[size(allfits,1) 1]);
+
+diffamp = diff(allfits,[],2);
+bigdiff = fitAmp_450nW-fitAmp_0nW;
+
+total1=sum(~isnan(diffamp(:,1)));
+total2=sum(~isnan(diffamp(:,2)));
+total3=sum(~isnan(bigdiff));
+
+zero_to_fiftynW = 100*sum(sign(diffamp( ~isnan(diffamp(:,1)) ,1)) == 1)./total1
+fifty_to_fourfiftynW = 100*sum(sign(diffamp( ~isnan(diffamp(:,2)) ,2)) == 1)./total2
+zero_to_fourfiftnW = 100*sum(sign(bigdiff( ~isnan(bigdiff))) == 1)./total3
+
 
 %% Boxplot of the amplitudes from each intensity.
 
