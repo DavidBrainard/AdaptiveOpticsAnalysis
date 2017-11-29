@@ -15,14 +15,14 @@ if ~exist('plotstuff','var')
 end
 
 %Keep values before cutoff time
-cutofftime = 8;
+cutofftime = 7;
 
 pretime = timeBase <= cutofftime;
 timeBase = timeBase(pretime);
 pooled_std_stim = pooled_std_stim(pretime);
 
 
-pooled_std_stim = medfilt1(pooled_std_stim,5);
+pooled_std_stim = medfilt1(pooled_std_stim,3);
 
 
 %% Start plot
@@ -195,6 +195,7 @@ x = fmincon(@(x)FitModelErrorFunction(x,timeBase,pooled_std_stim,fitParams0),x1,
 % Extract fit parameters
 fitParams = XToParams(x,fitParams0);
 
+
 delta=min(diff(timeBase));
 fitTimeBase = 0:delta:max(timeBase);
 
@@ -207,8 +208,12 @@ if plotstuff
     figure(thePlot); hold on; plot(fitTimeBase,predictions,'g','LineWidth',2);
 end
 
-fitParams
-[max_ampl, max_ind ] = max(abs(predictions));
+if peaked
+    [max_ampl, max_ind ] = max((predictions));
+else
+    fitParams
+    [max_ampl, max_ind ] = max(abs(predictions)); 
+end
 
 threeQind = min( find( predictions > (max_ampl/2) ) );
 threeQval = predictions(threeQind);

@@ -151,7 +151,7 @@ for i=1:size(allcoords,1)
         vertices = V(C{i},:);
         
         if ~isnan(thiscolorind) && all(vertices(:,1)<max(allcoords(:,1))) && all(vertices(:,2)<max(allcoords(:,1))) ... % [xmin xmax ymin ymax] 
-                                && all(vertices(:,1)>0) && all(vertices(:,2)>0) %&& slopes(i)<0.1                
+                                && all(vertices(:,1)>0) && all(vertices(:,2)>0) %&& slopes(i)<0.05                
 %             plot(allcoords(i,1),allcoords(i,2),'.','Color', thismap(thiscolorind,:), 'MarkerSize', 15 );
             patch(V(C{i},1),V(C{i},2),ones(size(V(C{i},1))),'FaceColor', thismap(thiscolorind,:));
 
