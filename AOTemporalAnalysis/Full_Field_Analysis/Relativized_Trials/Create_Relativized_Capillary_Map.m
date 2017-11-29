@@ -13,9 +13,17 @@ mov_path = pwd;
 
 fNames = read_folder_contents(mov_path,'avi');
 
-varImages = [];
-%% Load the files
 for f=1:length(fNames)
+    if strcmp('_piped.avi', fNames{f}(end-length('_piped.avi')+1:end))
+        temporal_stack_reader = VideoReader( fullfile(mov_path,fNames{f}) );
+        varImages = nan(temporal_stack_reader.Height, temporal_stack_reader.Width, length(fNames));
+        break;
+    end
+end
+
+
+%% Load the files
+parfor f=1:length(fNames)
 
     if strcmp('_piped.avi', fNames{f}(end-length('_piped.avi')+1:end))
         fNames{f}
@@ -31,9 +39,18 @@ for f=1:length(fNames)
         
         [ ~, thisVarImage ] = tam_etal_capillary_func( temporal_stack );
         
-        varImages = cat(3,varImages,thisVarImage);
+        varImages(:,:,f) = thisVarImage;
     end
 end
+%%
+
+tokeep = true(length(fNames),1);
+for f=1:length(fNames)
+    naner= isnan(varImages(:,:,f));
+    tokeep(f) = ~all(naner(:));
+end
+
+varImages = varImages(:,:,tokeep);
 
 %%
 undefsd = (isnan(varImages) | isinf(varImages) );
