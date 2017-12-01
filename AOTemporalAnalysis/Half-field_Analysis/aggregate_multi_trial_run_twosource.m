@@ -1,4 +1,4 @@
-%   Aggregate_Recursive_Run_Twosource
+%   aggregate_multi_trial_run_twosource
 %
 %   Recursively calculates the pooled variance across a set of pre-analyzed 
 %   signals from stimulus and control trials, performs the subtraction
@@ -19,7 +19,6 @@
 % The analyses performed by this script are from Cooper et al. "Non-invasive 
 % assessment of human cone photoreceptor function", and
 % encompassed in Figures 4B/5A, Equation 3.
-
 
 clear;
 close all force;

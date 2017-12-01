@@ -1,13 +1,6 @@
 clear;
-% close all;
+close all;
 
-% a480 = dlmread('/local_data/Projects/AOSLO-Intrinsic-Reflectivity-2015_10_01-/data/allsubs_manual_480_20170120.csv');
-% a510 = dlmread('/local_data/Projects/AOSLO-Intrinsic-Reflectivity-2015_10_01-/data/allsubs_manual_510_20161130.csv');
-% a550 = dlmread('/local_data/Projects/AOSLO-Intrinsic-Reflectivity-2015_10_01-/data/allsubs_manual_550_20161130.csv');
-% a590 = dlmread('/local_data/Projects/AOSLO-Intrinsic-Reflectivity-2015_10_01-/data/allsubs_manual_590_20161219.csv');
-% a675 = dlmread('/local_data/Projects/AOSLO-Intrinsic-Reflectivity-2015_10_01-/data/allsubs_manual_675_20161130.csv');
-
-% wavelengths = [480 510 550 590 675];
 
 [fname, pathname] = uigetfile('*.csv');
 
@@ -56,10 +49,7 @@ for i=1:length(IDs)
         irrdata = irrdata(irrdata~=0);
         
         irradiances(w) = {irrdata};
-%         luminosity{w} = [luminosity{w}; AOLightLevelConversions_Func(1, repmat(wavelengths(w),length(irradiances{w}),1), irradiances{w}/1000, false)];
-        datavals(w) = {valdata};
-        
-%         plot(log10(luminosity{w}),datavals{w}, [wavecolors(w) 'o'],'MarkerFaceColor',wavecolors(w), 'MarkerSize',6);
+        datavals(w) = {valdata};        
         
     end
 %     hold off;
