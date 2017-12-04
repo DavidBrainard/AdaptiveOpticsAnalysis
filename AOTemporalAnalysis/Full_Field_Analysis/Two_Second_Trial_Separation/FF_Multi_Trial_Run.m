@@ -1,11 +1,36 @@
+% FF_Multi_Trial_Run
+%
+%   Recursively performs a temporal analysis of a dataset. This dataset
+%   must be formatted in a specific way, all relative to the "reference",
+%   or averaged, image from a single confocal trial.
+%
+%   For a given grayscale temporal video file [TEMPORAL_FILE].avi, 
+%       There must be:
+%       -A reference image [TEMPORAL_FILE]_AVG.tif
+%       -A cone coordinate list [TEMPORAL_FILE]_AVG_coords.csv
+%       -A frame list [TEMPORAL_FILE]_acceptable_frames.csv
+%       -A video file (the same size as [TEMPORAL_FILE] containing the 
+%        stimulus extent and duration. Stimulus extent is delineated by
+%        above-noise values (20 A.U.).
+%
+%
+% Inputs:
+%       mov_path: The folder path of the files that will be analyzed.
+%
+%       ref_image_fname: The name of the averaged image (ending in _AVG.tif)                        
+%
+%
+% Created by Robert F Cooper 11-3-2015
+% 
+% 
+% The analyses performed in this script are from Cooper et al. "Non-invasive 
+% assessment of human cone photoreceptor function", and
+% encompassed in Figures 1-4A, Equations 1-2.
 
 clear;
 close all force;
 clc;
 
-
-% poolobj = gcp();
-reprocess=true;
 
 rootDir = uigetdir(pwd);
 
@@ -18,32 +43,24 @@ for i=1:size(fPaths,1)
     tic;
     [mov_path, ref_image_fname] = getparent(fPaths{i});
 
-    if reprocess || ~exist(fullfile(mov_path,'Profile_Data',[ref_image_fname(1:end - length('AVG.tif') ) 'box_cutoff_regional_norm_prestimminusdiv_sub_90_profiledata.mat'] ), 'file' );
-        
+
         vid_type= 'stimulus';
         if strcmpi(getparent(mov_path,0,'short'), 'control')
             vid_type = 'control';
         end
         
         try
-%             f(i) = parfeval(@FF_Temporal_Reflectivity_Analysis, 0, mov_path, ref_image_fname,[67 99],vid_type);
             FF_Temporal_Reflectivity_Analysis(mov_path,ref_image_fname,[67 83],vid_type);
         catch ex
            disp([ref_image_fname ' failed to process:']);
            disp([ex.message ': line ' num2str(ex.stack(1).line)] );
         end
-    end
+
     
-    % If we've maxed out our number of workers wait until they've all
-    % returned.
-%     if mod(i,poolobj.NumWorkers) == 0
-%         for m=1:poolobj.NumWorkers
-%             fetchNext(f);
-            toc;
-            waitbar(i/length(fPaths), wbh, ['Finished trial ' ref_image_fname ' (' num2str(i) ' of ' num2str(length(fPaths)) ').']);        
-%         end
-%         tic;
-%     end
+
+    toc;
+    waitbar(i/length(fPaths), wbh, ['Finished trial ' ref_image_fname ' (' num2str(i) ' of ' num2str(length(fPaths)) ').']);        
+
     
     close all;
 end

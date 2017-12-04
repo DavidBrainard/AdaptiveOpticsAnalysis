@@ -1,3 +1,26 @@
+%   FF_aggregate_Multi_Trial_Run_Twosource
+%
+%   Recursively calculates the pooled variance across a set of pre-analyzed 
+%   signals from stimulus and control trials, performs the subtraction
+%   between their standard deviations, and performs a piecewise fit of the 
+%   resulting subtraction.
+%
+%   If it cannot find a control video, then it simply runs the default
+%   "Aggregate_Multiple_Temporal_Analyses", which assumes that one mat file
+%   has valid stimulus and control data.
+%
+% Outputs:
+%
+%   A date-stamped file containing information about the fit, named:
+%   "Aggregate_Summary_[date].csv"
+%
+% Created by Robert F Cooper 06-20-2017
+%
+% The analyses performed in this script are from:
+% Cooper RF, Tuten WS, Dubra A, Brainard BH, Morgan JIW. 
+% "Non-invasive assessment of human cone photoreceptor function." 
+% Biomed Opt Express 8(11): 5098-5112. and are
+% encompassed in Figures 4B/5A, Equation 3.
 
 clear;
 close all force;
@@ -42,7 +65,6 @@ for i=1:length(dataPath)
        disp([ex.message ' ' ex.stack(1).name ': line ' num2str(ex.stack(1).line)] );
     end
     
-%     pause;
 end
 
 close(wbh);
@@ -50,4 +72,3 @@ close(wbh);
 fitData = struct2table(fitData);
 
 writetable(fitData,['Aggregate_Summary_' date '.csv']);
-% save(['Residuals_' date '.mat'], 'residuals');
