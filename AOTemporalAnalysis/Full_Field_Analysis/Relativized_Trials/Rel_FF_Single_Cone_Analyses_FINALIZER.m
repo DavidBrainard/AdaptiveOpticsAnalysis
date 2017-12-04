@@ -35,9 +35,10 @@ saveas(gcf, 'allamps_boxplot.png');
 
 %% Determine each cone's slope
 
-slopes = intensities'\allfits';
+slopes = [ones(3,1) intensities']\allfits';
 
-slopes=slopes(1,:);
+intercepts=slopes(1,:);
+slopes=slopes(2,:);
 
 %% Individual Histograms
 % To compare against the previously observed population-based dose-response,
