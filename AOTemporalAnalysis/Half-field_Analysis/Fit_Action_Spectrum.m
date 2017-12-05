@@ -1,3 +1,19 @@
+% Fit_Action_Spectrum
+%
+% This script is responsible for taking the summarized reflectance
+% response data from each subject and wavelength, fitting each
+% wavelength's reflectance response vs irradiance with
+% a sigmoid, then determining each subject's individual action spectrum.
+% It then outputs the average of all subjects' action spectra as well.
+%
+% Created by Robert F Cooper 01-24-2017
+%
+% The analyses performed in this script are from:
+% Cooper RF, Tuten WS, Dubra A, Brainard BH, Morgan JIW. 
+% "Non-invasive assessment of human cone photoreceptor function." 
+% Biomed Opt Express 8(11): 5098-5112 and are
+% encompassed in Figures 6/7, Equation 4.
+
 clear;
 close all;
 

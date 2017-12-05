@@ -25,8 +25,10 @@ function [characteristics]=Aggregate_Analyses_TwoSource_bootstrap(stimRootDir, c
 %
 % Created by Robert F Cooper 12-31-2015
 %
-% The analyses performed in this script are from Cooper et al. "Non-invasive 
-% assessment of human cone photoreceptor function", and
+% The analyses performed in this script are from:
+% Cooper RF, Tuten WS, Dubra A, Brainard BH, Morgan JIW. 
+% "Non-invasive assessment of human cone photoreceptor function." 
+% Biomed Opt Express 8(11): 5098-5112 and are
 % encompassed in Figures 4/5, Equation 3.
 
 if ~exist('stimRootDir','var')
