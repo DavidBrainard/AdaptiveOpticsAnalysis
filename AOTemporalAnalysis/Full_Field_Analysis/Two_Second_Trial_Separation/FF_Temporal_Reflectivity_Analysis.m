@@ -22,17 +22,27 @@ function []=FF_Temporal_Reflectivity_Analysis(mov_path, ref_image_fname, stimulu
 % This software is responsible for the data processing of temporal
 % datasets, by taking the data from separate stim folders and a control
 % folders.
-% This is designed to work with FULL FIELD datasets, and only performs a
-% a normalization across the entire frame, with a standardization relative
+% This is designed to work with FULL FIELD datasets, and performs a
+% a normalization across the ENTIRE frame, with a standardization relative
 % to the prestimulus behavior of EACH cell.
 %
 % 
+% The processing performed in this script is from:
+% Cooper RF, Tuten WS, Dubra A, Brainard BH, Morgan JIW. 
+% "Non-invasive assessment of human cone photoreceptor function." 
+% Biomed Opt Express 8(11): 5098-5112 and are
+% encompassed in Figures 1-4A, Equations 1-2.
+
+% *** Constants ***
 %
-
+% The shape used to isolate the reflectance at each time point. Box is
+% best choice, as it is both the fastest and most reliable.
 profile_method = 'box';
-norm_type = 'global_norm_prestim_stdiz';
 
-% mov_path=pwd;
+% For release, this version only contains the normalizations used in the
+% paper. However, the code is structured such that you can add more if desired.
+norm_type = 'global_norm_prestim_stdiz'; 
+
 if ~exist('mov_path','var') || ~exist('ref_image_fname','var')
     close all force;
     [ref_image_fname, mov_path]  = uigetfile(fullfile(pwd,'*.tif'));
@@ -57,15 +67,12 @@ for i=1:length(stack_fnames)
 end
 
 %% Load the dataset(s)
-
 ref_image  = double(imread(  fullfile(mov_path, ref_image_fname) ));
 stimd_images = dlmread( fullfile(mov_path,acceptable_frames_fname) );
 stimd_images = sort(stimd_images)' +1; % For some dumb reason it doesn't store them in the order they're put in the avi.
 
 ref_coords = dlmread( fullfile(mov_path, ref_coords_fname));
-
-% ref_coords = [ref_coords(:,1)-2 ref_coords(:,2)];
-ref_coords = [ref_coords(:,1) ref_coords(:,2)];
+ref_coords = [ref_coords(:,1) ref_coords(:,2)]; % If an offset is needed (if, for example you're coming from split coordinates)
 
 temporal_stack_reader = VideoReader( fullfile(mov_path,temporal_stack_fname) );
 
@@ -109,6 +116,7 @@ ref_coords = round(ref_coords);
 cellseg = cell(size(ref_coords,1),1);
 cellseg_inds = cell(size(ref_coords,1),1);
 
+
 wbh = waitbar(0,'Segmenting coordinate 0');
 for i=1:size(ref_coords,1)
 
@@ -131,7 +139,7 @@ for i=1:size(ref_coords,1)
 
                 diffpim = diffpim - min(diffpim(:));
                 
-                [pad_roi, adj, rowcol]=segment_splitcell(diffpim);
+                [pad_roi, adj, rowcol]=segment_cell(diffpim);
 
                 dg = digraph(adj);        
 
@@ -154,7 +162,7 @@ for i=1:size(ref_coords,1)
                 
                 ref_image(cellseg_inds{i})= -1;
                 
-                figure(10); imagesc(ref_image); axis image;
+                %figure(10); imagesc(ref_image); axis image;
             end
         case 'box'
             roiradius = 1;
@@ -191,28 +199,6 @@ for i=1:size(ref_coords,1)
 
 end
 
-%% Crop the analysis area to a certain size
-% cropsize = 7.5;
-% croprect = [0 0 cropsize/.4678 cropsize/.4678];
-% 
-% figure(cropfig); 
-% title('Select the crop region for the STIMULUS cones');
-% h=imrect(gca, croprect);
-% stim_mask_rect = wait(h);
-% close(cropfig)
-% stim_mask = poly2mask([stim_mask_rect(1) stim_mask_rect(1)                   stim_mask_rect(1)+stim_mask_rect(3) stim_mask_rect(1)+stim_mask_rect(3) stim_mask_rect(1)],...
-%                       [stim_mask_rect(2) stim_mask_rect(2)+stim_mask_rect(4) stim_mask_rect(2)+stim_mask_rect(4) stim_mask_rect(2)                   stim_mask_rect(2)],...
-%                       size(colorcoded_im,1), size(colorcoded_im,2));
-% 
-% cropfig = figure(1); 
-% imagesc( uint8(colorcoded_im) ); axis image; title('Select the crop region for the CONTROL cones');
-% h=imrect(gca, croprect);
-% control_mask_rect = wait(h);
-% close(cropfig)
-% control_mask = poly2mask([control_mask_rect(1) control_mask_rect(1)                      control_mask_rect(1)+control_mask_rect(3) control_mask_rect(1)+control_mask_rect(3) control_mask_rect(1)],...
-%                          [control_mask_rect(2) control_mask_rect(2)+control_mask_rect(4) control_mask_rect(2)+control_mask_rect(4) control_mask_rect(2)                      control_mask_rect(2)],...
-%                          size(colorcoded_im,1), size(colorcoded_im,2));
-
 %% Extract the raw reflectance of each cell.
 
 coords_used = ref_coords(~cellfun(@isempty,cellseg_inds), :);
@@ -237,16 +223,30 @@ for i=1:length(cellseg_inds)
     if any( capillary_mask(cellseg_inds{i}) ~= 1 )
         
         cell_reflectance{i} = nan(1,size(temporal_stack,3));
-    else
+    elseif strcmp(profile_method, 'box') % Shorthand, but way faster than the naive implementation, for box extraction only. (>2x speedup)
+
+        [m,n] = ind2sub(vid_size, cellseg_inds{i});
         
-        for t=1:size(temporal_stack,3)
-            masked_timepoint = temporal_stack(:,:,t); 
-            if all( masked_timepoint(cellseg_inds{i}) ~= 0 )
-                cell_reflectance{i}(t) = mean( masked_timepoint(cellseg_inds{i}));
-            else            
-                cell_reflectance{i}(t) =  NaN;
-            end
-        end
+        thisstack = temporal_stack(min(m):max(m), min(n):max(n),:);        
+        thisstack(thisstack == 0) = NaN;
+        
+        thisstack = sum(thisstack,1);
+        thisstack = squeeze(sum(thisstack,2));
+        thisstack = thisstack./ (length(cellseg_inds{i})*ones(size(thisstack)));
+        
+        cell_reflectance{i} = thisstack';
+
+    else
+
+         for t=1:size(temporal_stack,3)
+             masked_timepoint = temporal_stack(:,:,t); 
+             if all( masked_timepoint(cellseg_inds{i}) ~= 0 )
+                 cell_reflectance{i}(t) = mean( masked_timepoint(cellseg_inds{i}));
+             else            
+                 cell_reflectance{i}(t) = NaN;
+             end
+         end
+
     end
 end
 close(wbh);
@@ -286,8 +286,6 @@ for i=1:length( cell_reflectance )
     
     if ~isempty( strfind( norm_type, 'global_norm') )
         norm_cell_reflectance{i} = cell_reflectance{i} ./ ref_mean;
-    elseif ~isempty( strfind( norm_type, 'regional_norm') )
-        norm_cell_reflectance{i} = cell_reflectance{i} ./ ref_mean;
     elseif ~isempty( strfind( norm_type, 'no_norm') )
         norm_cell_reflectance{i} = cell_reflectance{i};
         error('No normalization selected!')
@@ -317,23 +315,8 @@ if ~isempty( strfind(norm_type, 'prestim_stdiz'))
         
         norm_cell_reflectance{i} = norm_cell_reflectance{i}/( prestim_std(i) ); % /sqrt(length(norm_control_cell_reflectance{i})) );
     end
-elseif ~isempty( strfind(norm_type, 'poststim_stdiz'))
-    % Then normalize to the average intensity of each cone AFTER stimulus.
-    poststim_std=nan(1,length( norm_cell_reflectance ));
-    poststim_mean=nan(1,length( norm_cell_reflectance ));
-    
-    for i=1:length( norm_cell_reflectance )
-
-        poststim_mean(i) = mean( norm_cell_reflectance{i}( cell_times{i}>stim_locs(2) & ~isnan( norm_cell_reflectance{i} ) ) );
-        
-        norm_cell_reflectance{i} = norm_cell_reflectance{i}-poststim_mean(i);
-        
-        poststim_std(i) = std( norm_cell_reflectance{i}( cell_times{i}>stim_locs(2) & ~isnan( norm_cell_reflectance{i} ) ) );
-        
-        norm_cell_reflectance{i} = norm_cell_reflectance{i}/( poststim_std(i) ); % /sqrt(length(norm_control_cell_reflectance{i})) );
-    end
 else
-    % NOP - leave stub in case of change.
+    % NOP - leave stub in case another standardization is created.
 end
 
 %% Standard deviation of all cells before first stimulus
@@ -370,6 +353,7 @@ end
 if strcmp(vid_type,'stimulus')
     plot(stim_locs/hz, max(ref_stddev)*ones(size(stim_locs)),'r*'); 
 end
+
 hold off;
 ylabel('Standard deviation'); xlabel('Time (s)'); title( strrep( [ref_image_fname(1:end - length('_AVG.tif') ) '_' profile_method '_stddev_ref_plot' ], '_',' ' ) );
 axis([0 15 -1 4])

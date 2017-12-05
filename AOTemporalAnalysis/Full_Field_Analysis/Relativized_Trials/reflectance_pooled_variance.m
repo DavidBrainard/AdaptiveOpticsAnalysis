@@ -1,6 +1,25 @@
 function [ ref_variance, ref_times, ref_count ] = reflectance_pooled_variance( cell_times, cell_reflectance, series_length )
-%UNTITLED Summary of this function goes here
-%   Detailed explanation goes here
+% [ ref_variance, ref_times, ref_count ] = reflectance_pooled_variance( cell_times, cell_reflectance, series_length )
+%   This function calculates the pooled variance of a group of signals, where each time point
+%   may have a different number of signals contributing to it.
+%
+% @params:
+%    cell_times: A 1xN cell array of frame indexes. Each cell contains to the frame times 
+%                from a single photoreceptor signal.
+%
+%    cell_reflectance: A 1xN cell array of photoreceptor reflectances.
+%                      Each cell contains the reflectance signal from a single photoreceptor.
+%
+%    series_length: The maximum length that the cell_reflectance or cell_times can be.
+%
+% @outputs:
+%
+%    ref_variance: An array containing the variance at each time point that we have data.
+%
+%    ref_times: An array containg the frame indexes of the ref_variance
+%
+%    ref_count: An array as long as ref_times where each array entry contains the number of signals that
+%               contributed to each time point.
 
     ref_avg = zeros( series_length,1);
 

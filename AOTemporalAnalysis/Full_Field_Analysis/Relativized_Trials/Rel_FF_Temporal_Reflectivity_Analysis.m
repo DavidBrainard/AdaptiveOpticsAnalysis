@@ -1,5 +1,5 @@
 function []=Rel_FF_Temporal_Reflectivity_Analysis(mov_path, ref_image_fname, stimulus_frames, vid_type)
-% []=Rel_FF_Temporal_Reflectivity_Analysis_twosource(mov_path, ref_image_fname)
+% []=Rel_FF_Temporal_Reflectivity_Analysis(mov_path, ref_image_fname)
 % Robert F Cooper 06-20-2017
 %
 % @param mov_path - The path to the video which stores the reflectance
@@ -29,8 +29,15 @@ function []=Rel_FF_Temporal_Reflectivity_Analysis(mov_path, ref_image_fname, sti
 % 
 %
 
+% *** Constants ***
+%
+% The shape used to isolate the reflectance at each time point. Box is
+% best choice, as it is both the fastest and most reliable.
 profile_method = 'box';
-norm_type = 'global_norm_prestim_stdiz';
+
+% For release, this version only contains the normalizations used in the
+% paper. However, the code is structured such that you can add more if desired.
+norm_type = 'global_norm_prestim_stdiz'; 
 
 % mov_path=pwd;
 if ~exist('mov_path','var') || ~exist('ref_image_fname','var')
@@ -197,20 +204,11 @@ for i=1:length(cellseg_inds)
     if any( capillary_mask(cellseg_inds{i}) ~= 1 )
         
         cell_reflectance{i} = nan(1,size(temporal_stack,3));
-    else                
-        
+    elseif strcmp(profile_method, 'box') % Shorthand, but way faster than the naive implementation, for box extraction only. (>2x speedup)
+
         [m,n] = ind2sub(vid_size, cellseg_inds{i});
         
-        % Only works when using a box profile extraction!
-        thisstack = temporal_stack(min(m):max(m), min(n):max(n),:);
-        
-%         thisstack = zeros(max(m)-min(m)+1,max(n)-min(n)+1, size(temporal_stack,3));
-%         [s,t] = ind2sub([max(m)-min(m)+1,max(n)-min(n)+1], 1:length(cellseg_inds{i}));
-%         
-%         for k=1:length(cellseg_inds{i})
-%             thisstack(s(k),t(k),:) = temporal_stack(m(k),n(k),:);
-%         end
-        
+        thisstack = temporal_stack(min(m):max(m), min(n):max(n),:);        
         thisstack(thisstack == 0) = NaN;
         
         thisstack = sum(thisstack,1);
@@ -218,16 +216,18 @@ for i=1:length(cellseg_inds)
         thisstack = thisstack./ (length(cellseg_inds{i})*ones(size(thisstack)));
         
         cell_reflectance{i} = thisstack';
-%         for t=1:size(temporal_stack,3)
-%             masked_timepoint = temporal_stack(:,:,t); 
-%             if all( masked_timepoint(cellseg_inds{i}) ~= 0 )
-%                 cell_reflectance{i}(t) = mean( masked_timepoint(cellseg_inds{i}));
-%             else            
-%                 cell_reflectance{i}(t) =  NaN;
-%             end
-%         end
-%         thisstack'
-%         cell_reflectance{i}
+
+    else
+
+         for t=1:size(temporal_stack,3)
+             masked_timepoint = temporal_stack(:,:,t); 
+             if all( masked_timepoint(cellseg_inds{i}) ~= 0 )
+                 cell_reflectance{i}(t) = mean( masked_timepoint(cellseg_inds{i}));
+             else            
+                 cell_reflectance{i}(t) =  NaN;
+             end
+         end
+
     end
 end
 close(wbh);

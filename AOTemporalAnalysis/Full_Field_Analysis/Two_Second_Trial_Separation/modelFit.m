@@ -1,49 +1,23 @@
-function [fitCharacteristics, residual] = modelFit(timeBase, pooled_std_stim)
-% gammaFitTutorial
+function [fitCharacteristics] = modelFit(timeBase, pooled_std_stim)
+% [fitCharacteristics] = modelFit(timeBase, pooled_std_stim)
 %
-% Illustrates using fmincon to fit a gamma function to data.
 %
 % 12/31/15 dhb       Wrote from parameter search tutorial.
 % 12/31/15 rfc      Added temporal analysis specific parameters.
+%
+% @params:
+%    timeBase: A 1xN array of time stamps corresponding pooled_std_stim
+%
+%    pooled_std_stim: The subtracted pooled standard deviation of the 
+%                     stimulus and control videos
+%
+% @outputs:
+%    fitCharacteristics: A struct containing information about the fit
+%                       the contents of this struct are subject to change.
 
-%% Initialize
-% close all;
-
-%% Generate some simulated data for fitting
-% trueParams.type = '2xgammapdf';
-% trueParams.preStimValue = 0;
-% trueParams.stimOnsetTime = 2;
-% trueParams.responseDelay1 = 0.4;
-% trueParams.scale1 = 3;
-% trueParams.gammaA1 = 4;
-% trueParams.gammaB1 = 0.24;
-% trueParams.responseDelay2 = 1.5;
-% trueParams.scale2 = 3;
-% trueParams.gammaA2 = 4;
-% trueParams.gammaB2 = 0.24;
-% 
-% startTime = 0;
-% endTime = max(timeBase);
-% nTrueData = 200;
-% timeBase = linspace(startTime,endTime,nTrueData);
-% trueParams.noiseSd = 0;
-% theResponse = ComputeModelPreds(trueParams,timeBase);
-% trueParams.noiseSd = 0.3;
-% pooled_std_stim = ComputeModelPreds(trueParams,timeBase);
 
 %Remove values before cutoff time
 cutofftime = 8;
-
-% timeBase = timeBase([1:79 84:end] );
-% pooled_std_stim = pooled_std_stim([1:79 84:end] );
-
-% 
-% %TEMP
-% goodtimes = find(timeBase>5.34 | (timeBase<4.56));
-% goodtimes = find(timeBase>3.5);
-% 
-% timeBase = timeBase(goodtimes);
-% pooled_std_stim = pooled_std_stim(goodtimes);
 
 pretime = timeBase <= cutofftime;
 timeBase = timeBase(pretime);
@@ -63,11 +37,8 @@ title('Pooled standard deviation data and fit');
 drawnow;
 
 
-%% Set up initial guess for fit parameters
-
-% These are known
+%% Set up initial guesses for fit parameters
 fitParams0.type = 'gammapdfexp';
-
 fitParams0.stimOnsetTime = 3.96;
 
 % Remove any nan.

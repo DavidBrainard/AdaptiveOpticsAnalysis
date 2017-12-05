@@ -4,6 +4,11 @@ function [ sdImageMasked, varImage  ] = tam_etal_capillary_func( pceptVideo )
 %
 % This function incorporates an algorithm based on Johnny Tam's motion 
 % contrast enhancements for an input avi dataset filename.
+%
+% @param pceptVideo:
+%
+% A 3D stack containing the video frames from which the motion contrast will
+% be generated
 
 numFrames = size(pceptVideo,3);
 ignoremask = zeros(size(pceptVideo));

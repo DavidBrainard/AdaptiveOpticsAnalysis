@@ -23,8 +23,10 @@
 % Created by Robert F Cooper 11-3-2015
 % 
 % 
-% The analyses performed in this script are from Cooper et al. "Non-invasive 
-% assessment of human cone photoreceptor function", and
+% The analyses performed in this script are from:
+% Cooper RF, Tuten WS, Dubra A, Brainard BH, Morgan JIW. 
+% "Non-invasive assessment of human cone photoreceptor function." 
+% Biomed Opt Express 8(11): 5098-5112. and are
 % encompassed in Figures 1-4A, Equations 1-2.
 
 clear;
@@ -32,13 +34,18 @@ close all force;
 clc;
 
 
+% Constants:
+%
+% The frames over which the stimulus was delivered. It is extremely important
+% that the first number be correct, as the software will use that as the last
+% frame included in normalization.
+STIM_RANGE = [67 99]; 
+
 rootDir = uigetdir(pwd);
 
 fPaths = read_folder_contents_rec(rootDir,'tif');
 
 wbh = waitbar(0,['Processing trial 0 of ' num2str(length(fPaths)) '.']);
-
-
 for i=1:size(fPaths,1)
     tic;
     [mov_path, ref_image_fname] = getparent(fPaths{i});
@@ -50,7 +57,7 @@ for i=1:size(fPaths,1)
         end
         
         try
-            FF_Temporal_Reflectivity_Analysis(mov_path,ref_image_fname,[67 83],vid_type);
+            FF_Temporal_Reflectivity_Analysis(mov_path,ref_image_fname,STIM_RANGE,vid_type);
         catch ex
            disp([ref_image_fname ' failed to process:']);
            disp([ex.message ': line ' num2str(ex.stack(1).line)] );

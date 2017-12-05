@@ -261,17 +261,17 @@ timeBase = ((1:max_index)/16.6)';
 fitAmp = nan(size(std_dev_sub,1),1);
 fitMean = nan(size(std_dev_sub,1),1);
 
+
+
+for i=1:size(std_dev_sub,1)
 waitbar(1/size(std_dev_sub,1),THEwaitbar,'Fitting subtracted signals...');
-
-parfor i=1:size(std_dev_sub,1)
-
     i
     thissig = std_dev_sub(i,:);
     if ~all( isnan(thissig) ) && (stim_trial_count(i) >= 25) && (control_trial_count(i) >= 25)
-        fitData = modelFit_beta(timeBase, thissig', true);
+        fitData = modelFit_beta(timeBase, thissig');
         fitAmp(i) = fitData.amplitude;
 %         pause(1);
-        fitData = modelFit_beta(timeBase, mean_sub(i,:)', true);
+        fitData = modelFit_beta(timeBase, mean_sub(i,:)' );
 %         pause(1);
         fitMean(i) = fitData.amplitude;
 

@@ -1,6 +1,6 @@
 function [ pad_roi, adj_mat, rowcol_inds ] = segment_splitcell( roi )
-%UNTITLED3 Summary of this function goes here
-%   Detailed explanation goes here
+% [ pad_roi, adj_mat, rowcol_inds ] = segment_splitcell( roi )
+%   This function creates the cost matrix for a given roi.
 
 
 % Zero pad the top and bottom

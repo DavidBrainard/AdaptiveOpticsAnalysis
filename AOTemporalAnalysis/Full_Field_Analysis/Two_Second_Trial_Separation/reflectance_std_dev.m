@@ -1,6 +1,22 @@
 function [ ref_stddev, ref_times ] = reflectance_std_dev( cell_times, cell_reflectance, series_length )
-%UNTITLED Summary of this function goes here
-%   Detailed explanation goes here
+% [ ref_stddev, ref_times ] = reflectance_std_dev( cell_times, cell_reflectance, series_length )
+%   This function calculates the pooled standard deviation of a group of signals, where each time point
+%   may have a different number of signals contributing to it.
+%
+% @params:
+%    cell_times: A 1xN cell array of frame indexes. Each cell contains to the frame times 
+%                from a single photoreceptor signal.
+%
+%    cell_reflectance: A 1xN cell array of photoreceptor reflectances.
+%                      Each cell contains the reflectance signal from a single photoreceptor.
+%
+%    series_length: The maximum length that the cell_reflectance or cell_times can be.
+%
+% @outputs:
+%
+%    ref_stddev: An array containing the standard deviation at each time point that we have data.
+%
+%    ref_times: An array containg the frame indexes of the ref_stddev
 
 ref_avg = zeros( series_length,1);
 ref_stddev = zeros( series_length,1);
@@ -31,7 +47,7 @@ for k=1:series_length % Plot average
             has_content = true;
         end
     end
-    ref_stddev(k) = sqrt(ref_stddev(k)/n);
+    ref_stddev(k) = sqrt(ref_stddev(k)/n-1);
     
     if has_content
         ref_times = [ref_times; k];
