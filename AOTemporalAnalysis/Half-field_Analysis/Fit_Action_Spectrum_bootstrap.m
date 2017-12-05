@@ -1,3 +1,23 @@
+% Fit_Action_Spectrum_boostrap
+%
+% This script is responsible for taking the reflectance
+% response data from each subject and wavelength, and bootstrapping
+% them, fitting a randomly subset of wavelength's reflectance response 
+% vs irradiance with a sigmoid 1000 times,then determining each 
+% subject's individual action spectrum, with mean and std deviation bars.
+% It then outputs the average of all subjects' action spectra as well.
+%
+% *IMPORTANT: This script is designed to operate on the specific file
+%             structure inherent to the paper below.
+%
+% Created by Robert F Cooper 04-28-2017
+%
+% The analyses performed in this script are from:
+% Cooper RF, Tuten WS, Dubra A, Brainard BH, Morgan JIW. 
+% "Non-invasive assessment of human cone photoreceptor function." 
+% Biomed Opt Express 8(11): 5098-5112 and are
+% encompassed in Figures 6/7, Equation 4.
+
 clear;
 clc
 close all;
@@ -47,9 +67,6 @@ fit_type = 'sigmoid';
 
 %% Load CIE data
 ciefunc = dlmread( fullfile(pwd,'linCIE2008v2e_5.csv') );
-% conefunda = dlmread( fullfile(pwd,'linss2_10e_5.csv') );
-
-
 
 %% Create the fits.
 legendIDs = cell(length(alldata),1);
@@ -118,7 +135,6 @@ for i=1:length(alldata)
             
         end
         meanamps{w} = mean(sumamps{w},2);
-%         errorbar(log10(irradiances{w}), meanamps{w},1.96*std(sumamps{w},[],2)*sqrt(1+1/1000) );
         errorbar(log10(irradiances{w}), meanamps{w}, prctile(sumamps{w},5,2)-meanamps{w}, prctile(sumamps{w},95,2)-meanamps{w});
         labels{w} = num2str(wavelengths(w));
         
@@ -151,7 +167,6 @@ for i=1:length(alldata)
     legendIDs{i} = alldata{i}.ID(4:end);
     subshifts = cell2mat(rel_shifts(i,:)');
     meanshifts(i,:) = mean( log10(subshifts) );
-%     stdshifts(i,:) = std(subshifts);
 
     errorbar(wavelengths, mean( log10(subshifts) ), prctile(log10(subshifts),5)-mean( log10(subshifts) ),...
                                                     prctile(log10(subshifts),95)-mean( log10(subshifts) ),...

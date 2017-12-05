@@ -1,4 +1,43 @@
 function [ rel_shifts, fits ] = action_spect_fit( wavelengths, irradiances, datavals, ciefunc, type )
+% [ rel_shifts, fits ] = action_spect_fit( wavelengths, irradiances, datavals, ciefunc, type )
+%
+% This function is responsible for fitting the reflectance response vs irradiance functions for each
+% wavelength from a single subject, and determining their relative offset. The fit to all wavelengths
+% is performed simultaneously. The only fit parameter allowed to vary on a per-wavelength basis is
+% the relative X-axis (irradiance) shift of each curve. Everything else (amplitude, shape, etc)
+% is allowed to vary across all wavelengths' curves simultaneously.
+%
+% @params:
+%    wavelengths: A 1xN array of wavelengths (in nm) that we'll be fitting. Each wavelength in this
+%                 array corresponds to a single cell in parameters "irradiances" and "datavals".
+%
+%    irradiances: A 1xN cell array where each cell corresponds to an index/wavelength
+%                 in the "wavelengths" parameter. Each cell the contains the irradiances used
+%                 for the corresponding wavelength array value.
+%
+%    datavals: A 1xN cell array where each cell corresponds to an index/wavelength
+%              in the "wavelengths" parameter. Each cell the contains the reflectance response
+%              of the corresponding wavelength array value and irradiance cell.
+%
+%    ciefunc: The CIE function we're attempting to fit to.
+%
+%    type: The type of fit to use for the reflectance response vs irradiance. Options are:
+%         "Sigmoid", "Linear", or "Exponential"
+%
+% @outputs:
+%
+%    rel_shifts: A 1xN array of relative shifts of each wavelength.
+%
+%    fits: A 1xN cell array with the fits of each wavelength's reflectance reponse vs irradiance
+%         function
+%
+% Created by Robert F Cooper 01-24-2017
+%
+% The analyses performed in this script are from:
+% Cooper RF, Tuten WS, Dubra A, Brainard BH, Morgan JIW. 
+% "Non-invasive assessment of human cone photoreceptor function." 
+% Biomed Opt Express 8(11): 5098-5112 and are
+% encompassed in Figures 6/7, Equation 4.
 
 normalize = false;
 

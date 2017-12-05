@@ -15,8 +15,10 @@
 %
 % Created by Robert F Cooper 12-31-2015
 %
-% The analyses performed by this script are from Cooper et al. "Non-invasive 
-% assessment of human cone photoreceptor function", and
+% The analyses performed in this script is from:
+% Cooper RF, Tuten WS, Dubra A, Brainard BH, Morgan JIW. 
+% "Non-invasive assessment of human cone photoreceptor function." 
+% Biomed Opt Express 8(11): 5098-5112 and are
 % encompassed in Figures 4B/5A, Equation 3.
 
 

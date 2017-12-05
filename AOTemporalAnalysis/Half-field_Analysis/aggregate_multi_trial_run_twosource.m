@@ -76,4 +76,3 @@ close(wbh);
 fitData = struct2table(fitData);
 
 writetable(fitData,['Aggregate_Summary_' date '.csv']);
-% save(['Residuals_' date '.mat'], 'residuals');

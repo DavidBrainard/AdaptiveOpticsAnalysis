@@ -1,5 +1,16 @@
 # Robert Cooper
 # 12-30-2015
+#
+# This extracts the frame indexes that were good enough to be registered from a *.dmp file,
+# And throws them into an [imname]_acceptable_frames.csv file so they can be used in processing.
+# 
+# It requires:
+#    * The .dmp file output from Alfredo Dubra's Demotion software suite. **I realize this makes it VERY specific-
+#      I do not promise any amazing things happening as result of using this software!**
+#    * The 'mat' file corresponding to the grid calibration- also using Alf Dubra's script.
+#    * The dataset you wish to put through the temporal analysis pipeline.
+#
+#
 
 import os,pickle,csv, sys
 import Tkinter as tk

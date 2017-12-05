@@ -1,59 +1,29 @@
 function [fitCharacteristics, residual] = modelFit(timeBase, pooled_std_stim)
-% gammaFitTutorial
+% [fitCharacteristics] = modelFit(timeBase, pooled_std_stim)
 %
-% Illustrates using fmincon to fit a gamma function to data.
 %
 % 12/31/15 dhb       Wrote from parameter search tutorial.
 % 12/31/15 rfc      Added temporal analysis specific parameters.
+%
+% @params:
+%    timeBase: A 1xN array of time stamps corresponding pooled_std_stim
+%
+%    pooled_std_stim: The subtracted pooled standard deviation of the 
+%                     stimulus and control videos
+%
+% @outputs:
+%    fitCharacteristics: A struct containing information about the fit
+%                       the contents of this struct are subject to change.
 
-%% Initialize
-% close all;
-
-%% Generate some simulated data for fitting
-% trueParams.type = '2xgammapdf';
-% trueParams.preStimValue = 0;
-% trueParams.stimOnsetTime = 2;
-% trueParams.responseDelay1 = 0.4;
-% trueParams.scale1 = 3;
-% trueParams.gammaA1 = 4;
-% trueParams.gammaB1 = 0.24;
-% trueParams.responseDelay2 = 1.5;
-% trueParams.scale2 = 3;
-% trueParams.gammaA2 = 4;
-% trueParams.gammaB2 = 0.24;
-% 
-% startTime = 0;
-% endTime = max(timeBase);
-% nTrueData = 200;
-% timeBase = linspace(startTime,endTime,nTrueData);
-% trueParams.noiseSd = 0;
-% theResponse = ComputeModelPreds(trueParams,timeBase);
-% trueParams.noiseSd = 0.3;
-% pooled_std_stim = ComputeModelPreds(trueParams,timeBase);
 
 %Remove values after cutoff time
 cutofftime = 8;
-
-% timeBase = timeBase([1:79 84:end] );
-% pooled_std_stim = pooled_std_stim([1:79 84:end] );
-
-% 
-% %TEMP
-% goodtimes = find(timeBase>5.34 | (timeBase<4.56));
-% goodtimes = find(timeBase>3.5);
-% 
-% timeBase = timeBase(goodtimes);
-% pooled_std_stim = pooled_std_stim(goodtimes);
 
 pooled_std_stim = medfilt1(pooled_std_stim);
 
 pretime = timeBase <= cutofftime;
 timeBase = timeBase(pretime);
 pooled_std_stim = pooled_std_stim(pretime);
-
-
-
-
 
 %% Set up initial guess for fit parameters
 
@@ -68,15 +38,13 @@ maskout = ~isnan(pooled_std_stim);
 pooled_std_stim = pooled_std_stim(maskout);
 timeBase = timeBase(maskout);
 
-fitParams0.preStimValue = 0; %mean( pooled_std_stim( timeBase < fitParams0.stimOnsetTime ) );
+fitParams0.preStimValue = 0; 
 
 pooled_std_stim = pooled_std_stim-mean( pooled_std_stim( timeBase < fitParams0.stimOnsetTime ) );
 
 %% Start plot
 thePlot = figure(2); clf; hold on;
-% set(gca,'FontName','Helvetica','FontSize',14);
 plot(timeBase,pooled_std_stim,'ro','MarkerFaceColor','r','MarkerSize',6);
-% figure(thePlot); plot(timeBase,theResponse,'r','LineWidth',4);
 xlim([0 16]);
 ylim([-1 3]);
 xlabel('Time (secs)','FontSize',18);
@@ -149,16 +117,8 @@ if ~isempty( strfind( fitParams0.type, 'gammapdf') )
         fitParams0.scale1 = maxResp/tempMax;
     end
     
-    if strcmp( fitParams0.type, '2xgammapdf')
-%         poststimind = find(timeBase>fitParams0.stimOnsetTime);
-%         [minval, minind] = min(pooled_std_stim(poststimind(10:end)));
-%         minind = minind+ poststimind(10)-1;
-%         if minval > 0            
+    if strcmp( fitParams0.type, '2xgammapdf')         
             fitParams0.scale2 = maxResp/(tempMax*2);
-%         else
-%             fitParams0.responseDelay2 = timeBase(minind)-fitParams0.stimOnsetTime;
-%             fitParams0.scale2 = -maxResp/(tempMax*2);
-%         end
     end
 
 end
@@ -234,16 +194,6 @@ residual = mean((pooled_std_stim-predictions(1:length(pooled_std_stim))').^2);
 
 figure(thePlot); hold on; plot(fitTimeBase,predictions,'g','LineWidth',2);
 
-
-
-% legend({' Data', ' Initial Guess', ' Intermediate Fit' ' Final Fit' ' Residuals'},'FontSize',14,'Location','NorthEast');
-% hold off;
-
-
-
-% figure(3); plot(timeBase,pooled_std_stim-predictions');
-% title('Residuals');
-
 [max_ampl, max_ind ] = max(predictions);
 
 threeQind = min( find( predictions > (max_ampl/2) ) );
@@ -309,22 +259,7 @@ if strcmp( fitParams0.type, '2xgammapdf')
     fitCharacteristics.gamma_separation = abs(loc1-loc2);
 end
 
-fitParams;
-% afterPIval
-% threeQind
-
-% if threeQind ~= afterPIval
-%     fitCharacteristics.max_slope = (threeQval-predictions(afterPIval))/(timeBase(threeQind)-timeBase(afterPIval))
-% else
     fitCharacteristics.max_slope = max(diff(predictions))/(timeBase(2)-timeBase(1));
-% end
-
-% figure(thePlot); hold on; 
-%     plot(fitCharacteristics.resp_start,1.5,'g*');
-%     plot(timeBase(max_ind),1.5,'b*');
-% hold off;
-
-
 end
 
 % f = FitModelErrorFunction(x,timeBase,theResponse,fitParams)
@@ -342,13 +277,10 @@ preds = ComputeModelPreds(fitParams,timeBase);
 nPoints = length(theResponse);
 theDiff2 = (theResponse-preds).^2;
 f = mean(sqrt(theDiff2));
-% theDiff2 = abs(theResponse-preds);
-% f = mean(theDiff2);
 
 end
 
-% x = ParamsToX(params)
-%
+
 % Convert parameter structure to vector of parameters to search over
 function x = ParamsToX(params)
 switch (params.type)
