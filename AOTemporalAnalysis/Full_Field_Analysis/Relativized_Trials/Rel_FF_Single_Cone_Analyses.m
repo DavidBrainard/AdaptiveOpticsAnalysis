@@ -260,11 +260,13 @@ timeBase = ((1:max_index)/16.6)';
 
 fitAmp = nan(size(std_dev_sub,1),1);
 fitMean = nan(size(std_dev_sub,1),1);
+fitAngle = nan(size(std_dev_sub,1),1);
 
-
-
-for i=1:size(std_dev_sub,1)
 waitbar(1/size(std_dev_sub,1),THEwaitbar,'Fitting subtracted signals...');
+
+
+parfor i=1:size(std_dev_sub,1)
+
     i
     thissig = std_dev_sub(i,:);
     if ~all( isnan(thissig) ) && (stim_trial_count(i) >= 25) && (control_trial_count(i) >= 25)
@@ -275,6 +277,7 @@ waitbar(1/size(std_dev_sub,1),THEwaitbar,'Fitting subtracted signals...');
 %         pause(1);
         fitMean(i) = fitData.amplitude;
 
+        fitAngle(i) = atan2(fitMean(i),fitAmp(i));
 %         if fitAmp(i) <=0
 %             modelFit(timeBase, thissig',true)
 %             fitAmp(i)
@@ -318,18 +321,17 @@ close(THEwaitbar);
 posnegratio=nan(size(allcoords,1),1);
 
 
-
 figure(101); clf; hold on;
 for i=1:size(allcoords,1)
     if ~isnan(fitAmp(i))
         % Find out what percentage of time the signal spends negative
         % or positive after stimulus delivery (66th frame)
-        numposneg = sign(mean_sub(i,:));
-        pos = sum(numposneg == 1);
+%         numposneg = sign(mean_sub(i,:));
+%         pos = sum(numposneg == 1);
+% 
+%         posnegratio(i) = 100*pos/length(numposneg);
 
-        posnegratio(i) = 100*pos/length(numposneg);
-
-        plot( fitAmp(i),posnegratio(i),'k.');        
+        plot( fitAmp(i),fitMean(i),'k.');        
     end
 end
 ylabel('Mean response % positive');
@@ -393,80 +395,18 @@ set(gca,'Color','k'); hold off; drawnow;
 
 %% Output
 
-fitAmp_nW = fitAmp; save('nW.mat','fitAmp_nW','allcoords','ref_image','control_cell_mean','control_cell_var','stim_cell_mean','stim_cell_var');
+% For structure:
+% /stuff/id/date/wavelength/time/intensity/location/data/Profile_Data
 
-% % For structure: /stuff/id/date/wavelength/time/intensity/location/data
-% [remain kid] = getparent(stimRootDir);
-% 
-% % [remain region] = getparent(remain);
-% [remain stim_loc] = getparent(remain);
-% [remain stim_intensity] = getparent(remain);
-% [remain stim_time] = getparent(remain);
-% [remain stimwave] = getparent(remain);
-% % [remain sessiondate] = getparent(remain);
-% [~, id] = getparent(remain);
+[remain kid] = getparent(stimRootDir); % data
+[remain stim_loc] = getparent(remain); % location 
+[remain stim_intensity] = getparent(remain); % intensity 
+[remain stim_time] = getparent(remain); % time
+[remain stimwave] = getparent(remain); % wavelength
+% [remain sessiondate] = getparent(remain); % date
+[~, id] = getparent(remain); % id
 
-% outFname = [id '_' stimwave '_' stim_intensity '_' stim_time '_single_' num2str(size(allcoords,1)) '_signals_twosource'];
-% 
-% figure(8);  title('All control signals'); xlabel('Frame #'); ylabel('Standard deviations'); %axis([0 249 -20 75]);
-% saveas(gcf, fullfile(pwd, [outFname '_allcontrol.png']), 'png' );
-% figure(9);  title('All stimulus signals'); xlabel('Frame #'); ylabel('Standard deviations'); %axis([0 249 -20 75]);
-% saveas(gcf, fullfile(pwd, [outFname '_allstim.png']), 'png' );
-% 
-% hz=16.66666666;
-% timeBase = ((1:allmax)/hz)';
-% 
-% dlmwrite(fullfile(pwd, [outFname '.csv']), [timeBase sqrt(pooled_variance_stim) sqrt(pooled_variance_control)], ',' );
-% 
-% 
-% figure(10); 
-% plot( timeBase,sqrt(pooled_variance_stim)-1,'r'); hold on;
-% plot( timeBase,sqrt(pooled_variance_control)-1,'b');
-% 
-% 
-% pooled_std_stim    = sqrt(pooled_variance_stim)-sqrt(pooled_variance_control);
-% plot( timeBase(~isnan(pooled_std_stim)), pooled_std_stim(~isnan(pooled_std_stim)),'k'); hold on;
-% legend('Stimulus cones','Control cones','Subtraction');
-% 
-% 
-% % Stim train
-% stimlen = str2double( strrep(stim_time(1:3),'p','.') );
-% 
-% trainlocs = 66/hz:1/hz:(66/hz+stimlen);
-% plot(trainlocs, max(pooled_std_stim)*ones(size(trainlocs)),'r*'); hold off;
-% 
-% % plot(stim_locs, max([ref_variance_stim; ref_variance_control])*ones(size(stim_locs)),'r*'); hold off;
-% ylabel('Pooled Standard deviation'); xlabel('Time (s)'); title( [stim_intensity ' ' stim_time 'pooled standard deviation of ' num2str(length(profileSDataNames)) ' signals.'] );
-% axis([0 16 -1 3])
-% hold off;
-% saveas(gcf, fullfile(pwd, [outFname '.png']), 'png' );
-% % saveas(gcf, fullfile(pwd, [outFname '.svg']), 'svg' );
-% 
-% % save( fullfile(pwd,['pooled_var_aggregate_' num2str(length(profileDataNames)) '_signals.mat' ] ), 'pooled_std_stim', 'timeBase' );
-% 
-% % dlmwrite(fullfile(pwd, [date '_all_plots.csv']), [ [str2double(id(4:end)), str2double(stim_intensity(1:3)), stimlen] ;[ timeBase sqrt(pooled_variance_stim) sqrt(pooled_variance_control) ] ]',...
-% %          '-append', 'delimiter', ',', 'roffset',1);
-% 
-% 
-% [fitCharacteristics, residuals] = modelFit(timeBase, pooled_std_stim);
-% figure(2); hold on;
-% plot(trainlocs, (.2+max(pooled_std_stim))*ones(size(trainlocs)),'y*'); hold off;
-% 
-% saveas(gcf, fullfile(pwd, [outFname '_wfit.png']) );
-% % saveas(gcf, fullfile(pwd, [outFname '_wfit.fig']) );
-% % saveas(gcf, fullfile(pwd, [outFname '_wfit.svg']), 'svg' );
-% % figure(1);
-% % saveas(gcf, fullfile(pwd, [outFname '_meanratio.svg']), 'svg' );
-% % close(8);
-% 
-% fitCharacteristics.min_cones = min_cones;
-% fitCharacteristics.max_cones = max_cones;
-% fitCharacteristics.avg_num_cones = num_control_cones/length(profileSDataNames);
-% fitCharacteristics.num_pooled = length(profileSDataNames);
-% fitCharacteristics.subject = id;
-% fitCharacteristics.stim_intensity = stim_intensity;
-% fitCharacteristics.stim_length = stimlen;
-% fitCharacteristics.stim_wavelength = stimwave;
-% fitCharacteristics.stim_loc = stim_loc;
-% fitCharacteristics
 
+save([ stim_intensity '.mat'],'fitAmp','fitMean','fitAngle',...
+     'allcoords','ref_image','control_cell_mean',...
+     'control_cell_var','stim_cell_mean','stim_cell_var');

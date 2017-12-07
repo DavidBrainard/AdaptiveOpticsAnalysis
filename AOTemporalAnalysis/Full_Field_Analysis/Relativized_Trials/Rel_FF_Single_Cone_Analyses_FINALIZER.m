@@ -3,8 +3,19 @@ clear;
 % close all;
 
 load('0nW.mat');
+fitAmp_0nW = fitAmp; 
+fitMean_0nW = fitMean;
+fitAngle_0nW = fitAngle;
+
 load('50nW.mat');
+fitAmp_50nW = fitAmp; 
+fitMean_50nW = fitMean;
+fitAngle_50nW = fitAngle;
+
 load('450nW.mat');
+fitAmp_450nW = fitAmp; 
+fitMean_450nW = fitMean;
+fitAngle_450nW = fitAngle;
 
 allfits = [fitAmp_0nW fitAmp_50nW fitAmp_450nW];
 

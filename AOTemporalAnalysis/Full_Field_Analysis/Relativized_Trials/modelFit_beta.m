@@ -1,13 +1,21 @@
 function [fitCharacteristics, residual] = modelFit_beta(timeBase, pooled_std_stim, plotstuff)
-% gammaFitTutorial
+% [fitCharacteristics] = modelFit_beta(timeBase, pooled_std_stim)
 %
-% Illustrates using fmincon to fit a gamma function to data.
 %
 % 12/31/15 dhb       Wrote from parameter search tutorial.
 % 12/31/15 rfc      Added temporal analysis specific parameters.
+%
+% @params:
+%    timeBase: A 1xN array of time stamps corresponding pooled_std_stim
+%
+%    pooled_std_stim: The subtracted pooled standard deviation of the 
+%                     stimulus and control videos
+%
+% @outputs:
+%    fitCharacteristics: A struct containing information about the fit
+%                       the contents of this struct are subject to change.
 
-%% Initialize
-% close all;
+
 
 %% Generate some simulated data for fitting
 if ~exist('plotstuff','var')
@@ -149,30 +157,7 @@ options = optimset(options,'Diagnostics','off','Display','off','LargeScale','off
 
 % Initial guess
 x0 = ParamsToX(fitParams0);
-% % fieldnames(fitParams0);
-% % First seach on gammaA and scale only, and add to plot
-% switch fitParams0.type
-%     case 'gammapdf'
-%         vlb = [x0(1) 0.01 x0(3) -10];
-%         vub = [x0(1) 10 x0(3) 10];     
-%     case '2xgammapdf'
-%         vlb = [x0(1) 0.01 x0(3) 0.01 x0(5) 0.01 x0(7) -6 0];%x0(9)];
-%         vub = [x0(1) 10   x0(3) 10   x0(5) 10   x0(7) 6   0];%x0(9)];
-%     case 'gammapdfexp'
-%         if peaked
-%             vlb = [x0(1) 0.1  x0(3) 0.001 0 0];
-%             vub = [x0(1) 10   x0(3) 10    3 2];
-%         else
-%             vlb = [x0(1) 0.01 x0(3) 0 0 0];
-%             vub = [x0(1) 10   x0(3) 0 3 2];
-%         end
-% end
-% 
-% x1 = fmincon(@(x)FitModelErrorFunction(x,timeBase,pooled_std_stim,fitParams0),x0,[],[],[],[],vlb,vub,[],options);
-% predictions1 = ComputeModelPreds(XToParams(x1,fitParams0),timeBase);
-% if plotstuff
-%     figure(thePlot); hold on; plot(timeBase,predictions1,'c:','LineWidth',2);
-% end
+
 % Then full search
 switch fitParams0.type
     case 'gammapdf'
@@ -183,11 +168,11 @@ switch fitParams0.type
         vub = [ 1 10    10    10   2  10   10  6   0];
     case 'gammapdfexp'
         if peaked
-            vlb = [-3 0.2 0.2   -10   0.01  0];
-            vub = [ 3 3    3    20  2     3];
+            vlb = [-3 0.2 0.2   -20   0.01  0];
+            vub = [ 3 3    3    20  3     3];
         else
-            vlb = [-3 0.2 0.2  -4  0.01  0];
-            vub = [ 3 3    3   0.5  2    3];
+            vlb = [-3 0.2 0.2  -20  0.01  0];
+            vub = [ 3 3    3   0.5  3   3];
         end
 end
 
@@ -212,7 +197,6 @@ end
 if peaked
     [max_ampl, max_ind ] = max((predictions));
 else
-    fitParams
     [max_ampl, max_ind ] = max(abs(predictions)); 
 end
 
@@ -279,7 +263,7 @@ if strcmp( fitParams0.type, '2xgammapdf')
     fitCharacteristics.gamma_separation = abs(loc1-loc2);
 end
 
-fitParams;
+% fitParams;
 % afterPIval
 % threeQind
 
