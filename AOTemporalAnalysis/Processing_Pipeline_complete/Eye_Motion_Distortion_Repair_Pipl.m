@@ -1,4 +1,4 @@
-function [written_file, written_path] = Eye_Motion_Distortion_Repair_Pipl(motion_path, fName, crop_ROI, framemotion, static_grid_distortion)
+function [written_file, written_path, cropbox] = Eye_Motion_Distortion_Repair_Pipl(motion_path, fName, crop_ROI, framemotion, static_grid_distortion, crop_region)
 % EYE_MOTION_DISTORTION_REPAIR(motion_path, fName, static_grid_distortion)
 %
 % [] = EYE_MOTION_DISTORTION_REPAIR(motion_path, fName, static_grid_distortion)
@@ -210,10 +210,14 @@ clear tmp;
     
     
     % Crop out any border regions
-    imregions= bwconncomp(warpedIm>0);
-    cropbox = regionprops(imregions,'Area','BoundingBox');
-    [maxarea, maxind] = max([cropbox.Area]); % Take the bigger of the two areas
-    cropbox = cropbox(maxind).BoundingBox;
+    if ~exist('crop_region', 'var')
+         imregions= bwconncomp(warpedIm>0);
+         cropbox = regionprops(imregions,'Area','BoundingBox');
+         [maxarea, maxind] = max([cropbox.Area]); % Take the bigger of the two areas
+         cropbox = cropbox(maxind).BoundingBox;
+    else
+         cropbox = crop_region;
+    end
     
     warpedStk = warpedStk( round(cropbox(2)):round(cropbox(4)), round(cropbox(1)):round(cropbox(3)), : );
     

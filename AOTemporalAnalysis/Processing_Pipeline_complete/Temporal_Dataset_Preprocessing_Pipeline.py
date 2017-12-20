@@ -189,16 +189,20 @@ for thisfile in os.listdir(dmp_folder_path):
                 # progo.configure("Extracted the eye motion from the dmp file...")
 
 
+                for image in images_to_fix:
+                    if "confocal" in image:
+                         print("Removing distortion from: "+image +"...")
+                         anchorfile = mat_engi.Eye_Motion_Distortion_Repair_Pipl(image_folder_path, image, pick['strip_cropping_ROI_2'][-1],
+                                                          shift_array.tolist(), static_distortion,nargout=3)                    
+                         writtenfile = anchorfile[0:2]
+                         cropregion = anchorfile[2]
 
                 for image in images_to_fix:
-                    # progo.configure("Removing distortion from :"+image +"...")
-                    print("Removing distortion from: "+image +"...")
-                    anchorfile = mat_engi.Eye_Motion_Distortion_Repair_Pipl(image_folder_path, image, pick['strip_cropping_ROI_2'][-1],
-                                                          shift_array.tolist(), static_distortion,nargout=2)
-                    if "confocal" in anchorfile[0]:
-                         writtenfile = anchorfile
+                    if "confocal" not in image:
+                         print("Removing distortion from: "+image +"...")
+                         anchorfile = mat_engi.Eye_Motion_Distortion_Repair_Pipl(image_folder_path, image, pick['strip_cropping_ROI_2'][-1],
+                                                          shift_array.tolist(), static_distortion, cropregion, nargout=3)                                             
 
-                
                 np.savetxt(os.path.join(writtenfile[1], thisfile[0:-4] + "_repaired_acceptable_frames.csv"),
                            pick['acceptable_frames'],
                            delimiter=',', fmt='%f')

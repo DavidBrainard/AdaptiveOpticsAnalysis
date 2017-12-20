@@ -2,9 +2,9 @@
 % [fitCharacteristics]=Rel_FF_Single_Cone_Analyses(stimRootDir, controlRootDir)
 %
 %   Calculates pooled variance across a set of pre-analyzed 
-%   signals from stimulus and control trials, performs the subtraction
-%   between their standard deviations, and performs a piecewise fit of the 
-%   resulting subtraction.
+%   signals from a single cone's stimulus and control trials, performs 
+%   the subtraction between its standard deviations, and performs a
+%   piecewise fit of the subtraction.
 %
 %   This script is designed to work with FULL FIELD datasets- that is, each
 %   dataset (mat file) contains *only* control or stimulus data.
