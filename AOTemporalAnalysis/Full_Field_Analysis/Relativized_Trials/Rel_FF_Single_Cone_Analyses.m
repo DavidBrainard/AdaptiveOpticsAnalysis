@@ -293,7 +293,6 @@ fitAngle = nan(size(std_dev_sub,1),1);
 waitbar(1/size(std_dev_sub,1),THEwaitbar,'Fitting subtracted signals...');
 
 
-% Hd = designfilt('lowpassfir','FilterOrder',50,'PassbandFrequency',0.10,'StopbandFrequency',0.15,'DesignMethod','equiripple');
 parfor i=1:size(std_dev_sub,1)
 
     i
@@ -324,14 +323,8 @@ parfor i=1:size(std_dev_sub,1)
         fitData = modelFit_beta(timeBase, filt_mean_sig', [] );
 %         pause(1);
         fitMean(i) = fitData.amplitude;
-
         fitAngle(i) = atan2(fitMean(i),fitAmp(i));
-%         if fitAmp(i) <=0
-%             modelFit(timeBase, thissig',true)
-%             fitAmp(i)
-%             pause;
-%         end
-        
+
     end
 end
 close(THEwaitbar);

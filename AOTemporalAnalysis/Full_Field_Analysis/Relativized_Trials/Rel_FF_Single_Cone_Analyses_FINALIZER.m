@@ -39,6 +39,11 @@ zero_to_fiftynW = 100*sum(sign(diffamp( ~isnan(diffamp(:,1)) ,1)) == 1)./total1
 fifty_to_fourfiftynW = 100*sum(sign(diffamp( ~isnan(diffamp(:,2)) ,2)) == 1)./total2
 zero_to_fourfiftnW = 100*sum(sign(bigdiff( ~isnan(bigdiff))) == 1)./total3
 
+zero_to_50_inc = (allfits(valid,2)-allfits(valid,1)>0);
+fifty_to_450_inc = (allfits(valid,3)-allfits(valid,2)>0);
+
+percent_chance_to_always_increase = 100*sum(zero_to_50_inc & fifty_to_450_inc) / sum(valid)
+
 
 %% Determine each cone's slope
 
@@ -226,7 +231,7 @@ for j=1:size(allfits,2)
             vertices = V(C{i},:);
 
             if ~isnan(thiscolorind) && all(vertices(:,1)<max(allcoords(:,1))) && all(vertices(:,2)<max(allcoords(:,1))) ... % [xmin xmax ymin ymax] 
-                                    && all(vertices(:,1)>0) && all(vertices(:,2)>0) && allfits(i,j)<=lower_thresh
+                                    && all(vertices(:,1)>0) && all(vertices(:,2)>0) && allfits(i,j)>=upper_thresh
     %             plot(allcoords(i,1),allcoords(i,2),'.','Color', thismap(thiscolorind,:), 'MarkerSize', 15 );
                 patch(V(C{i},1),V(C{i},2),ones(size(V(C{i},1))),'FaceColor', thismap(thiscolorind,:));
 
@@ -290,6 +295,9 @@ figure(13); hold on;
 plot(fitAmp_50nW,abs(fitMean_50nW),'g.',...
      fitAmp_450nW,abs(fitMean_450nW),'r.',...
      fitAmp_0nW,abs(fitMean_0nW),'b.');
+xlabel('Std dev reponse');
+ylabel('Absolute Mean reponse');
+saveas(gcf, ['comparative_responses.png']); 
 
 
 %% Boxplot of the amplitudes from each intensity.
@@ -317,4 +325,28 @@ rose(diffangle*2*pi/360);
 legend('Individual differences*100','Radial histogram')
 title('0nW vs 450nW mean/stddev responses');hold off; axis square;
 saveas(gcf, '0_vs_450_compass_rose_response.png');
+
+figure(17); clf; hold on;
+compass( 100*(fitAmp_450nW(valid)-fitAmp_50nW(valid)), 100*(abs(fitMean_450nW(valid))-abs(fitMean_50nW(valid))) );
+diffangle = atan2d(abs(fitMean_450nW(valid))-abs(fitMean_50nW(valid)), fitAmp_450nW(valid)-fitAmp_50nW(valid));
+rose(diffangle*2*pi/360);
+legend('Individual differences*100','Radial histogram')
+title('50nW vs 450nW mean/stddev responses');hold off; axis square;
+saveas(gcf, '50_vs_450_compass_rose_response.png');
+
+figure(18); clf; hold on;
+plot(allfits(valid,2), allfits(valid,3),'k.');
+xlabel('50nW Response');
+ylabel('450nW Response');
+title('50nW vs 450nW responses');hold off;
+axis square; grid on;
+saveas(gcf, '50_vs_450_response.png');
+
+
+
+
+% figure(19);clf;
+% quiver(fitAmp_0nW(valid),abs(fitMean_0nW(valid)), fitAmp_50nW(valid)-fitAmp_0nW(valid), abs(fitMean_50nW(valid))-abs(fitMean_0nW(valid)),0 );
+% hold on;
+% quiver(fitAmp_50nW(valid),abs(fitMean_50nW(valid)), fitAmp_450nW(valid)-fitAmp_50nW(valid), abs(fitMean_450nW(valid))-abs(fitMean_50nW(valid)) );
 
