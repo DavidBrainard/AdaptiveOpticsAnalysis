@@ -45,6 +45,18 @@ profileSDataNames = read_folder_contents(stimRootDir,'mat');
 profileCDataNames = read_folder_contents(controlRootDir,'mat');
 
 
+% For structure:
+% /stuff/id/date/wavelength/time/intensity/location/data/Profile_Data
+
+[remain kid] = getparent(stimRootDir); % data
+[remain stim_loc] = getparent(remain); % location 
+[remain stim_intensity] = getparent(remain); % intensity 
+[remain stim_time] = getparent(remain); % time
+[remain stimwave] = getparent(remain); % wavelength
+% [remain sessiondate] = getparent(remain); % date
+[~, id] = getparent(remain); % id
+
+
 %% Code for determining variance across all signals at given timepoint
 
 THEwaitbar = waitbar(0,'Loading stimulus profiles...');
@@ -52,7 +64,7 @@ THEwaitbar = waitbar(0,'Loading stimulus profiles...');
 max_index=0;
 
 load(fullfile(stimRootDir, profileSDataNames{1}));
-allcoords = ref_coords;
+stim_coords = ref_coords;
 
 stim_cell_reflectance = cell(length(profileSDataNames),1);
 stim_time_indexes = cell(length(profileSDataNames),1);
@@ -70,7 +82,7 @@ for j=1:length(profileSDataNames)
     stim_time_indexes{j} = cell_times;
     stim_cell_prestim_mean{j} = cell_prestim_mean;
     
-    thesecoords = union(allcoords, ref_coords,'rows');
+    thesecoords = union(stim_coords, ref_coords,'rows');
     
     % These all must be the same length! (Same coordinate set)
     if size(ref_coords,1) ~= size(thesecoords,1)
@@ -88,6 +100,9 @@ control_cell_reflectance = cell(length(profileCDataNames),1);
 control_time_indexes = cell(length(profileCDataNames),1);
 control_cell_prestim_mean = cell(length(profileCDataNames),1);
 
+load(fullfile(controlRootDir, profileCDataNames{1}));
+control_coords = ref_coords;
+
 for j=1:length(profileCDataNames)
 
     waitbar(j/length(profileCDataNames),THEwaitbar,'Loading control profiles...');
@@ -100,7 +115,7 @@ for j=1:length(profileCDataNames)
     control_time_indexes{j} = cell_times;
     control_cell_prestim_mean{j} = cell_prestim_mean;
 
-    thesecoords = union(allcoords, ref_coords,'rows');
+    thesecoords = union(control_coords, ref_coords,'rows');
     
     % The length of the cell reflectance lists *must* be the same, because the
     % coordinate lists *must* be the same in each mat file.
@@ -114,19 +129,28 @@ for j=1:length(profileCDataNames)
     
 end
 
+%% The coordinate lists must the same length,
+% otherwise it's not likely they're from the same set.
+
+if size(stim_coords,1) ~= size(control_coords,1)
+    error('Coordinate lists different between control and stimulus directories. Unable to perform analysis.')
+end
+
+allcoords = stim_coords;
+
 
 %% Aggregation of all trials
 
 percentparula = parula(101);
 
-stim_cell_var = nan(size(allcoords,1), max_index);
-stim_cell_mean = nan(size(allcoords,1), max_index);
-stim_trial_count = zeros(size(allcoords,1),1);
-stim_posnegratio = nan(size(allcoords,1),max_index);
+stim_cell_var = nan(size(stim_coords,1), max_index);
+stim_cell_mean = nan(size(stim_coords,1), max_index);
+stim_trial_count = zeros(size(stim_coords,1),1);
+stim_posnegratio = nan(size(stim_coords,1),max_index);
 % ratioplotnums=[];
 
-for i=1:size(allcoords,1)
-    waitbar(i/size(allcoords,1),THEwaitbar,'Processing stimulus signals...');
+for i=1:size(stim_coords,1)
+    waitbar(i/size(stim_coords,1),THEwaitbar,'Processing stimulus signals...');
     
 %     figure(1);
 %     clf;
@@ -185,13 +209,13 @@ end
 
 
 %%
-control_cell_var = nan(size(allcoords,1), max_index);
-control_cell_mean = nan(size(allcoords,1), max_index);
-control_trial_count = zeros(size(allcoords,1),1);
-control_posnegratio = nan(size(allcoords,1),max_index);
+control_cell_var = nan(size(control_coords,1), max_index);
+control_cell_mean = nan(size(control_coords,1), max_index);
+control_trial_count = zeros(size(control_coords,1),1);
+control_posnegratio = nan(size(control_coords,1),max_index);
 
-for i=1:size(allcoords,1)
-    waitbar(i/size(allcoords,1),THEwaitbar,'Processing control signals...');
+for i=1:size(control_coords,1)
+    waitbar(i/size(control_coords,1),THEwaitbar,'Processing control signals...');
 %     figure(3);
 %     clf;
 %     hold on;
@@ -256,7 +280,11 @@ end
 std_dev_sub = sqrt(stim_cell_var)-sqrt(control_cell_var);
 mean_sub = stim_cell_mean-control_cell_mean;
 
-timeBase = ((1:max_index)/16.6)';
+% Possible bug- first index is always nan?
+std_dev_sub = std_dev_sub(:,2:end);
+mean_sub = mean_sub(:,2:end);
+
+timeBase = ((1:max_index-1)/16.6)';
 
 fitAmp = nan(size(std_dev_sub,1),1);
 fitMean = nan(size(std_dev_sub,1),1);
@@ -265,15 +293,35 @@ fitAngle = nan(size(std_dev_sub,1),1);
 waitbar(1/size(std_dev_sub,1),THEwaitbar,'Fitting subtracted signals...');
 
 
+% Hd = designfilt('lowpassfir','FilterOrder',50,'PassbandFrequency',0.10,'StopbandFrequency',0.15,'DesignMethod','equiripple');
 parfor i=1:size(std_dev_sub,1)
 
     i
-    thissig = std_dev_sub(i,:);
-    if ~all( isnan(thissig) ) && (stim_trial_count(i) >= 25) && (control_trial_count(i) >= 25)
-        fitData = modelFit_beta(timeBase, thissig');
+    std_dev_sig = std_dev_sub(i,:);
+    padding_amt = ceil((2^(nextpow2(length(std_dev_sig)))-length(std_dev_sig)) /2);
+    padded_stddev_sig = padarray(std_dev_sig, [0  padding_amt],'symmetric', 'both');
+    padded_stddev_sig=wavelet_denoise( padded_stddev_sig );
+    filt_stddev_sig = padded_stddev_sig(padding_amt+1:end-padding_amt);
+    
+%     figure(200); plot(timeBase,std_dev_sig,timeBase,filt_stddev_sig);
+    
+    mean_sig = mean_sub(i,:);
+    padding_amt = ceil((2^(nextpow2(length(mean_sig)))-length(mean_sig)) /2);
+    padded_mean_sig = padarray(mean_sig, [0  padding_amt],'symmetric', 'both');
+    padded_mean_sig=wavelet_denoise( padded_mean_sig );
+    filt_mean_sig = padded_mean_sig(padding_amt+1:end-padding_amt);
+            
+%     figure(201); plot(timeBase,mean_sig,timeBase,filt_mean_sig);    
+%     drawnow;
+    
+    if ~all( isnan(filt_stddev_sig) ) && (stim_trial_count(i) >= 25) && (control_trial_count(i) >= 25)
+%         figure(2);clf; plot(timeBase,std_dev_sig);
+        fitData = modelFit_beta(timeBase, filt_stddev_sig', []);
         fitAmp(i) = fitData.amplitude;
 %         pause(1);
-        fitData = modelFit_beta(timeBase, mean_sub(i,:)' );
+
+%         figure(2);clf; plot(timeBase,mean_sig);
+        fitData = modelFit_beta(timeBase, filt_mean_sig', [] );
 %         pause(1);
         fitMean(i) = fitData.amplitude;
 
@@ -288,41 +336,12 @@ parfor i=1:size(std_dev_sub,1)
 end
 close(THEwaitbar);
 
-%% Plot the individual reflectance profiles
-% figure(100); hold on;
-% delete('cone_ref_examples.tif')
-% for i=1:400%size(allcoords,1)
-%     clf;
-%     if ~isnan(fitAmp(i))
-%    
-%         subplot(4,1,1); plot(std_dev_sub(i,:),'-');
-%         xlabel('Frame #'); ylabel('Reflectance Response'); title(num2str(i));
-%         axis([0 180 -1 4]);
-%         
-%         subplot(4,1,2); plot(stim_cell_mean(i,:)-control_cell_mean(i,:));
-%         xlabel('Frame #'); ylabel('Mean Reflectance Response');
-%         axis([0 180 -3 3]);
-%               
-%         for j=1:length(profileSDataNames)
-%             subplot(4,1,3); hold on; plot(stim_time_indexes{j}{i}, (stim_cell_reflectance{j}{i}),'-' );
-%             xlabel('Frame #'); ylabel('Standardized reflectance'); %axis([0 165 -15 15]);
-%                              
-%             if ~isnan(stim_posnegratio(i,j)) && ~isinf(stim_posnegratio(i,j))
-%                 subplot(4,1,4);hold on; plot(j, stim_cell_prestim_mean{j}(i),'.','Color',percentparula(stim_posnegratio(i,j),:),'MarkerSize', 15 );
-%                 axis([0 length(profileSDataNames) 0 255]); xlabel('Trial #'); ylabel('Prestimulus reflectance (AU)');
-%             end
-%         end
-%         f=getframe(gcf);
-%         imwrite(f.cdata,'cone_ref_examples.tif','WriteMode','append');
-%     end
-% end
-
 %% Plot the pos/neg ratio of the mean vs the amplitude
-posnegratio=nan(size(allcoords,1),1);
+posnegratio=nan(size(control_coords,1),1);
 
 
 figure(101); clf; hold on;
-for i=1:size(allcoords,1)
+for i=1:size(control_coords,1)
     if ~isnan(fitAmp(i))
         % Find out what percentage of time the signal spends negative
         % or positive after stimulus delivery (66th frame)
@@ -334,11 +353,11 @@ for i=1:size(allcoords,1)
         plot( fitAmp(i),fitMean(i),'k.');        
     end
 end
-ylabel('Mean response % positive');
+ylabel('Mean response amplitude');
 xlabel('Reflectance response amplitude');
 title('Percent positive vs reflectance response amplitude')
 hold off;
-saveas(gcf,'posneg_vs_amp.png');
+saveas(gcf,['posneg_vs_amp_' num2str(stim_intensity) '.png']);
 %% Plot histograms of the amplitudes
 % figure(5); 
 % histogram( ( control_amps(~isnan(control_amps)) ),'Binwidth',0.1); hold on;
@@ -353,58 +372,7 @@ title('Stim-Control per cone subtraction amplitudes');
 xlabel('Amplitude difference from control');
 ylabel('Number of cones');
 
-%% Color code our image. 
-
-upper_thresh = 4; 
-lower_thresh = 0;
-
-thismap = parula((upper_thresh*100)+1); 
-
-figure(6); %imagesc(ref_image); hold on; colormap gray;
-axis image; hold on;
-
-percentmax = zeros(size(allcoords,1));
-
-[V,C] = voronoin(allcoords,{'QJ'});
-
-for i=1:size(allcoords,1)
-    
-    if ~isnan(fitAmp(i))
-        percentmax(i) = fitAmp(i);
-        
-        if percentmax(i) > upper_thresh
-            percentmax(i) = upper_thresh;
-        elseif percentmax(i) < lower_thresh
-            percentmax(i) = lower_thresh;
-        end
-        
-        thiscolorind = round(percentmax(i)*100)+1;
-        
-        if ~isnan(thiscolorind) %&& percentmax(i) < 0.5
-%             plot(allcoords(i,1),allcoords(i,2),'.','Color', thismap(thiscolorind,:), 'MarkerSize', 15 );
-            patch(V(C{i},1),V(C{i},2),ones(size(V(C{i},1))),'FaceColor', thismap(thiscolorind,:));
-
-        end
-    end
-end
-colorbar
-axis([min(allcoords(:,1)) max(allcoords(:,1)) min(allcoords(:,2)) max(allcoords(:,2))])
-caxis([lower_thresh upper_thresh])
-set(gca,'Color','k'); hold off; drawnow;
-
-
 %% Output
-
-% For structure:
-% /stuff/id/date/wavelength/time/intensity/location/data/Profile_Data
-
-[remain kid] = getparent(stimRootDir); % data
-[remain stim_loc] = getparent(remain); % location 
-[remain stim_intensity] = getparent(remain); % intensity 
-[remain stim_time] = getparent(remain); % time
-[remain stimwave] = getparent(remain); % wavelength
-% [remain sessiondate] = getparent(remain); % date
-[~, id] = getparent(remain); % id
 
 
 save([ stim_intensity '.mat'],'fitAmp','fitMean','fitAngle',...

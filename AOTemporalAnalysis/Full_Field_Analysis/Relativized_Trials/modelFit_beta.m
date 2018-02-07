@@ -30,14 +30,14 @@ timeBase = timeBase(pretime);
 pooled_std_stim = pooled_std_stim(pretime);
 
 
-% pooled_std_stim = medfilt1(pooled_std_stim,3);
+% pooled_std_stim = wavelet_denoise(pooled_std_stim);
 
 
 %% Start plot
 if plotstuff
-    thePlot = figure(2); clf; hold on;
+    thePlot = figure(2); hold on; clf; 
     % set(gca,'FontName','Helvetica','FontSize',14);
-    plot(timeBase,pooled_std_stim,'ro','MarkerFaceColor','r','MarkerSize',6);
+    plot(timeBase,pooled_std_stim,'r','MarkerFaceColor','r','MarkerSize',6);
     % figure(thePlot); plot(timeBase,theResponse,'r','LineWidth',4);
     xlim([0 16]);
     ylim([-1 3]);
@@ -51,7 +51,7 @@ end
 %% Set up initial guess for fit parameters
 
 % These are known
-fitParams0.type = 'gammapdfexp';
+fitParams0.type = 'gammapdf';
 
 fitParams0.stimOnsetTime = 3.96;
 
@@ -77,6 +77,8 @@ prestim_PI = fitParams0.preStimValue + prestim_stddev;
 
 % Kludgy setup, but works for a simple analysis...
 global peaked;
+
+peaked = true;
 
 % And set scale so that initial max predition matches max data
 if ~isempty( strfind( fitParams0.type, 'gammapdf') )
@@ -161,18 +163,18 @@ x0 = ParamsToX(fitParams0);
 % Then full search
 switch fitParams0.type
     case 'gammapdf'
-        vlb = [-3 0 0 -10];
-        vub = [3  3 3 10];        
+        vlb = [-2 0 0 -10];
+        vub = [2  3 3 10];        
     case '2xgammapdf'
         vlb = [-2 0.1 0.1 0.001  0  1    1  -6   0];
         vub = [ 1 10    10    10   2  10   10  6   0];
     case 'gammapdfexp'
         if peaked
-            vlb = [-3 0.2 0.2   -20   0.01  0];
-            vub = [ 3 3    3    20  3     3];
+            vlb = [-3 0 0 -20  0.01 0];
+            vub = [ 3 3 3  20  3    3];
         else
-            vlb = [-3 0.2 0.2  -20  0.01  0];
-            vub = [ 3 3    3   0.5  3   3];
+            vlb = [-3 0 0 -20  0.01 0];
+            vub = [ 3 3 3  0.5 3    3];
         end
 end
 
@@ -263,7 +265,7 @@ if strcmp( fitParams0.type, '2xgammapdf')
     fitCharacteristics.gamma_separation = abs(loc1-loc2);
 end
 
-% fitParams;
+fitParams;
 % afterPIval
 % threeQind
 
@@ -294,10 +296,10 @@ preds = ComputeModelPreds(fitParams,timeBase);
 
 % Compute fit error as RMSE
 nPoints = length(theResponse);
-theDiff2 = (theResponse-preds).^2;
-f = mean(sqrt(theDiff2));
-% theDiff2 = abs(theResponse-preds);
-% f = mean(theDiff2);
+% theDiff2 = (theResponse-preds).^2;
+% f = mean(sqrt(theDiff2));
+theDiff2 = abs(theResponse-preds);
+f = mean(theDiff2);
 
 end
 

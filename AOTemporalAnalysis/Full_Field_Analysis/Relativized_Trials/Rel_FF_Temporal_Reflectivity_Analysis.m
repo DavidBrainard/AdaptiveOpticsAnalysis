@@ -69,8 +69,11 @@ if ~exist(fullfile(mov_path,ref_coords_fname),'file')
     tifnames = read_folder_contents( mov_path,'tif' );
     
     for i=1:length(tifnames)
-        if ~isempty( strfind( tifnames{i}, 'ALL_TRIALS.tif'))
+        if ~isempty( strfind( tifnames{i}, 'ALL_TRIALS.tif')) %%&& ...
+%             exist( [tifnames{i}(1:end-4) '_coords.csv'],'file')
+            
             ref_coords_fname = [tifnames{i}(1:end-4) '_coords.csv'];
+            
             if exist(fullfile(mov_path, [tifnames{i}(1:end-4) '_cap_map.mat']), 'file')
                 load( fullfile(mov_path, [tifnames{i}(1:end-4) '_cap_map.mat']) );
                 capillary_mask = ~capillary_mask;

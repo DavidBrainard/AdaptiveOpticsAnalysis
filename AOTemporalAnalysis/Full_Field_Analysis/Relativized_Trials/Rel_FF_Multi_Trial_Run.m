@@ -14,7 +14,7 @@ fPaths = read_folder_contents_rec(rootDir,'tif');
 wbh = waitbar(0,['Processing trial 0 of ' num2str(length(fPaths)) '.']);
 
 
-for i=1:size(fPaths,1)
+parfor i=1:size(fPaths,1)
     i
 %     tic;
     [mov_path, ref_image_fname] = getparent(fPaths{i});
