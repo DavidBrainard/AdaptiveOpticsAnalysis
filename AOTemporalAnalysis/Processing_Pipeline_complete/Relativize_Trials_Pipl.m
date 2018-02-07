@@ -70,6 +70,8 @@ i=ref_im;
             
             tforms{i,j} = imregtform( trial_im{j}, trial_im{ref_im},... % Then tweak for affine
                                      'affine',monooptimizer,monometric, 'PyramidLevels',1,'InitialTransformation',tforms{i,j});
+                                 
+                                 
             toc;
 
 
