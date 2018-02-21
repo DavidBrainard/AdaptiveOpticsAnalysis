@@ -144,7 +144,7 @@ allcoords = stim_coords;
 percentparula = parula(101);
 
 stim_cell_var = nan(size(stim_coords,1), max_index);
-stim_cell_mean = nan(size(stim_coords,1), max_index);
+stim_cell_median = nan(size(stim_coords,1), max_index);
 stim_trial_count = zeros(size(stim_coords,1),1);
 stim_posnegratio = nan(size(stim_coords,1),max_index);
 % ratioplotnums=[];
@@ -168,14 +168,14 @@ for i=1:size(stim_coords,1)
             numposneg = sign(stim_cell_reflectance{j}{i}(stim_time_indexes{j}{i}>66));
             pos = sum(numposneg == 1);
 
-%             subplot(2,1,1);hold on; plot(stim_time_indexes{j}{i}, (stim_cell_reflectance{j}{i}) );
+%             subplot(3,1,1);hold on; plot(stim_time_indexes{j}{i}, (stim_cell_reflectance{j}{i}) );
 %             xlabel('Frame #'); ylabel('Standardized reflectance'); title(num2str(i));
 
             stim_posnegratio(i,j) = round(100*pos/length(numposneg))+1;                        
-%             if ~isnan(posnegatio) && ~isinf(posnegatio)
+%             if ~isnan(stim_posnegratio(i,j)) && ~isinf(stim_posnegratio(i,j))
 % %                 ratioplotnums = [ratioplotnums;stim_cell_prestim_mean{j}(i) posnegatio];
-%                 subplot(2,1,2);hold on; plot(j, stim_cell_prestim_mean{j}(i),'.','Color',percentparula(posnegatio,:),'MarkerSize', 15 );
-%                 axis([0 100 0 255]); xlabel('Trial #'); ylabel('Prestimulus reflectance (AU)');
+%                 subplot(3,1,2);hold on; plot(j, stim_cell_prestim_mean{j}(i),'.','Color',percentparula(stim_posnegratio(i,j),:),'MarkerSize', 15 );
+%                 axis([0 50 0 255]); xlabel('Trial #'); ylabel('Prestimulus reflectance (AU)');
 %             end
         
             numtrials = numtrials+1;
@@ -188,18 +188,23 @@ for i=1:size(stim_coords,1)
     for j=1:size(stim_cell_var,2)
         nonan_ref = all_times_ref(~isnan(all_times_ref(:,j)), j);
         refcount = sum(~isnan(all_times_ref(:,j)));
-        refmean = mean(nonan_ref);
-        if ~isnan(refmean)
-            stim_cell_mean(i,j) = refmean;            
-            stim_cell_var(i,j) = ( sum((nonan_ref-refmean).^2)./ (refcount-1) );
+        refmedian = median(nonan_ref);
+        if ~isnan(refmedian)
+            stim_cell_median(i,j) = refmedian;            
+            stim_cell_var(i,j) = ( sum((nonan_ref-refmedian).^2)./ (refcount-1) );
         end
     end
+%     subplot(3,1,3);
+%     plot(stim_cell_mean(i,:));hold on;
+%     plot(sqrt(stim_cell_var(i,:)));
     
-%     plot(stim_cell_mean(i,:));
+    
 %     figure(2); 
 %     hold on;
 %     clf;
-%     plot(sqrt(stim_cell_var(i,:))); drawnow; hold off;
+%     subplot(4,1,4);
+%     plot(abs(stim_cell_mean(i,:)) +sqrt(stim_cell_var(i,:)) ); 
+%      drawnow; hold off;
 
 %     if i == 400
 %         pause;
@@ -210,7 +215,7 @@ end
 
 %%
 control_cell_var = nan(size(control_coords,1), max_index);
-control_cell_mean = nan(size(control_coords,1), max_index);
+control_cell_median = nan(size(control_coords,1), max_index);
 control_trial_count = zeros(size(control_coords,1),1);
 control_posnegratio = nan(size(control_coords,1),max_index);
 
@@ -261,10 +266,10 @@ for i=1:size(control_coords,1)
     for j=1:size(control_cell_var,2)
         nonan_ref = all_times_ref(~isnan(all_times_ref(:,j)), j);
         refcount = sum(~isnan(all_times_ref(:,j)));
-        refmean = mean(nonan_ref);
-        if ~isnan(refmean)
-            control_cell_mean(i,j) = refmean;
-            control_cell_var(i,j) = ( sum((nonan_ref-refmean).^2)./ (refcount-1) );
+        refmedian = median(nonan_ref);
+        if ~isnan(refmedian)
+            control_cell_median(i,j) = refmedian;
+            control_cell_var(i,j) = ( sum((nonan_ref-refmedian).^2)./ (refcount-1) );
         end
     end
 %     figure(4);
@@ -276,54 +281,79 @@ end
 
 
 
+
+
 %% Calculate the pooled std deviation
 std_dev_sub = sqrt(stim_cell_var)-sqrt(control_cell_var);
-mean_sub = stim_cell_mean-control_cell_mean;
+median_sub = stim_cell_median-control_cell_median;
 
 % Possible bug- first index is always nan?
 std_dev_sub = std_dev_sub(:,2:end);
-mean_sub = mean_sub(:,2:end);
+median_sub = median_sub(:,2:end);
 
 timeBase = ((1:max_index-1)/16.6)';
 
 fitAmp = nan(size(std_dev_sub,1),1);
-fitMean = nan(size(std_dev_sub,1),1);
+fitMedian = nan(size(std_dev_sub,1),1);
 fitAngle = nan(size(std_dev_sub,1),1);
-
-waitbar(1/size(std_dev_sub,1),THEwaitbar,'Fitting subtracted signals...');
-
+% waitbar(1/size(std_dev_sub,1),THEwaitbar,'Fitting subtracted signals...');
 
 parfor i=1:size(std_dev_sub,1)
 
-    i
+% Filtering
     std_dev_sig = std_dev_sub(i,:);
-    padding_amt = ceil((2^(nextpow2(length(std_dev_sig)))-length(std_dev_sig)) /2);
-    padded_stddev_sig = padarray(std_dev_sig, [0  padding_amt],'symmetric', 'both');
-    padded_stddev_sig=wavelet_denoise( padded_stddev_sig );
-    filt_stddev_sig = padded_stddev_sig(padding_amt+1:end-padding_amt);
+%     padding_amt = ceil((2^(nextpow2(length(std_dev_sig)))-length(std_dev_sig)) /2);
+%     padded_stddev_sig = padarray(std_dev_sig, [0  padding_amt],'symmetric', 'both');
+%     padded_stddev_sig=wavelet_denoise( padded_stddev_sig );
+%     filt_stddev_sig = padded_stddev_sig(padding_amt+1:end-padding_amt);
+% 
+    median_sig = median_sub(i,:);
+%     padding_amt = ceil((2^(nextpow2(length(median_sig)))-length(median_sig)) /2);
+%     padded_mean_sig = padarray(median_sig, [0  padding_amt],'symmetric', 'both');
+%     padded_mean_sig=wavelet_denoise( padded_mean_sig );
+%     filt_mean_sig = padded_mean_sig(padding_amt+1:end-padding_amt);
+             
     
-%     figure(200); plot(timeBase,std_dev_sig,timeBase,filt_stddev_sig);
-    
-    mean_sig = mean_sub(i,:);
-    padding_amt = ceil((2^(nextpow2(length(mean_sig)))-length(mean_sig)) /2);
-    padded_mean_sig = padarray(mean_sig, [0  padding_amt],'symmetric', 'both');
-    padded_mean_sig=wavelet_denoise( padded_mean_sig );
-    filt_mean_sig = padded_mean_sig(padding_amt+1:end-padding_amt);
-            
-%     figure(201); plot(timeBase,mean_sig,timeBase,filt_mean_sig);    
-%     drawnow;
-    
-    if ~all( isnan(filt_stddev_sig) ) && (stim_trial_count(i) >= 25) && (control_trial_count(i) >= 25)
-%         figure(2);clf; plot(timeBase,std_dev_sig);
-        fitData = modelFit_beta(timeBase, filt_stddev_sig', []);
-        fitAmp(i) = fitData.amplitude;
-%         pause(1);
 
-%         figure(2);clf; plot(timeBase,mean_sig);
-        fitData = modelFit_beta(timeBase, filt_mean_sig', [] );
-%         pause(1);
-        fitMean(i) = fitData.amplitude;
-        fitAngle(i) = atan2(fitMean(i),fitAmp(i));
+    
+    if ~all( isnan(std_dev_sig) ) && (stim_trial_count(i) >= 25) && (control_trial_count(i) >= 25)
+%         figure(2);clf; plot(timeBase,std_dev_sig);
+
+% Fitting
+%         fitData = modelFit_beta(timeBase, std_dev_sig', []);
+%         fitAmp(i) = fitData.amplitude;
+%         
+%         fitData = modelFit_beta(timeBase, median_sig', [] );
+%         fitMedian(i) = fitData.amplitude;
+        
+%         fitMean(i) = fitDataStim.amplitude - fitDataCont.amplitude;
+
+% Filtering AUC
+%         [~, themaxind]=max( abs(filt_stddev_sig(67:116)) );
+
+%         fitAmp(i) = filt_stddev_sig(66+themaxind) - mean(filt_stddev_sig(1:66));
+%         fitAmp(i) = sum(filt_stddev_sig(67:116)) - sum(filt_stddev_sig(17:66));
+%         if fitAmp(i)==0
+%            figure(200); plot(timeBase,std_dev_sig,timeBase,filt_stddev_sig);
+%            figure(201); plot(timeBase,mean_sub(i,:), timeBase, filt_mean_sig); 
+%            fitAmp(i) 
+%         end
+        
+%         [~, themaxind]=max(abs(filt_mean_sig(67:116)));
+%         
+%         fitMean(i) = filt_mean_sig(66+themaxind) - mean(filt_mean_sig(1:66));
+%         fitMean(i) = sum(filt_mean_sig(67:116)) - sum(filt_mean_sig(17:66));
+        
+% AUC        
+        fitAmp(i) = sum(std_dev_sig(66:100)) - sum(std_dev_sig(31:65));
+        fitMedian(i) = sum(median_sig(66:100)) - sum(median_sig(31:65));
+
+%         figure(2);clf; 
+%         plot(timeBase,stim_cell_mean(i, 2:end)); hold on;
+%         plot(timeBase,control_cell_mean(i, 2:end)); hold off;
+%         title( num2str(fitMean(i)));
+        
+
 
     end
 end
@@ -343,12 +373,12 @@ for i=1:size(control_coords,1)
 % 
 %         posnegratio(i) = 100*pos/length(numposneg);
 
-        plot( fitAmp(i),fitMean(i),'k.');        
+        plot( fitAmp(i),fitMedian(i),'k.');        
     end
 end
-ylabel('Mean response amplitude');
+ylabel('Median response amplitude');
 xlabel('Reflectance response amplitude');
-title('Percent positive vs reflectance response amplitude')
+title('Median reflectance vs reflectance response amplitude')
 hold off;
 saveas(gcf,['posneg_vs_amp_' num2str(stim_intensity) '.png']);
 %% Plot histograms of the amplitudes
@@ -368,6 +398,6 @@ ylabel('Number of cones');
 %% Output
 
 
-save([ stim_intensity '.mat'],'fitAmp','fitMean','fitAngle',...
-     'allcoords','ref_image','control_cell_mean',...
-     'control_cell_var','stim_cell_mean','stim_cell_var');
+save([ stim_intensity '.mat'],'fitAmp','fitMedian','fitAngle',...
+     'allcoords','ref_image','control_cell_median',...
+     'control_cell_var','stim_cell_median','stim_cell_var');

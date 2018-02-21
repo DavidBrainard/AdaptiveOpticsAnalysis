@@ -4,25 +4,22 @@ clear;
 
 load('0nW.mat');
 fitAmp_0nW = fitAmp; 
-fitMean_0nW = fitMean;
-fitAngle_0nW = fitAngle;
+fitMedian_0nW = fitMedian;
 
 load('50nW.mat');
 fitAmp_50nW = fitAmp; 
-fitMean_50nW = fitMean;
-fitAngle_50nW = fitAngle;
+fitMedian_50nW = fitMedian;
 
 load('450nW.mat');
 fitAmp_450nW = fitAmp; 
-fitMean_450nW = fitMean;
-fitAngle_450nW = fitAngle;
+fitMedian_450nW = fitMedian;
 
 % Just Amp
 % allfits = [fitAmp_0nW fitAmp_50nW fitAmp_450nW];
 
-allfits = [ (fitAmp_0nW   + abs(fitMean_0nW)) ...
-            (fitAmp_50nW  + abs(fitMean_50nW)) ... 
-            (fitAmp_450nW + abs(fitMean_450nW)) ];
+allfits = [ (fitAmp_0nW   + abs(fitMedian_0nW)) ...
+            (fitAmp_50nW  + abs(fitMedian_50nW)) ... 
+            (fitAmp_450nW + abs(fitMedian_450nW)) ];
 
 valid = all(~isnan(allfits),2);
 
@@ -62,39 +59,39 @@ lower_slope_thresh = quantile(slopes,0.05);
 % histograms, such as their mean, median, and what percentage of their
 % values are above 0. 
 
-figure(1); histogram(allfits(valid, 1),'BinWidth',0.1,'Normalization','probability'); 
-axis([-1 6 0 0.2]);
-title(['\bf0nW: \rmMean: ' num2str(mean(allfits(valid, 1))) ...
-       ' Median: ' num2str(median(allfits(valid, 1))) ...
-       ' %>0: ' num2str( 100*sum(allfits(valid, 1)>0)./ sum(valid) ) ]);
-xlabel('Amplitude (std devs)');
-ylabel('Probability');
-saveas(gcf, '0nW_histo.png');
+% figure(1); histogram(allfits(valid, 1),'BinWidth',0.1,'Normalization','probability'); 
+% axis([-1 6 0 0.2]);
+% title(['\bf0nW: \rmMean: ' num2str(mean(allfits(valid, 1))) ...
+%        ' Median: ' num2str(median(allfits(valid, 1))) ...
+%        ' %>0: ' num2str( 100*sum(allfits(valid, 1)>0)./ sum(valid) ) ]);
+% xlabel('Amplitude (std devs)');
+% ylabel('Probability');
+% saveas(gcf, '0nW_histo.png');
+% 
+% response_threshold = quantile(allfits(valid, 1),0.95)
+% 
+% figure(2); histogram(allfits(valid, 2),'BinWidth',0.1,'Normalization','probability');
+% axis([-1 6 0 0.12]); 
+% title(['\bf50nW: \rmMean: ' num2str(mean(allfits(valid, 2))) ...
+%        ' Median: ' num2str(median(allfits(valid, 2))) ...
+%        ' %>95th: ' num2str( 100*sum(allfits(valid, 2)>response_threshold)./ sum(valid) ) ]);
+% xlabel('Amplitude (std devs)');
+% ylabel('Probability');
+% saveas(gcf, '50nW_histo.png');
+% 
+% 
+% figure(3); histogram(allfits(valid, 3),'BinWidth',0.1,'Normalization','probability');
+% axis([-1 6 0 0.12]); 
+% title(['\bf450nW: \rmMean: ' num2str(mean(allfits(valid, 3))) ...
+%        ' Median: ' num2str(median(allfits(valid, 3))) ...
+%        ' %>95th: ' num2str( 100*sum(allfits(valid, 3)>response_threshold)./ sum(valid) ) ]);
+% xlabel('Amplitude (std devs)');
+% ylabel('Probability');
+% saveas(gcf, '450nW_histo.png');
 
-response_threshold = quantile(allfits(valid, 1),0.95)
 
-figure(2); histogram(allfits(valid, 2),'BinWidth',0.1,'Normalization','probability');
-axis([-1 6 0 0.12]); 
-title(['\bf50nW: \rmMean: ' num2str(mean(allfits(valid, 2))) ...
-       ' Median: ' num2str(median(allfits(valid, 2))) ...
-       ' %>95th: ' num2str( 100*sum(allfits(valid, 2)>response_threshold)./ sum(valid) ) ]);
-xlabel('Amplitude (std devs)');
-ylabel('Probability');
-saveas(gcf, '50nW_histo.png');
-
-
-figure(3); histogram(allfits(valid, 3),'BinWidth',0.1,'Normalization','probability');
-axis([-1 6 0 0.12]); 
-title(['\bf450nW: \rmMean: ' num2str(mean(allfits(valid, 3))) ...
-       ' Median: ' num2str(median(allfits(valid, 3))) ...
-       ' %>95th: ' num2str( 100*sum(allfits(valid, 3)>response_threshold)./ sum(valid) ) ]);
-xlabel('Amplitude (std devs)');
-ylabel('Probability');
-saveas(gcf, '450nW_histo.png');
-
-
-disp([ num2str(100*sum(allfits(valid, 2)>response_threshold) / sum(valid)) '% of 50nW cone responses are over the 95th percentile of the 0nW condition'])
-disp([ num2str(100*sum(allfits(valid, 3)>response_threshold) / sum(valid)) '% of 450nW cone responses are over the 95th percentile of the 0nW condition'])
+% disp([ num2str(100*sum(allfits(valid, 2)>response_threshold) / sum(valid)) '% of 50nW cone responses are over the 95th percentile of the 0nW condition'])
+% disp([ num2str(100*sum(allfits(valid, 3)>response_threshold) / sum(valid)) '% of 450nW cone responses are over the 95th percentile of the 0nW condition'])
 
 %% Individual Spatal maps
 
@@ -292,9 +289,9 @@ saveas(gcf, ['increase_map.png']);
 
 %% Plot each relationship on the plot
 figure(13); hold on;
-plot(fitAmp_50nW,abs(fitMean_50nW),'g.',...
-     fitAmp_450nW,abs(fitMean_450nW),'r.',...
-     fitAmp_0nW,abs(fitMean_0nW),'b.');
+plot(fitAmp_50nW,abs(fitMedian_50nW),'g.',...
+     fitAmp_450nW,abs(fitMedian_450nW),'r.',...
+     fitAmp_0nW,abs(fitMedian_0nW),'b.');
 xlabel('Std dev reponse');
 ylabel('Absolute Mean reponse');
 saveas(gcf, ['comparative_responses.png']); 
@@ -312,35 +309,55 @@ saveas(gcf, 'allamps_boxplot.png');
 %% Vs plots
 figure(15); clf; hold on;
 plot(allfits(valid,1), allfits(valid,3),'k.');
+plot([-20 160], [-20 160],'k');
 xlabel('0nW Response');
 ylabel('450nW Response');
-title('0nW vs 450nW responses');hold off;
+title(['450nW vs 0nW responses: ' num2str(zero_to_fourfiftnW) '% increased.']);hold off;
+% axis([-1 8 -1 8])
+axis([-20 160 -20 160])
 axis square; grid on;
-saveas(gcf, '0_vs_450_response.png');
+saveas(gcf, '450_vs_0nW_response.png');
 
 figure(16); clf; hold on;
-compass( 100*(fitAmp_450nW(valid)-fitAmp_0nW(valid)), 100*(abs(fitMean_450nW(valid))-abs(fitMean_0nW(valid))) );
-diffangle = atan2d(abs(fitMean_450nW(valid))-abs(fitMean_0nW(valid)), fitAmp_450nW(valid)-fitAmp_0nW(valid));
+compass( 100*(fitAmp_450nW(valid)-fitAmp_0nW(valid)), 100*(abs(fitMedian_450nW(valid))-abs(fitMedian_0nW(valid))) );
+diffangle = atan2d(abs(fitMedian_450nW(valid))-abs(fitMedian_0nW(valid)), fitAmp_450nW(valid)-fitAmp_0nW(valid));
 rose(diffangle*2*pi/360);
 legend('Individual differences*100','Radial histogram')
-title('0nW vs 450nW mean/stddev responses');hold off; axis square;
+title('0nW vs 450nW mean/stddev responses');hold off; 
+% axis([-100 700 -100 700])
+axis square;
 saveas(gcf, '0_vs_450_compass_rose_response.png');
 
 figure(17); clf; hold on;
-compass( 100*(fitAmp_450nW(valid)-fitAmp_50nW(valid)), 100*(abs(fitMean_450nW(valid))-abs(fitMean_50nW(valid))) );
-diffangle = atan2d(abs(fitMean_450nW(valid))-abs(fitMean_50nW(valid)), fitAmp_450nW(valid)-fitAmp_50nW(valid));
+compass( 100*(fitAmp_450nW(valid)-fitAmp_50nW(valid)), 100*(abs(fitMedian_450nW(valid))-abs(fitMedian_50nW(valid))) );
+diffangle = atan2d(abs(fitMedian_450nW(valid))-abs(fitMedian_50nW(valid)), fitAmp_450nW(valid)-fitAmp_50nW(valid));
 rose(diffangle*2*pi/360);
 legend('Individual differences*100','Radial histogram')
-title('50nW vs 450nW mean/stddev responses');hold off; axis square;
+title('50nW vs 450nW mean/stddev responses');hold off; 
+% axis([-200 400 -200 400])
+axis square;
 saveas(gcf, '50_vs_450_compass_rose_response.png');
 
 figure(18); clf; hold on;
 plot(allfits(valid,2), allfits(valid,3),'k.');
 xlabel('50nW Response');
 ylabel('450nW Response');
+
 title('50nW vs 450nW responses');hold off;
+% axis([-1 8 -1 8])
 axis square; grid on;
 saveas(gcf, '50_vs_450_response.png');
+
+figure(19); clf; hold on;
+plot(allfits(valid,1), allfits(valid,3),'.');
+plot(allfits(valid,2), allfits(valid,3),'.');
+
+legend('450nW vs 0nW','450nW vs 50nW');
+title('450nW vs 0nW and 450nW vs 50nW responses');hold off;
+% axis([-1 8 -1 8])
+axis square; grid on;
+saveas(gcf, '0_vs_450_n_50_vs_450_response.png');
+saveas(gcf, '0_vs_450_n_50_vs_450_response.svg');
 
 
 

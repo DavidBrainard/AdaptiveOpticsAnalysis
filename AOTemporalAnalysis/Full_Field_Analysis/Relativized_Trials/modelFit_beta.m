@@ -211,10 +211,20 @@ prestim_PI = fitParams0.preStimValue + 2*prestim_stddev;
 
 fitCharacteristics.amplitude = predictions(max_ind)-fitParams0.preStimValue;
 
-afterPIval = min( find( predictions > prestim_PI ) );
+afterPIval = min( find( abs(predictions) > prestim_PI ) );
 
 fitCharacteristics.resp_start = 0;
-fitCharacteristics.time_to_peak = 0;
+fitCharacteristics.time_to_peak = fitTimeBase(max_ind) - fitParams0.stimOnsetTime;
+
+if fitCharacteristics.time_to_peak < 0
+    fitCharacteristics.time_to_peak = Inf;
+end
+%     figure; plot(fitTimeBase,predictions); hold on;
+%     plot(timeBase, pooled_std_stim,'k')
+%     plot(fitTimeBase(max_ind), predictions(max_ind), '*r');
+%     xlabel('Time'); ylabel('Response');
+%     hold off;
+
 
 
 if afterPIval<=length(timeBase)            
@@ -223,8 +233,6 @@ if afterPIval<=length(timeBase)
     interpslope = (predictions(afterPIval)-predictions(beforePIval))/(timeBase(afterPIval)-timeBase(beforePIval));
 
     fitCharacteristics.resp_start = timeBase(beforePIval) + ((prestim_PI-predictions(beforePIval))/interpslope);
-
-    fitCharacteristics.time_to_peak = fitTimeBase(max_ind) - fitParams0.stimOnsetTime;
 end
 
 
