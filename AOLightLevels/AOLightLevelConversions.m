@@ -35,13 +35,24 @@ pupilAreaMm2 = pi*((pupilDiamMm/2)^2);
 pupilAreaCm2 = pupilAreaMm2*(10^-2);
 eyeLengthCm = eyeLengthMm*(10^-1);
 degPerMm = RetinalMMToDegrees(1,eyeLengthMm);
+degPerCm = degPerMm*10;
+
+% Convert retinal area from deg2 to cm2
+stimulusAreaCm2 = stimulusAreaDegrees2/(degPerCm^2);
 
 % Accept either corneal or retinal illuminance
 RETORCORN = GetWithDefault('Enter retinal irradiance (1), corneal irradiance (2), or power entering eye (3)?',3);
 switch (RETORCORN)
     case 1
-        rawRetIrradianceMicrowattsPerCm2In = GetWithDefault('Enter retinal illuminance in microwatts/cm2',25.5);
-        rawCornIrradianceMicrowattsPerCm2In = rawRetIrradianceMicrowattsPerCm2In*stimulusAreaDegrees2/pupilAreaCm2;
+        IRRADUNITS = GetWithDefault('Enter retinal irradiance in units of  microwatts/cm2 (1) or microwatts/deg2 (2)?',1);
+        switch (IRRADUNITS)
+            case 1
+                rawRetIrradianceMicrowattsPerCm2In = GetWithDefault('Enter retinal illuminance in microwatts/cm2',25.5);
+            case 2
+                rawRetIrradianceMicrowattsPerDeg2In = GetWithDefault('Enter retinal illuminance in microwatts/deg2',0.5);
+                rawRetIrradianceMicrowattsPerCm2In = rawRetIrradianceMicrowattsPerDeg2In*(degPerCm^2);
+        end
+        rawCornIrradianceMicrowattsPerCm2In = rawRetIrradianceMicrowattsPerCm2In*stimulusAreaCm2/pupilAreaCm2;
     case 2
         rawCornIrradianceMicrowattsPerCm2In = GetWithDefault('Enter corneal illuminance in microwatts/cm2',25.5);
         rawRadianceMicrowattsPerCm2Sr = CornIrradianceAndDegrees2ToRadiance(rawCornIrradianceMicrowattsPerCm2In,stimulusAreaDegrees2);
