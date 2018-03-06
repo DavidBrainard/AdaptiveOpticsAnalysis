@@ -53,6 +53,8 @@ desinsoid_file = tkFileDialog.askopenfilename(**options)
 
 static_distortion = mat_engi.Static_Distortion_Repair(desinsoid_file)
 
+print "Calculated distortion"
+
 just_the_dir = os.path.split(desinsoid_file)[0]
 
 options = {}
@@ -100,7 +102,7 @@ for thisfile in os.listdir(dmp_folder_path):
             pickle_file.close()
 
             # Find the dmp's matching image(s).
-            modalities = ('confocal', 'split_det', 'avg')
+            modalities = ('confocal', 'split_det', 'avg', 'visible')
 
             images_to_fix =[]
             # Find all images in our folder that this dmp applies to.
