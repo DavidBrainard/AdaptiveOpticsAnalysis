@@ -147,7 +147,7 @@ stim_cell_var = nan(size(stim_coords,1), max_index);
 stim_cell_median = nan(size(stim_coords,1), max_index);
 stim_trial_count = zeros(size(stim_coords,1),1);
 stim_posnegratio = nan(size(stim_coords,1),max_index);
-% ratioplotnums=[];
+stim_prestim_means=[];
 
 for i=1:size(stim_coords,1)
     waitbar(i/size(stim_coords,1),THEwaitbar,'Processing stimulus signals...');
@@ -173,7 +173,7 @@ for i=1:size(stim_coords,1)
 
             stim_posnegratio(i,j) = round(100*pos/length(numposneg))+1;                        
 %             if ~isnan(stim_posnegratio(i,j)) && ~isinf(stim_posnegratio(i,j))
-% %                 ratioplotnums = [ratioplotnums;stim_cell_prestim_mean{j}(i) posnegatio];
+                stim_prestim_means = [stim_prestim_means; stim_cell_prestim_mean{j}(i)];
 %                 subplot(3,1,2);hold on; plot(j, stim_cell_prestim_mean{j}(i),'.','Color',percentparula(stim_posnegratio(i,j),:),'MarkerSize', 15 );
 %                 axis([0 50 0 255]); xlabel('Trial #'); ylabel('Prestimulus reflectance (AU)');
 %             end
@@ -218,6 +218,7 @@ control_cell_var = nan(size(control_coords,1), max_index);
 control_cell_median = nan(size(control_coords,1), max_index);
 control_trial_count = zeros(size(control_coords,1),1);
 control_posnegratio = nan(size(control_coords,1),max_index);
+cont_prestim_means=[];
 
 for i=1:size(control_coords,1)
     waitbar(i/size(control_coords,1),THEwaitbar,'Processing control signals...');
@@ -246,6 +247,7 @@ for i=1:size(control_coords,1)
         if ~isempty(control_cell_reflectance{j}{i}) && ...
            sum(control_time_indexes{j}{i} >= 67 & control_time_indexes{j}{i} <=99) >=  CUTOFF
        
+            cont_prestim_means = [cont_prestim_means; control_cell_prestim_mean{j}(i)];
             numtrials = numtrials+1;
             all_times_ref(j, control_time_indexes{j}{i} ) = control_cell_reflectance{j}{i};
         end
@@ -280,7 +282,10 @@ for i=1:size(control_coords,1)
 end
 
 
-
+figure;
+histogram(stim_prestim_means, 255); hold on; histogram(cont_prestim_means, 255);
+numover = sum(stim_prestim_means>200) + sum(cont_prestim_means>200);
+title(['Pre-stimulus means of all available trials (max 50) from ' num2str(size(control_coords,1)) ' cones. ' num2str(numover) ' trials >200 ']);
 
 
 %% Calculate the pooled std deviation
@@ -358,6 +363,10 @@ parfor i=1:size(std_dev_sub,1)
     end
 end
 close(THEwaitbar);
+%%
+save([ stim_intensity '.mat'],'fitAmp','fitMedian','fitAngle',...
+     'allcoords','ref_image','control_cell_median',...
+     'control_cell_var','stim_cell_median','stim_cell_var');
 
 %% Plot the pos/neg ratio of the mean vs the amplitude
 posnegratio=nan(size(control_coords,1),1);
@@ -395,9 +404,4 @@ title('Stim-Control per cone subtraction amplitudes');
 xlabel('Amplitude difference from control');
 ylabel('Number of cones');
 
-%% Output
 
-
-save([ stim_intensity '.mat'],'fitAmp','fitMedian','fitAngle',...
-     'allcoords','ref_image','control_cell_median',...
-     'control_cell_var','stim_cell_median','stim_cell_var');

@@ -11,7 +11,7 @@ clear;
 close all force;
 
 
-NUM_REF_OUTPUT = 3;
+NUM_REF_OUTPUT = 5;
 MODALITIES = {'confocal','split_det','avg'}; % The modalities to search for.
 MODALITY_WEIGHTS = [1/3 1/3 1/3]; % The weights applied to each modality. Adjust these values if you want the first modality (say, confocal) to carry more weight in the reference frame choice.
 STRIP_SIZE = 40; % The size of the strip at which we'll analyze the distortion
@@ -125,7 +125,7 @@ for f=1 : size(stack_fname,1)
     %% NEED TO ADD GROUP SUPPORT!
     intersected = [];
 
-    for m=1 : size(stack_fname,2)  
+    for m=1 : size(stack_fname,2)
         intersected = union(intersected, refs{f,m});
     end
 
@@ -150,7 +150,7 @@ for f=1 : size(stack_fname,1)
     intersected = intersected(rankinds);
     
     % Go through each intersected value and determine which group its in;
-    % make separate rows in bestrefs for disparate groups.
+    % make separate rows in newrefs for disparate groups.
     grps = -ones(length(intersected),size(stack_fname,2));
     for i=1:length(intersected)
         for m=1 : size(stack_fname,2)
@@ -189,7 +189,7 @@ for f=1 : size(stack_fname,1)
         end
     end
     
-    % Re-rank them based on their location in the intersected list.
+    %% Re-rank them based on their location in the intersected list.
     for g=1:length(newrefs)
         theserefs = newrefs{g};
         rankedrefs = -ones(size(theserefs));
@@ -199,15 +199,40 @@ for f=1 : size(stack_fname,1)
         [rankings, rankinds ] = sort(rankedrefs);
         newrefs{g} = theserefs(rankinds);
       
-        
-        if length(newrefs{g})>=10
-            bestrefs = [bestrefs; [str2double(vidnum) newrefs{g}(1:10)']];
-            dlmwrite(fullfile(mov_path{1},'Reference_Frames.csv'), [str2double(vidnum) newrefs{g}(1:10)'], 'delimiter',',','-append');
-
-        else        
-            bestrefs = [bestrefs; [str2double(vidnum) padarray(newrefs{g},[10-length(newrefs{g}) 0], -1,'post')']];
-            dlmwrite(fullfile(mov_path{1},'Reference_Frames.csv'), [str2double(vidnum) padarray(newrefs{g},[10-length(newrefs{g}) 0], -1,'post')'], 'delimiter',',','-append');
+        % Find out which reference frames fit best with which modalities
+        if length(newrefs{g})>=NUM_REF_OUTPUT
+            bestrefs = newrefs{g}(1:NUM_REF_OUTPUT)';
+        else
+            bestrefs = padarray(newrefs{g},[NUM_REF_OUTPUT-length(newrefs{g}) 0], -1,'post')';
         end
+        ref_best_modality = cell(size(bestrefs));
+        
+        for r=1:length(bestrefs)
+            thisrefrank = 100*ones(1,size(refs,2));
+            for m=1:size(refs,2)
+                rank = find( refs{f,m}==bestrefs(r) );
+                if ~isempty(rank)
+                    thisrefrank(m) = rank;
+                end
+            end
+            [~, refrank_ind] = min(thisrefrank); % Whichever has the lowest index (best rank), record as the suggested modality.
+            ref_best_modality{r} = MODALITIES{refrank_ind}; 
+        end
+        
+        % Write all of this to disk.
+        fid= fopen(fullfile(mov_path{1},'Reference_Frames.csv'),'a');
+        
+        fprintf(fid,'"%s",',vidnum);
+        
+        for r=1:length(bestrefs)
+            fprintf(fid,'"%s",%d,',ref_best_modality{r},bestrefs(r));
+        end
+        fprintf(fid,'\n');
+        
+        fclose(fid);
+            
+%         dlmwrite(fullfile(mov_path{1},'Reference_Frames.csv'), [str2double(vidnum)  newrefs{g}(1:NUM_REF_OUTPUT)'], 'delimiter',',','-append');
+        
     end
 
     
