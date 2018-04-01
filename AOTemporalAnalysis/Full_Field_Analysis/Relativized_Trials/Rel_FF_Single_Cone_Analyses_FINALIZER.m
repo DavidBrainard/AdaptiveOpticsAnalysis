@@ -4,30 +4,37 @@ clear;
 
 load('0nW.mat');
 fitAmp_0nW = fitAmp;
-fitAmp_0nW_Std = fitAmpStd;
+% fitAmp_0nW_Std = fitAmpStd;
 fitMedian_0nW = fitMedian;
-fitMedian_0nW_Std = fitMedianStd;
+% fitMedian_0nW_Std = fitMedianStd;
+PCA_std_0nW = pca_sub;
 
 load('50nW.mat');
 fitAmp_50nW = fitAmp;
-fitAmp_50nW_Std = fitAmpStd;
+% fitAmp_50nW_Std = fitAmpStd;
 fitMedian_50nW = fitMedian;
-fitMedian_50nW_Std = fitMedianStd;
+% fitMedian_50nW_Std = fitMedianStd;
+PCA_std_50nW = pca_sub;
 
 load('450nW.mat');
 fitAmp_450nW = fitAmp;
-fitAmp_450nW_Std = fitAmpStd;
+% fitAmp_450nW_Std = fitAmpStd;
 fitMedian_450nW = fitMedian;
-fitMedian_450nW_Std = fitMedianStd;
+% fitMedian_450nW_Std = fitMedianStd;
+PCA_std_450nW = pca_sub;
 
 % Just Amp
-allfits = [ (fitAmp_0nW   + abs(fitMedian_0nW)) ...
-            (fitAmp_50nW  + abs(fitMedian_50nW)) ... 
-            (fitAmp_450nW + abs(fitMedian_450nW)) ];
-        
-allfitampserr = [ fitAmp_0nW_Std fitAmp_50nW_Std fitAmp_450nW_Std ];
+allfits = [ (PCA_std_0nW   + abs(fitMedian_0nW)) ...
+            (PCA_std_50nW  + abs(fitMedian_50nW)) ... 
+            (PCA_std_450nW + abs(fitMedian_450nW)) ];
 
-allfitmedianserr = [ fitMedian_0nW_Std fitMedian_50nW_Std fitMedian_450nW_Std ];
+allfits = [ (PCA_std_0nW   ) ...
+            (PCA_std_50nW  ) ... 
+            (PCA_std_450nW ) ];        
+        
+% allfitampserr = [ fitAmp_0nW_Std fitAmp_50nW_Std fitAmp_450nW_Std ];
+
+% allfitmedianserr = [ fitMedian_0nW_Std fitMedian_50nW_Std fitMedian_450nW_Std ];
                     
 
 valid = all(~isnan(allfits),2);
@@ -374,7 +381,7 @@ saveas(gcf, '0_vs_450_n_50_vs_450_response.svg');
 %%
 figure(20); clf;
 histogram(allfitampserr(valid,:)); hold on; histogram(allfitmedianserr(valid,:));
-title('Bootstrapped Error- at least 5 trials'); legend('Amplitude Error','Median Error')
+title('Bootstrapped Error- at least 10 trials'); legend('Amplitude Error','Median Error')
 saveas(gcf, 'Bootstrapped_Error.png');
 
 % figure(19);clf;
