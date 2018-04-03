@@ -34,7 +34,7 @@ clear;
 close all;
 
 CUTOFF = 26;
-RERUNS = 500;
+RERUNS = 200;
 
 if ~exist('stimRootDir','var')
     close all force;
@@ -241,6 +241,7 @@ fitAmp = nan(size(allcoords,1), 1);
 fitAmpStd = nan(size(allcoords,1), 1);
 fitMedian = nan(size(allcoords,1), 1);
 fitMedianStd = nan(size(allcoords,1), 1);
+
 k=1;
 for i=1:size(allcoords,1)
 
@@ -274,15 +275,12 @@ for i=1:size(allcoords,1)
 %         area(mean_median_sub+2*std_median_sub,-4,'FaceColor',[.85 .85 .85],'EdgeColor',[.85 .85 .85]);
 %         area(mean_median_sub,-4,'FaceColor',[.85 .85 .85]);
 %         area(mean_median_sub-2*std_median_sub,-4,'FaceColor',[1 1 1], 'EdgeColor',[1 1 1]);
-        
-        
+%                 
 %         pause;
     end
-    
 end
+
 %% Output
-
-
 save([ stim_intensity '.mat'],'fitAmp','fitAmpStd','fitMedian','fitMedianStd',...
      'allcoords','ref_image');
 
@@ -296,11 +294,6 @@ for i=1:size(control_coords,1)
     if ~isnan(fitAmp(i))
         % Find out what percentage of time the signal spends negative
         % or positive after stimulus delivery (66th frame)
-%         numposneg = sign(mean_sub(i,:));
-%         pos = sum(numposneg == 1);
-% 
-%         posnegratio(i) = 100*pos/length(numposneg);
-
         plot( fitAmp(i),fitMedian(i),'k.');        
     end
 end

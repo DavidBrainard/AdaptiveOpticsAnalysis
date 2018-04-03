@@ -33,7 +33,10 @@
 clear;
 close all;
 
+% load('lowest_responders.mat');
+
 CUTOFF = 26;
+NUMTRIALS=20;
 
 if ~exist('stimRootDir','var')
     close all force;
@@ -154,6 +157,8 @@ stim_prestim_means=[];
 
 i=1;
 
+
+        
 for i=1:numstimcoords
     waitbar(i/size(stim_coords,1),THEwaitbar,'Processing stimulus signals...');
 
@@ -171,6 +176,14 @@ for i=1:numstimcoords
         end
     end 
     stim_trial_count(i) = numtrials;
+    
+%     if lowestfourfifty(i)
+%         figure(1); plot(all_times_ref');
+%         figure(2); imagesc(ref_image); colormap gray; axis image;hold on; 
+%         plot(ref_coords(lowestfourfifty,1),ref_coords(lowestfourfifty,2),'b*');
+%         plot(ref_coords(i,1),ref_coords(i,2),'r*'); hold off;
+%         drawnow;
+%     end
     
     %% Perform a PCA on the trials we have, project them to a common (variance minimizing) space.
 %     nonan_ref = all_times_ref(~all(isnan(all_times_ref),2), :);
@@ -193,7 +206,7 @@ for i=1:numstimcoords
 %         stim_cell_pca_std(i) = std(projected_ref(:,2));
 %         end
 % %         std(projected_ref(:,2))
-% %         figure(1); plot(projected_ref');
+%         figure(1); plot(projected_ref');
 % %         figure(2); plot(critical_nonnan_ref');drawnow;
 %     end
     
@@ -278,33 +291,27 @@ for i=1:numcontrolcoords
 end
 
 
-%% Run PCA on All sTD DEV signals, reproject?
-
 figure;
 histogram(stim_prestim_means, 255); hold on; histogram(cont_prestim_means, 255);
 numover = sum(stim_prestim_means>200) + sum(cont_prestim_means>200);
 title(['Pre-stimulus means of all available trials (max 50) from ' num2str(size(control_coords,1)) ' cones. ' num2str(numover) ' trials >200 ']);
 
 
+valid = (stim_trial_count >= NUMTRIALS) & (control_trial_count >= NUMTRIALS);
+
 % Calculate the pooled std deviation
 std_dev_sub = sqrt(stim_cell_var)-sqrt(control_cell_var);
 median_sub = stim_cell_median-control_cell_median;
 
-%% Calculate PCA on the crtiical area of the std dev signals
+
+
+%% Calculate PCA on the crtiical area of the signals
 critical_nonnan_ref = std_dev_sub(:,66:100);
+[std_dev_coeff, score, latent, tquare, explained]=pca(critical_nonnan_ref,'NumComponents',3);
 
-[coeff, score, latent, tquare, explained]=pca(critical_nonnan_ref,'NumComponents',3);
 
-mu = mean(critical_nonnan_ref,2,'omitnan');
-norm_nonan_ref = bsxfun(@minus,critical_nonnan_ref,mu);
-% norm_nonan_ref(isnan(norm_nonan_ref)) = 1;
-
-projected_ref = norm_nonan_ref*coeff;
-pca_sub = projected_ref(:,1);
-%%
-% Possible bug- first index is always nan?
-std_dev_sub = std_dev_sub(:,2:end);
-median_sub = median_sub(:,2:end);
+critical_nonnan_ref = median_sub(:,66:100);
+[median_coeff, score, latent, tquare, explained]=pca(critical_nonnan_ref,'NumComponents',3);
 
 timeBase = ((1:max_index-1)/16.6)';
 
@@ -315,33 +322,32 @@ fitMedian = nan(size(std_dev_sub,1),1);
 
 
 for i=1:size(std_dev_sub,1)
-waitbar(1/size(std_dev_sub,1),THEwaitbar,'Analyzing subtracted signals...');
+waitbar(i/size(std_dev_sub,1),THEwaitbar,'Analyzing subtracted signals...');
 % Filtering
     std_dev_sig = std_dev_sub(i,:);
 %     padding_amt = ceil((2^(nextpow2(length(std_dev_sig)))-length(std_dev_sig)) /2);
 %     padded_stddev_sig = padarray(std_dev_sig, [0  padding_amt],'symmetric', 'both');
 %     padded_stddev_sig=wavelet_denoise( padded_stddev_sig );
 %     filt_stddev_sig = padded_stddev_sig(padding_amt+1:end-padding_amt);
-% 
+
     median_sig = median_sub(i,:);
 %     padding_amt = ceil((2^(nextpow2(length(median_sig)))-length(median_sig)) /2);
 %     padded_mean_sig = padarray(median_sig, [0  padding_amt],'symmetric', 'both');
 %     padded_mean_sig=wavelet_denoise( padded_mean_sig );
 %     filt_mean_sig = padded_mean_sig(padding_amt+1:end-padding_amt);
-             
-    
-    if ~all( isnan(std_dev_sig) ) && (stim_trial_count(i) >= 20) && (control_trial_count(i) >= 20)
+                 
+    if ~all( isnan(std_dev_sig) ) && (stim_trial_count(i) >= NUMTRIALS) && (control_trial_count(i) >= NUMTRIALS)
 
         % AUC        
-        fitAmp(i) = sum(std_dev_sig(66:100)); %- sum(std_dev_sig(31:65));
-        fitMedian(i) = sum(median_sig(66:100)); %- sum(median_sig(31:65));
+        fitAmp(i) = sum(std_dev_sig(66:100));
+        fitMedian(i) = sum(median_sig(66:100));
 
     end
 end
 close(THEwaitbar);
 %%
-save([ stim_intensity '.mat'],'fitAmp','fitMedian','pca_sub',...
-     'allcoords','ref_image','control_cell_median',...
+save([ stim_intensity '.mat'],'fitAmp','fitMedian','std_dev_coeff','valid',...
+     'median_coeff','allcoords','ref_image','control_cell_median',...
      'control_cell_var','stim_cell_median','stim_cell_var');
 
 %% Plot the pos/neg ratio of the mean vs the amplitude
@@ -358,7 +364,7 @@ for i=1:size(control_coords,1)
 % 
 %         posnegratio(i) = 100*pos/length(numposneg);
 
-        plot( pca_sub(i), fitMedian(i),'k.');        
+        plot( fitAmp(i), fitMedian(i),'k.');        
     end
 end
 ylabel('Median response amplitude');
@@ -367,17 +373,18 @@ title('Median reflectance vs reflectance response amplitude')
 hold off;
 saveas(gcf,['posneg_vs_amp_' num2str(stim_intensity) '.png']);
 %% Plot histograms of the amplitudes
-% figure(5); 
-% histogram( ( control_amps(~isnan(control_amps)) ),'Binwidth',0.1); hold on;
-% histogram( ( stim_amps(~isnan(stim_amps)) ),'Binwidth',0.1);  hold off;
-% title('Stimulus and control inter-trial stddev amplitudes');
-% xlabel('Amplitude');
-% ylabel('Number of cones');
-
 figure(7);
 histogram( fitAmp(~isnan(fitAmp)) ,'Binwidth',0.1);
 title('Stim-Control per cone subtraction amplitudes');
 xlabel('Amplitude difference from control');
 ylabel('Number of cones');
 
+%% TEMP TO PROVE control equivalence!
 
+% stim_resp = sum(sqrt(stim_cell_var(:,66:100)),2) + abs(sum(stim_cell_median(:,66:100),2));
+% control_resp = sum(sqrt(control_cell_var(:,66:100)),2) + abs(sum(control_cell_median(:,66:100),2));
+% 
+% figure(8); plot(stim_resp,control_resp,'k.'); hold on;
+% plot([25 90],[25 90],'k'); hold off; axis square;
+% ylabel('450nW control response');
+% xlabel('0nW control response');

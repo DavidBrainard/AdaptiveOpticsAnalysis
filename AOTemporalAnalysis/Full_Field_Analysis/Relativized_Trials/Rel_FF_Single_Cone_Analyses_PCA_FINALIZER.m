@@ -2,36 +2,74 @@
 clear;
 % close all;
 
-load('0nW.mat');
-fitAmp_0nW = fitAmp;
-fitAmp_0nW_Std = fitAmpStd;
-fitMedian_0nW = fitMedian;
-fitMedian_0nW_Std = fitMedianStd;
+load('450nW.mat');
+
+% Pull these coefficients out, 
+std_dev_coeff_450nW = std_dev_coeff;
+median_coeff_450nW = median_coeff;
+
+
+valid_450nW = valid;
+% fitAmp_450nW_Std = fitAmpStd;
+% fitMedian_450nW_Std = fitMedianStd;
+critical_period_std_dev_sub = sqrt(stim_cell_var(:,66:100))-sqrt(control_cell_var(:,66:100));
+mu = mean(critical_period_std_dev_sub,2,'omitnan');
+norm_nonan_ref = bsxfun(@minus,critical_period_std_dev_sub,mu);
+projected_ref = norm_nonan_ref*std_dev_coeff_450nW;
+fitAmp_450nW = projected_ref(:,1);
+
+critical_period_std_dev_sub = stim_cell_median(:,66:100)-control_cell_median(:,66:100);
+mu = mean(critical_period_std_dev_sub,2,'omitnan');
+norm_nonan_ref = bsxfun(@minus,critical_period_std_dev_sub,mu);
+projected_ref = norm_nonan_ref*median_coeff_450nW;
+fitMedian_450nW = projected_ref(:,1);
 
 load('50nW.mat');
-fitAmp_50nW = fitAmp;
-fitAmp_50nW_Std = fitAmpStd;
-fitMedian_50nW = fitMedian;
-fitMedian_50nW_Std = fitMedianStd;
+% fitAmp_50nW_Std = fitAmpStd;
+% fitMedian_50nW_Std = fitMedianStd;
+valid_50nW = valid;
 
-load('450nW.mat');
-fitAmp_450nW = fitAmp;
-fitAmp_450nW_Std = fitAmpStd;
-fitMedian_450nW = fitMedian;
-fitMedian_450nW_Std = fitMedianStd;
+critical_period_std_dev_sub = sqrt(stim_cell_var(:,66:100))-sqrt(control_cell_var(:,66:100));
+mu = mean(critical_period_std_dev_sub,2,'omitnan');
+norm_nonan_ref = bsxfun(@minus,critical_period_std_dev_sub,mu);
+projected_ref = norm_nonan_ref*std_dev_coeff_450nW;
+fitAmp_50nW = projected_ref(:,1);
+
+critical_period_std_dev_sub = stim_cell_median(:,66:100)-control_cell_median(:,66:100);
+mu = mean(critical_period_std_dev_sub,2,'omitnan');
+norm_nonan_ref = bsxfun(@minus,critical_period_std_dev_sub,mu);
+projected_ref = norm_nonan_ref*median_coeff_450nW;
+fitMedian_50nW = projected_ref(:,1);
+
+load('0nW.mat');
+% fitAmp_0nW_Std = fitAmpStd;
+% fitMedian_0nW_Std = fitMedianStd;
+valid_0nW = valid;
+
+critical_period_std_dev_sub = sqrt(stim_cell_var(:,66:100))-sqrt(control_cell_var(:,66:100));
+mu = mean(critical_period_std_dev_sub,2,'omitnan');
+norm_nonan_ref = bsxfun(@minus,critical_period_std_dev_sub,mu);
+projected_ref = norm_nonan_ref*std_dev_coeff_450nW;
+fitAmp_0nW = projected_ref(:,1);
+
+critical_period_std_dev_sub = stim_cell_median(:,66:100)-control_cell_median(:,66:100);
+mu = mean(critical_period_std_dev_sub,2,'omitnan');
+norm_nonan_ref = bsxfun(@minus,critical_period_std_dev_sub,mu);
+projected_ref = norm_nonan_ref*median_coeff_450nW;
+fitMedian_0nW = projected_ref(:,1);
+
 
 % Just Amp
 allfits = [ (fitAmp_0nW   + abs(fitMedian_0nW)) ...
             (fitAmp_50nW  + abs(fitMedian_50nW)) ... 
             (fitAmp_450nW + abs(fitMedian_450nW)) ];
-    
+       
         
-allfitampserr = [ fitAmp_0nW./fitAmp_0nW_Std fitAmp_50nW./fitAmp_50nW_Std fitAmp_450nW./fitAmp_450nW_Std ];
-
-allfitmedianserr = [ fitMedian_0nW./fitMedian_0nW_Std fitMedian_50nW./fitMedian_50nW_Std fitMedian_450nW./fitMedian_450nW_Std ];
+% allfitampserr = [ fitAmp_0nW_Std fitAmp_50nW_Std fitAmp_450nW_Std ];
+% allfitmedianserr = [ fitMedian_0nW_Std fitMedian_50nW_Std fitMedian_450nW_Std ];
                     
 
-valid = all(~isnan(allfits),2);
+valid = valid_0nW & valid_50nW & valid_450nW;
 
 intensities = repmat( [0 log10(50) log10(450)],[size(allfits,1) 1]);
 
@@ -206,55 +244,8 @@ title('Slope spatial map')
 hold off; drawnow;
 saveas(gcf, 'spatial_map_slopes.png');
 
-%% Individual Low-response maps
-    
-for j=1:size(allfits,2)
-    
-    upper_thresh = quantile(allfits(:),0.95); 
-    lower_thresh = quantile(allfits(:),0.05);
-
-    thismap = parula( ((upper_thresh-lower_thresh)*100)+2); 
-
-    figure(8+j); clf;%imagesc(ref_image); hold on; colormap gray;
-    axis image; hold on;
-
-    percentmax = zeros(size(allcoords,1));
-
-    [V,C] = voronoin(allcoords,{'QJ'});
-
-    for i=1:size(allcoords,1)
-
-        if valid(i)
-            percentmax(i) = allfits(i,j);
-
-            if percentmax(i) > upper_thresh
-                percentmax(i) = upper_thresh;
-            elseif percentmax(i) < lower_thresh
-                percentmax(i) = lower_thresh;
-            end
-
-            thiscolorind = round((percentmax(i)-lower_thresh)*100)+1;
-
-            vertices = V(C{i},:);
-
-            if ~isnan(thiscolorind) && all(vertices(:,1)<max(allcoords(:,1))) && all(vertices(:,2)<max(allcoords(:,1))) ... % [xmin xmax ymin ymax] 
-                                    && all(vertices(:,1)>0) && all(vertices(:,2)>0) && allfits(i,j)>=upper_thresh
-    %             plot(allcoords(i,1),allcoords(i,2),'.','Color', thismap(thiscolorind,:), 'MarkerSize', 15 );
-                patch(V(C{i},1),V(C{i},2),ones(size(V(C{i},1))),'FaceColor', thismap(thiscolorind,:));
-
-            end
-        end
-    end
-    colorbar
-    axis([min(allcoords(:,1)) max(allcoords(:,1)) min(allcoords(:,2)) max(allcoords(:,2)) ])
-    caxis([lower_thresh upper_thresh])
-    set(gca,'Color','k'); 
-    title(['Spatial map ' num2str(j-1)])
-    hold off; drawnow;
-    saveas(gcf, ['low_response_map_' num2str(j-1) '.png']);
-end
-
-%% Individual Increase maps
+%% Individual Increase maps - change to be based on profiles, 
+% where any increase over 2sd kicks it out from the group
 
 
 lower_fourfifty_thresh = quantile(allfits(:,3)-allfits(:,1),0.05);
@@ -326,8 +317,8 @@ plot([-20 160], [-20 160],'k');
 xlabel('0nW Response');
 ylabel('450nW Response');
 title(['450nW vs 0nW responses: ' num2str(zero_to_fourfiftnW) '% increased.']);hold off;
-% axis([-1 8 -1 8])
-axis([-20 160 -20 160])
+axis([-2 8 -2 8])
+% axis([-20 160 -20 160])
 axis square; grid on;
 saveas(gcf, '450_vs_0nW_response.png');
 
@@ -372,11 +363,12 @@ axis square; grid on;
 saveas(gcf, '0_vs_450_n_50_vs_450_response.png');
 saveas(gcf, '0_vs_450_n_50_vs_450_response.svg');
 
-%%
-figure(20); clf;
-histogram(allfitampserr(valid,:)); hold on; histogram(allfitmedianserr(valid,:));
-title('Bootstrapped Error- at least 20 trials'); legend('Amplitude Error','Median Error')
-saveas(gcf, 'Bootstrapped_Error.png');
+%% Error plots
+
+% figure(20); clf;
+% histogram(allfitampserr(valid,:)); hold on; histogram(allfitmedianserr(valid,:));
+% title('Bootstrapped Error- at least 10 trials'); legend('Amplitude Error','Median Error')
+% saveas(gcf, 'Bootstrapped_Error.png');
 
 % figure(19);clf;
 % quiver(fitAmp_0nW(valid),abs(fitMean_0nW(valid)), fitAmp_50nW(valid)-fitAmp_0nW(valid), abs(fitMean_50nW(valid))-abs(fitMean_0nW(valid)),0 );
