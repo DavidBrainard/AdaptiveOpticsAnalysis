@@ -211,6 +211,7 @@ for i=1:numstimcoords
 %     end
     
     %%
+    nonan_ref = all_times_ref(~all(isnan(all_times_ref),2), :);
     
     for j=1:max_index
         nonan_ref = all_times_ref(~isnan(all_times_ref(:,j)), j);
@@ -291,10 +292,10 @@ for i=1:numcontrolcoords
 end
 
 
-figure;
-histogram(stim_prestim_means, 255); hold on; histogram(cont_prestim_means, 255);
-numover = sum(stim_prestim_means>200) + sum(cont_prestim_means>200);
-title(['Pre-stimulus means of all available trials (max 50) from ' num2str(size(control_coords,1)) ' cones. ' num2str(numover) ' trials >200 ']);
+% figure;
+% histogram(stim_prestim_means, 255); hold on; histogram(cont_prestim_means, 255);
+% numover = sum(stim_prestim_means>200) + sum(cont_prestim_means>200);
+% title(['Pre-stimulus means of all available trials (max 50) from ' num2str(size(control_coords,1)) ' cones. ' num2str(numover) ' trials >200 ']);
 
 
 valid = (stim_trial_count >= NUMTRIALS) & (control_trial_count >= NUMTRIALS);
@@ -306,12 +307,12 @@ median_sub = stim_cell_median-control_cell_median;
 
 
 %% Calculate PCA on the crtiical area of the signals
-critical_nonnan_ref = std_dev_sub(:,66:100);
-[std_dev_coeff, score, latent, tquare, explained]=pca(critical_nonnan_ref,'NumComponents',3);
+critical_nonnan_ref = sqrt(stim_cell_var(:,66:100));
+[std_dev_coeff, std_dev_score, std_dev_latent, tquare, std_dev_explained]=pca(critical_nonnan_ref,'NumComponents',3);
 
 
-critical_nonnan_ref = median_sub(:,66:100);
-[median_coeff, score, latent, tquare, explained]=pca(critical_nonnan_ref,'NumComponents',3);
+critical_nonnan_ref = stim_cell_median(:,66:100);
+[median_coeff, median_score, latent, tquare, explained]=pca(critical_nonnan_ref,'NumComponents',3);
 
 timeBase = ((1:max_index-1)/16.6)';
 
@@ -323,19 +324,10 @@ fitMedian = nan(size(std_dev_sub,1),1);
 
 for i=1:size(std_dev_sub,1)
 waitbar(i/size(std_dev_sub,1),THEwaitbar,'Analyzing subtracted signals...');
-% Filtering
-    std_dev_sig = std_dev_sub(i,:);
-%     padding_amt = ceil((2^(nextpow2(length(std_dev_sig)))-length(std_dev_sig)) /2);
-%     padded_stddev_sig = padarray(std_dev_sig, [0  padding_amt],'symmetric', 'both');
-%     padded_stddev_sig=wavelet_denoise( padded_stddev_sig );
-%     filt_stddev_sig = padded_stddev_sig(padding_amt+1:end-padding_amt);
 
+    std_dev_sig = std_dev_sub(i,:);
     median_sig = median_sub(i,:);
-%     padding_amt = ceil((2^(nextpow2(length(median_sig)))-length(median_sig)) /2);
-%     padded_mean_sig = padarray(median_sig, [0  padding_amt],'symmetric', 'both');
-%     padded_mean_sig=wavelet_denoise( padded_mean_sig );
-%     filt_mean_sig = padded_mean_sig(padding_amt+1:end-padding_amt);
-                 
+
     if ~all( isnan(std_dev_sig) ) && (stim_trial_count(i) >= NUMTRIALS) && (control_trial_count(i) >= NUMTRIALS)
 
         % AUC        
@@ -347,8 +339,10 @@ end
 close(THEwaitbar);
 %%
 save([ stim_intensity '.mat'],'fitAmp','fitMedian','std_dev_coeff','valid',...
-     'median_coeff','allcoords','ref_image','control_cell_median',...
+     'median_coeff','std_dev_score','median_score','allcoords','ref_image','control_cell_median',...
      'control_cell_var','stim_cell_median','stim_cell_var');
+
+ 
 
 %% Plot the pos/neg ratio of the mean vs the amplitude
 posnegratio=nan(size(control_coords,1),1);
@@ -379,8 +373,7 @@ title('Stim-Control per cone subtraction amplitudes');
 xlabel('Amplitude difference from control');
 ylabel('Number of cones');
 
-%% TEMP TO PROVE control equivalence!
-
+%% TEMP to prove control equivalence!
 % stim_resp = sum(sqrt(stim_cell_var(:,66:100)),2) + abs(sum(stim_cell_median(:,66:100),2));
 % control_resp = sum(sqrt(control_cell_var(:,66:100)),2) + abs(sum(control_cell_median(:,66:100),2));
 % 
