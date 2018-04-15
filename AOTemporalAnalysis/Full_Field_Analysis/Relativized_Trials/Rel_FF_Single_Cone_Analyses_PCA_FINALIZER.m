@@ -524,11 +524,12 @@ saveas(gcf, ['comparative_responses.png']);
 %% Boxplot of the amplitudes from each intensity.
 
 figure(14);
-boxplot(allfits,'notch','on','Labels', {'0nW','50nW','450nW'});
+boxplot(allfits,'notch','on','Labels', {'0nW','50nW','450nW'}, 'Symbol', 'k.');
 xlabel('Stimulus irradiance');
 ylabel('Stimulus amplitude');
-title('Stimulus amplitudes for each stimulus irradiance')
-saveas(gcf, 'allamps_boxplot.png');
+title('Stimulus amplitudes for each stimulus irradiance');
+axis([0 4 -1 10])
+saveas(gcf, 'allamps_boxplot.svg');
 
 %% Vs plots
 figure(15); clf; hold on;
@@ -555,14 +556,15 @@ saveas(gcf, '50_vs_450_response.png');
 
 figure(19); clf; hold on;
 plot(allfits(valid,1), allfits(valid,3),'.');
+plot(allfits(valid,1), allfits(valid,2),'.');
 plot(allfits(valid,2), allfits(valid,3),'.');
 
-legend('450nW vs 0nW','450nW vs 50nW');
+legend('50nW vs 0nW','450nW vs 0nW','450nW vs 50nW');
 title('450nW vs 0nW and 450nW vs 50nW responses');hold off;
 
-axis equal; axis([-1 8 -1 8]); grid on;
-saveas(gcf, '0_vs_450_n_50_vs_450_response.png');
-saveas(gcf, '0_vs_450_n_50_vs_450_response.svg');
+axis equal; axis([-1 10 -1 10]); grid on;
+saveas(gcf, 'allvs_response.png');
+saveas(gcf, 'allvs_response.svg');
 
 %% Error plots
 

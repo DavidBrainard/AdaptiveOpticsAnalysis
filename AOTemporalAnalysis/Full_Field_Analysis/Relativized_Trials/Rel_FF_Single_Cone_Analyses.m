@@ -39,7 +39,7 @@ CUTOFF = 26;
 NUMTRIALS=20;
 CRITICAL_REGION = 66:100;
 
-CELL_OF_INTEREST = 78;
+CELL_OF_INTEREST = [];
 
 if isempty(CELL_OF_INTEREST)
     close all force;
