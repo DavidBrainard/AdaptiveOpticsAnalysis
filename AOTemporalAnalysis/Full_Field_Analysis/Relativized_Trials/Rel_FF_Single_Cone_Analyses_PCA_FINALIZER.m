@@ -2,13 +2,18 @@
 clear;
 % close all;
 
+
+
+NUM_COMPONENTS=3;
+CRITICAL_REGION = 66:100; %1:166; %
+% 450nW
 load('450nW.mat');
-
-
-CRITICAL_REGION = 66:100;
-% 450nW 
 stddev_coeff_450nW = std_dev_coeff;
 median_coeff_450nW = median_coeff;
+std_explained_coeff_450nW = std_dev_explained;
+std_explained_coeff_450nW = std_explained_coeff_450nW(1:NUM_COMPONENTS)';
+med_explained_coeff_450nW = median_explained;
+med_explained_coeff_450nW = med_explained_coeff_450nW(1:NUM_COMPONENTS)';
 
 stddev_stim_450nW = sqrt(stim_cell_var(:,CRITICAL_REGION));
 stddev_control_450nW = sqrt(control_cell_var(:,CRITICAL_REGION));
@@ -17,25 +22,14 @@ median_control_450nW = control_cell_median(:,CRITICAL_REGION);
 
 valid_450nW = valid;
 
-norm_nonan_ref = stddev_stim_450nW -stddev_control_450nW;
-projected_ref = (norm_nonan_ref-mean(norm_nonan_ref,2,'omitnan'))*stddev_coeff_450nW(:,1);
-Stddev_450nW = sum(projected_ref,2);
-
-norm_nonan_ref = median_stim_450nW;% -median_control_450nW;
-projected_ref = (norm_nonan_ref-mean(norm_nonan_ref,2,'omitnan'))*median_coeff_450nW(:,1);
-Median_450nW = sum(projected_ref,2);
-
 % 50nW
 load('50nW.mat');
 valid_50nW = valid;
 
-norm_nonan_ref = sqrt(stim_cell_var(:,CRITICAL_REGION)) -sqrt(control_cell_var(:,CRITICAL_REGION));
-projected_ref = (norm_nonan_ref-mean(norm_nonan_ref,2,'omitnan'))*stddev_coeff_450nW(:,1);
-Stddev_50nW = sum(projected_ref,2);
-
-norm_nonan_ref = stim_cell_median(:,CRITICAL_REGION);% -control_cell_median(:,CRITICAL_REGION);
-projected_ref = (norm_nonan_ref-mean(norm_nonan_ref,2,'omitnan'))*median_coeff_450nW(:,1);
-Median_50nW = sum(projected_ref,2);
+stddev_stim_50nW = sqrt(stim_cell_var(:,CRITICAL_REGION));
+stddev_control_50nW = sqrt(control_cell_var(:,CRITICAL_REGION));
+median_stim_50nW = stim_cell_median(:,CRITICAL_REGION);
+median_control_50nW = control_cell_median(:,CRITICAL_REGION);
 
 % 0nW
 load('0nW.mat');
@@ -46,28 +40,51 @@ stddev_control_0nW = sqrt(control_cell_var(:,CRITICAL_REGION));
 median_stim_0nW = stim_cell_median(:,CRITICAL_REGION);
 median_control_0nW = control_cell_median(:,CRITICAL_REGION);
 
-norm_nonan_ref = stddev_stim_0nW -stddev_control_0nW;
-projected_ref = (norm_nonan_ref-mean(norm_nonan_ref,2,'omitnan'))*stddev_coeff_450nW(:,1);
-Stddev_0nW = sum(projected_ref,2);
+valid = valid_0nW & valid_50nW & valid_450nW;
 
-norm_nonan_ref = median_stim_0nW;% -median_control_0nW;
-projected_ref = (norm_nonan_ref-mean(norm_nonan_ref,2,'omitnan'))*median_coeff_450nW(:,1);
-Median_0nW = sum(projected_ref,2);
+allcontrolstd = mean([stddev_control_450nW(valid,:);stddev_control_50nW(valid,:);stddev_control_0nW(valid,:);stddev_stim_0nW(valid,:)]);
+allcontrolmed = mean([median_control_450nW(valid,:);median_control_50nW(valid,:);median_control_0nW(valid,:);median_stim_0nW(valid,:)]);
 
-norm_nonan_ref = stddev_control_0nW;
-projected_ref = (norm_nonan_ref-mean(norm_nonan_ref,2,'omitnan'))*stddev_coeff_450nW(:,1);
-tmp = sum(projected_ref,2);
+%plot(allcontrolstd); hold on; plot(allcontrolmed); hold off; axis([2 166 -2 4])
+% title('All averaged control values');
+% save('control_avgs.mat','allcontrolstd','allcontrolmed')
+
+% Process things
+
+% 450nW
+norm_nonan_ref = stddev_stim_450nW -allcontrolstd;
+projected_ref = (norm_nonan_ref-mean(norm_nonan_ref,2,'omitnan'))*stddev_coeff_450nW(:,1:NUM_COMPONENTS);
+Stddev_450nW = sum(projected_ref.*std_explained_coeff_450nW,2)./sum(std_explained_coeff_450nW);
+
+norm_nonan_ref = median_stim_450nW -allcontrolmed;
+projected_ref = (norm_nonan_ref-mean(norm_nonan_ref,2,'omitnan'))*median_coeff_450nW(:,1:NUM_COMPONENTS);
+Median_450nW = sum( (projected_ref.*med_explained_coeff_450nW) ,2)./sum(med_explained_coeff_450nW);
+
+% 50nW
+norm_nonan_ref = stddev_stim_50nW -allcontrolstd;
+projected_ref = (norm_nonan_ref-mean(norm_nonan_ref,2,'omitnan'))*stddev_coeff_450nW(:,1:NUM_COMPONENTS);
+Stddev_50nW = sum(projected_ref.*std_explained_coeff_450nW,2)./sum(std_explained_coeff_450nW);
+
+norm_nonan_ref = median_stim_50nW -allcontrolmed;
+projected_ref = (norm_nonan_ref-mean(norm_nonan_ref,2,'omitnan'))*median_coeff_450nW(:,1:NUM_COMPONENTS);
+Median_50nW = sum(projected_ref.*med_explained_coeff_450nW,2)./sum(med_explained_coeff_450nW);
+
+% 0nW
+norm_nonan_ref = stddev_stim_0nW -allcontrolstd;
+projected_ref = (norm_nonan_ref-mean(norm_nonan_ref,2,'omitnan'))*stddev_coeff_450nW(:,1:NUM_COMPONENTS);
+Stddev_0nW = sum(projected_ref.*std_explained_coeff_450nW,2)./sum(std_explained_coeff_450nW);
+
+norm_nonan_ref = median_stim_0nW  -allcontrolmed;
+projected_ref = (norm_nonan_ref-mean(norm_nonan_ref,2,'omitnan'))*median_coeff_450nW(:,1:NUM_COMPONENTS);
+Median_0nW = sum(projected_ref.*med_explained_coeff_450nW,2)./sum(med_explained_coeff_450nW);
 
 
 % Create our response measure
 allfits = [ (Stddev_0nW   + abs(Median_0nW)) ...
             (Stddev_50nW  + abs(Median_50nW)) ... 
-            (Stddev_450nW + abs(Median_450nW)) ];
-% allfits = [ (Stddev_0nW  ) ...
-%             (Stddev_50nW  ) ... 
-%             (Stddev_450nW ) ];        
+            (Stddev_450nW + abs(Median_450nW)) ];      
        
-valid = valid_0nW & valid_50nW & valid_450nW;
+
 
 intensities = repmat( [0 log10(50) log10(450)],[size(allfits,1) 1]);
 
@@ -95,16 +112,22 @@ intercepts=slopes(1,:);
 slopes=slopes(2,:);
 
 upper_slope_thresh = quantile(slopes,0.95); 
-lower_slope_thresh = quantile(slopes,0.02);
+lower_slope_thresh = quantile(slopes,0.05);
 
 %% Reprojection - Stddev
 figure(1); clf; 
-delete('Stddev_low_responders.tif');
+delete('Stddev_50greaterthan450_responders.tif');
 
 timeFromStim = (0:size(stddev_stim_450nW,2)-1)/16.66666;
-large_n_valid = valid;% & ((allfits(:,3)+.1)<=allfits(:,1));
-%(allfits(:,1)>0.8)); %  
-% small_n_valid = valid & ((allfits(:,1)>.8) & (allfits(:,3)<4) ); 
+
+lg_50=quantile(allfits(valid,2),0.95);
+lg_450=quantile(allfits(valid,3),0.95);
+large_n_valid = valid & ((allfits(:,2)>=lg_50) & (allfits(:,3)>=lg_450) ); 
+
+sm_50=quantile(allfits(valid,2),0.05);
+sm_450=quantile(allfits(valid,3),0.05);
+
+small_n_valid = valid & ((allfits(:,2)<=sm_50) & (allfits(:,3)<=sm_450) ); 
 
 
 for i=1:size(allcoords,1)
@@ -125,17 +148,17 @@ for i=1:size(allcoords,1)
                 score_sub_450 = linreger(1:num_coeffs,:)';
                 mu_sub_450 = linreger(num_coeffs+1, :)';
 
-                linreger = ([stddev_coeff_450nW(:,1:num_coeffs) ones(size(stddev_coeff_450nW,1),1)]\stddev_stim_0nW');
-                score_stim_0 = linreger(1:num_coeffs,:)';
-                mu_stim_0 = linreger( num_coeffs+1,:)';
+                linreger = ([stddev_coeff_450nW(:,1:num_coeffs) ones(size(stddev_coeff_450nW,1),1)]\stddev_stim_50nW');
+                score_stim_50 = linreger(1:num_coeffs,:)';
+                mu_stim_50 = linreger( num_coeffs+1,:)';
 
-                linreger = ([stddev_coeff_450nW(:,1:num_coeffs) ones(size(stddev_coeff_450nW,1),1)]\stddev_control_0nW');
-                score_cont_0 = linreger(1:num_coeffs,:)';
-                mu_cont_0 = linreger( num_coeffs+1,:)';
+                linreger = ([stddev_coeff_450nW(:,1:num_coeffs) ones(size(stddev_coeff_450nW,1),1)]\stddev_control_50nW');
+                score_cont_50 = linreger(1:num_coeffs,:)';
+                mu_cont_50 = linreger( num_coeffs+1,:)';
                 
-                linreger = ([stddev_coeff_450nW(:, 1:num_coeffs) ones(size(stddev_coeff_450nW,1),1)]\(stddev_stim_0nW-stddev_control_0nW)');
-                score_sub_0 = linreger(1:num_coeffs,:)';
-                mu_sub_0 = linreger(num_coeffs+1, :)';
+                linreger = ([stddev_coeff_450nW(:, 1:num_coeffs) ones(size(stddev_coeff_450nW,1),1)]\(stddev_stim_50nW-stddev_control_50nW)');
+                score_sub_50 = linreger(1:num_coeffs,:)';
+                mu_sub_50 = linreger(num_coeffs+1, :)';
                 
             end
             
@@ -185,41 +208,41 @@ for i=1:size(allcoords,1)
             % 0nW "stimulus"
             subplot(2,3,4); hold on;
             if num_coeffs > 0
-                reprojected = score_stim_0(:,1:num_coeffs)*stddev_coeff_450nW(:,1:num_coeffs)';
-                plot(timeFromStim,reprojected(i,:)+mu_stim_0(i));
+                reprojected = score_stim_50(:,1:num_coeffs)*stddev_coeff_450nW(:,1:num_coeffs)';
+                plot(timeFromStim,reprojected(i,:)+mu_stim_50(i));
             else
-                plot(timeFromStim, stddev_stim_0nW(i,:)); 
+                plot(timeFromStim, stddev_stim_50nW(i,:)); 
             end
             
             legend('Raw signal','1 Coefficient','2 Coefficients','3 Coefficients','Location','northwest');
             xlabel('Time from stimulus onset (s)'); ylabel('Std dev Response');
-            title(['0nW "Stimulus" (Response value: ' num2str(allfits(i,1)) ')']); axis([0 max(timeFromStim) 0 6]);
+            title(['50nW Stimulus (Response value: ' num2str(allfits(i,2)) ')']); axis([0 max(timeFromStim) 0 6]);
             hold off;
             % 0nW "control"
             subplot(2,3,5); hold on;
             if num_coeffs > 0
-                reprojected = score_cont_0(:,1:num_coeffs)*stddev_coeff_450nW(:,1:num_coeffs)';
-                plot(timeFromStim,reprojected(i,:)+mu_cont_0(i));
+                reprojected = score_cont_50(:,1:num_coeffs)*stddev_coeff_450nW(:,1:num_coeffs)';
+                plot(timeFromStim,reprojected(i,:)+mu_cont_50(i));
             else
-                plot(timeFromStim, stddev_control_0nW(i,:)); 
+                plot(timeFromStim, stddev_control_50nW(i,:)); 
             end
             legend('Raw signal','1 Coefficient','2 Coefficients','3 Coefficients','Location','northwest');
             xlabel('Time from stimulus onset (s)'); ylabel('Std dev Response');
-            title(['0nW "Control"']); axis([0 max(timeFromStim) 0 6]);        
+            title(['50nW Control']); axis([0 max(timeFromStim) 0 6]);        
             hold off;
 
             % 0nW subbed
             subplot(2,3,6); hold on;
             if num_coeffs > 0
-                reprojected = score_sub_0(:,1:num_coeffs)*stddev_coeff_450nW(:,1:num_coeffs)';
-                plot(timeFromStim,reprojected(i,:)+mu_sub_0(i));
+                reprojected = score_sub_50(:,1:num_coeffs)*stddev_coeff_450nW(:,1:num_coeffs)';
+                plot(timeFromStim,reprojected(i,:)+mu_sub_50(i));
             else
-                subbed = (stddev_stim_0nW-stddev_control_0nW);
+                subbed = (stddev_stim_50nW-stddev_control_50nW);
                 plot(timeFromStim, subbed(i,:)); 
             end
             legend('Raw signal','1 Coefficient','2 Coefficients','3 Coefficients','Location','northwest');
             xlabel('Time from stimulus onset (s)'); ylabel('Std dev Response');
-            title(['0nW Subbed (Projected value: ' num2str(Stddev_0nW(i)) ')']); axis([0 max(timeFromStim) -1 5]);        
+            title(['50nW Subbed (Projected value: ' num2str(Stddev_50nW(i)) ')']); axis([0 max(timeFromStim) -1 5]);        
             hold off;
             
 
@@ -229,7 +252,7 @@ for i=1:size(allcoords,1)
         
         drawnow;
 %     pause;
-%         imwrite(frame2im(getframe(gcf)), 'Stddev_low_responders.tif','WriteMode','append');
+        imwrite(frame2im(getframe(gcf)), 'Stddev_50greaterthan450_responders.tif','WriteMode','append');
     end
     
     warning on;
@@ -239,10 +262,10 @@ end
 %% Reprojection - Median
 figure(1); clf;
 
-% delete('Median_low_responders.tif');
+delete('Median_50greaterthan450_responders.tif');
 
 for i=1:size(allcoords,1)
-    if large_n_valid(i)  && i==78
+    if large_n_valid(i)  
         clf;
         warning off;
         for num_coeffs=0:3
@@ -259,17 +282,17 @@ for i=1:size(allcoords,1)
                 score_sub_450 = linreger(1:num_coeffs,:)';
                 mu_sub_450 = linreger(num_coeffs+1, :)';
 
-                linreger = ([median_coeff_450nW(:, 1:num_coeffs) ones(size(median_coeff_450nW,1),1)]\median_stim_0nW');
-                score_stim_0 = linreger(1:num_coeffs,:)';
-                mu_stim_0 = linreger( num_coeffs+1, :)';
+                linreger = ([median_coeff_450nW(:, 1:num_coeffs) ones(size(median_coeff_450nW,1),1)]\median_stim_50nW');
+                score_stim_50 = linreger(1:num_coeffs,:)';
+                mu_stim_50 = linreger( num_coeffs+1, :)';
 
-                linreger = ([median_coeff_450nW(:, 1:num_coeffs) ones(size(median_coeff_450nW,1),1)]\median_control_0nW');
-                score_cont_0 = linreger(1:num_coeffs,:)';
-                mu_cont_0 = linreger(num_coeffs+1, :)';
+                linreger = ([median_coeff_450nW(:, 1:num_coeffs) ones(size(median_coeff_450nW,1),1)]\median_control_50nW');
+                score_cont_50 = linreger(1:num_coeffs,:)';
+                mu_cont_50 = linreger(num_coeffs+1, :)';
                 
-                linreger = ([median_coeff_450nW(:, 1:num_coeffs) ones(size(median_coeff_450nW,1),1)]\(median_stim_0nW-median_control_0nW)');
-                score_sub_0 = linreger(1:num_coeffs,:)';
-                mu_sub_0 = linreger(num_coeffs+1, :)';
+                linreger = ([median_coeff_450nW(:, 1:num_coeffs) ones(size(median_coeff_450nW,1),1)]\(median_stim_50nW-median_control_50nW)');
+                score_sub_50 = linreger(1:num_coeffs,:)';
+                mu_sub_50 = linreger(num_coeffs+1, :)';
             end
 
             % 450nW stimulus
@@ -282,7 +305,7 @@ for i=1:size(allcoords,1)
             end
             legend('Raw signal','1 Coefficient','2 Coefficients','3 Coefficients','Location','northwest');
             xlabel('Time from stimulus onset (s)'); ylabel('Median Response');
-            title(['450nW Stimulus (Response value: ' num2str(allfits(i,3)) ')']); axis([0 max(timeFromStim) -3 3]);        
+            title(['450nW Stimulus (Response value: ' num2str(allfits(i,3)) ')']); axis([0 max(timeFromStim) -5 5]);        
             hold off;
             
             % 450nW control
@@ -315,45 +338,45 @@ for i=1:size(allcoords,1)
             % 0nW "stimulus"
             subplot(2,3,4); hold on;
             if num_coeffs > 0
-                reprojected = score_stim_0(:,1:num_coeffs)*median_coeff_450nW(:,1:num_coeffs)';
-                plot(timeFromStim,reprojected(i,:)+mu_stim_0(i));
+                reprojected = score_stim_50(:,1:num_coeffs)*median_coeff_450nW(:,1:num_coeffs)';
+                plot(timeFromStim,reprojected(i,:)+mu_stim_50(i));
             else
-                plot(timeFromStim, median_stim_0nW(i,:)); 
+                plot(timeFromStim, median_stim_50nW(i,:)); 
             end
             legend('Raw signal','1 Coefficient','2 Coefficients','3 Coefficients','Location','northwest');
             xlabel('Time from stimulus onset (s)'); ylabel('Median Response');
-            title(['0nW "Stimulus" (Response value: ' num2str(allfits(i,1)) ')']); axis([0 max(timeFromStim) -3 3]);
+            title(['50nW Stimulus (Response value: ' num2str(allfits(i,2)) ')']); axis([0 max(timeFromStim) -3 3]);
             hold off;
             % 0nW "control"
             subplot(2,3,5); hold on;
             if num_coeffs > 0
-                reprojected = score_cont_0(:,1:num_coeffs)*median_coeff_450nW(:,1:num_coeffs)';
-                plot(timeFromStim,reprojected(i,:)+mu_cont_0(i));
+                reprojected = score_cont_50(:,1:num_coeffs)*median_coeff_450nW(:,1:num_coeffs)';
+                plot(timeFromStim,reprojected(i,:)+mu_cont_50(i));
             else
-                plot(timeFromStim, median_control_0nW(i,:)); 
+                plot(timeFromStim, median_control_50nW(i,:)); 
             end
             legend('Raw signal','1 Coefficient','2 Coefficients','3 Coefficients','Location','northwest');
             xlabel('Time from stimulus onset (s)'); ylabel('Median Response');
-            title(['0nW "Control"']); axis([0 max(timeFromStim) -3 3]);        
+            title(['50nW Control']); axis([0 max(timeFromStim) -3 3]);        
             hold off;
             
             % 0nW subbed
             subplot(2,3,6); hold on;
             if num_coeffs > 0
-                reprojected = score_sub_0(:,1:num_coeffs)*median_coeff_450nW(:,1:num_coeffs)';
-                plot(timeFromStim,reprojected(i,:)+mu_sub_0(i));
+                reprojected = score_sub_50(:,1:num_coeffs)*median_coeff_450nW(:,1:num_coeffs)';
+                plot(timeFromStim,reprojected(i,:)+mu_sub_50(i));
             else
-                subbed = (median_stim_0nW-median_control_0nW);
+                subbed = (median_stim_50nW-median_control_50nW);
                 plot(timeFromStim, subbed(i,:)); 
             end
             legend('Raw signal','1 Coefficient','2 Coefficients','3 Coefficients','Location','northwest');
             xlabel('Time from stimulus onset (s)'); ylabel('Median Response');
-            title(['0nW Subtracted (Projected value: ' num2str(abs(Median_0nW(i))) ')']); axis([0 max(timeFromStim) -3 3]);
+            title(['50nW Subtracted (Projected value: ' num2str(abs(Median_50nW(i))) ')']); axis([0 max(timeFromStim) -3 3]);
             hold off;
         end
 %         pause;
         drawnow;
-%         imwrite(frame2im(getframe(gcf)), 'Median_low_responders.tif','WriteMode','append');
+        imwrite(frame2im(getframe(gcf)), 'Median_50greaterthan450_responders.tif','WriteMode','append');
     end
     warning on;
 end
@@ -363,11 +386,11 @@ end
 for j=1:size(allfits,2)
     
     upper_thresh = quantile(allfits(:),0.95); 
-    lower_thresh = quantile(allfits(:),0.025);
+    lower_thresh = quantile(allfits(:),0.05);
 
     thismap = parula( ((upper_thresh-lower_thresh)*100)+2); 
 
-    figure(3+j); clf;%imagesc(ref_image); hold on; colormap gray;
+    figure(3+j); clf; %imagesc(ref_image); hold on; colormap gray;
     axis image; hold on;
 
     percentmax = zeros(size(allcoords,1));
@@ -403,7 +426,8 @@ for j=1:size(allfits,2)
     set(gca,'Color','k'); 
     title(['Spatial map ' num2str(j-1)])
     hold off; drawnow;
-    saveas(gcf, ['spatial_map_' num2str(j-1) '_lowresponse.png']);
+    saveas(gcf, ['spatial_map_' num2str(j-1) '_highresp.svg']);
+%     pause;
 end
 
 
@@ -505,20 +529,20 @@ hold off; drawnow;
 saveas(gcf, ['increase_map.png']);
 
 %% Plot each relationship on the plot
-figure(13); hold on;
+figure(13); clf; hold on;
 subplot(1,3,1);
 plot(Stddev_0nW,abs(Median_0nW),'k.');
-axis([-2 7 0 7]); title('0nW'); ylabel('Absolute median response'); xlabel('Std dev response');
+axis square; axis([-2 10 0 5]); grid on; title('0nW'); ylabel('Absolute median response'); xlabel('Std dev response');
 subplot(1,3,2);
 plot(Stddev_50nW,abs(Median_50nW),'k.');
-axis([-2 7 0 7]); title('50nW'); ylabel('Absolute median response'); xlabel('Std dev response');
+axis square; axis([-2 10 0 5]); grid on; title('50nW'); ylabel('Absolute median response'); xlabel('Std dev response');
 subplot(1,3,3);
 plot(Stddev_450nW,abs(Median_450nW),'k.');
-axis([-2 7 0 7]); title('450nW'); ylabel('Absolute median response'); xlabel('Std dev response');
+axis square; axis([-2 10 0 5]);  grid on; title('450nW'); ylabel('Absolute median response'); xlabel('Std dev response');
 
-xlabel('Std dev reponse');
-ylabel('Absolute Median reponse');
+
 saveas(gcf, ['comparative_responses.png']); 
+saveas(gcf, ['comparative_responses.svg']);
 
 
 %% Boxplot of the amplitudes from each intensity.
@@ -566,36 +590,3 @@ axis equal; axis([-1 10 -1 10]); grid on;
 saveas(gcf, 'allvs_response.png');
 saveas(gcf, 'allvs_response.svg');
 
-%% Error plots
-
-% figure(20); clf;
-% histogram(allfitampserr(valid,:)); hold on; histogram(allfitmedianserr(valid,:));
-% title('Bootstrapped Error- at least 10 trials'); legend('Amplitude Error','Median Error')
-% saveas(gcf, 'Bootstrapped_Error.png');
-
-% figure(19);clf;
-% quiver(fitAmp_0nW(valid),abs(fitMean_0nW(valid)), fitAmp_50nW(valid)-fitAmp_0nW(valid), abs(fitMean_50nW(valid))-abs(fitMean_0nW(valid)),0 );
-% hold on;
-% quiver(fitAmp_50nW(valid),abs(fitMean_50nW(valid)), fitAmp_450nW(valid)-fitAmp_50nW(valid), abs(fitMean_450nW(valid))-abs(fitMean_50nW(valid)) );
-
-function [ stddev, median, valid_cells, proj_stddev_profile, proj_median_profile ] = parse_and_project( mat_to_load, ref_stddev_coeff, ref_median_coeff )
-% Robert F cooper 04-10-2018
-%   This function loads in a given MATLAB mat file, and parses/processes
-%   each of the mat-specific filenames into a format more easily handled by
-%   the script.
-
-load(mat_to_load);
-
-% mu = mean(critical_period_std_dev_sub,1,'omitnan');
-% norm_nonan_ref = bsxfun(@minus,critical_period_std_dev_sub,mu);
-norm_nonan_ref = sqrt(stim_cell_var(:,critical_region))-sqrt(control_cell_var(:,critical_region));
-projected_ref = norm_nonan_ref*ref_stddev_coeff;
-stddev = projected_ref(:,1);
-
-norm_nonan_ref = stim_cell_median(:,critical_region)-control_cell_median(:,critical_region);
-projected_ref = norm_nonan_ref*ref_median_coeff;
-median = projected_ref(:,1);
-
-valid_cells = valid;
-
-end

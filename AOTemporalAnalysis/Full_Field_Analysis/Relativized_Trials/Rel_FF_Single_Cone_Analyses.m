@@ -200,9 +200,7 @@ for i=1:numstimcoords
         end
     end 
     stim_trial_count(i) = numtrials;
-    
-    
-    nonan_ref = all_times_ref(~all(isnan(all_times_ref),2), :);
+            
     
     for j=1:max_index
         nonan_ref = all_times_ref(~isnan(all_times_ref(:,j)), j);
@@ -216,15 +214,15 @@ for i=1:numstimcoords
     
     if i==CELL_OF_INTEREST 
         figure(1); clf;
-        subplot(3,1,1); plot( bsxfun(@minus,nonorm_ref, nonorm_ref(:,2))');axis([2 134 -120 120]);
-        subplot(3,1,2); plot(all_times_ref');  axis([2 134 -8 8]);       
+        subplot(3,1,1); plot( bsxfun(@minus,nonorm_ref, nonorm_ref(:,2))');axis([2 166 -75 75]);
+        subplot(3,1,2); plot(all_times_ref');  axis([2 166 -10 10]);       
         subplot(3,1,3); plot(stim_cell_median(i,:)); hold on;
-                        plot(sqrt(stim_cell_var(i,:))); hold off; axis([2 134 -3 5]);
+                        plot(sqrt(stim_cell_var(i,:))); hold off; axis([2 166 -2 4]);
         title(['Cell #:' num2str(i)]);
         drawnow;
         saveas(gcf, ['Cell_' num2str(i) '_stimulus.svg']);
         
-        figure(2); imagesc(ref_image); colormap gray; axis image;hold on; 
+        figure(5); imagesc(ref_image); colormap gray; axis image;hold on; 
         plot(ref_coords(i,1),ref_coords(i,2),'r*'); hold off;
         saveas(gcf, ['Cell_' num2str(i) '_location.svg']);
         drawnow;
@@ -282,11 +280,11 @@ for i=1:numcontrolcoords
     end
     
     if i==CELL_OF_INTEREST 
-        figure(1); clf;
-        subplot(3,1,1); plot(bsxfun(@minus,nonorm_ref, nonorm_ref(:,2))'); axis([2 134 -120 120]);
-        subplot(3,1,2); plot(all_times_ref'); axis([2 134 -8 8]);       
+        figure(2); clf;
+        subplot(3,1,1); plot(bsxfun(@minus,nonorm_ref, nonorm_ref(:,2))'); axis([2 166 -75 75]);
+        subplot(3,1,2); plot(all_times_ref'); axis([2 166 -10 10]);       
         subplot(3,1,3); plot(control_cell_median(i,:)); hold on;
-                        plot(sqrt(control_cell_var(i,:))); hold off; axis([2 134 -3 5]);
+                        plot(sqrt(control_cell_var(i,:))); hold off; axis([2 166 -2 4]);
         title(['Cell #:' num2str(i)]);                
         drawnow;
         saveas(gcf, ['Cell_' num2str(i) '_control.svg']);
@@ -310,9 +308,12 @@ median_sub = stim_cell_median-control_cell_median;
 
 if ~isempty(CELL_OF_INTEREST )
     figure(3);clf;
-    plot(median_sub(CELL_OF_INTEREST,:));  hold on;
-    plot(std_dev_sub(CELL_OF_INTEREST,:));
-    axis([2 134 -3 3]);
+    
+    load('control_avgs.mat')
+    
+    plot( stim_cell_median(CELL_OF_INTEREST,:)-allcontrolmed );  hold on;
+    plot(sqrt(stim_cell_var(CELL_OF_INTEREST,:))-allcontrolstd);
+    axis([2 166 -3 3]);
     title(['Cell #:' num2str(CELL_OF_INTEREST)]);  
     drawnow;
     saveas(gcf, ['Cell_' num2str(CELL_OF_INTEREST) '_subs.svg']);
@@ -323,7 +324,7 @@ critical_nonnan_ref = sqrt(stim_cell_var(:,CRITICAL_REGION));
 
 
 critical_nonnan_ref = stim_cell_median(:,CRITICAL_REGION);
-[median_coeff, median_score, latent, tquare, explained]=pca(critical_nonnan_ref);
+[median_coeff, median_score, latent, tquare, median_explained]=pca(critical_nonnan_ref);
 
 timeBase = ((1:max_index-1)/16.6)';
 
@@ -349,7 +350,7 @@ waitbar(i/size(std_dev_sub,1),THEwaitbar,'Analyzing subtracted signals...');
 end
 close(THEwaitbar);
 %%
-save([ stim_intensity '.mat'],'fitAmp','fitMedian','std_dev_coeff','valid',...
+save([ stim_intensity '.mat'],'fitAmp','fitMedian','std_dev_coeff','valid','std_dev_explained','median_explained',...
      'median_coeff','std_dev_score','median_score','allcoords','ref_image','control_cell_median',...
      'control_cell_var','stim_cell_median','stim_cell_var');
 
