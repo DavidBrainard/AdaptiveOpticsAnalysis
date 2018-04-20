@@ -102,7 +102,79 @@ zero_to_fourfiftnW = 100*sum(sign(bigdiff( ~isnan(bigdiff))) == 1)./total3
 zero_to_50_inc = (allfits(valid,2)-allfits(valid,1)>0);
 fifty_to_450_inc = (allfits(valid,3)-allfits(valid,2)>0);
 
+%% Clumping analysis
 
+
+rng('shuffle');
+
+highestResp = log(allfits(:,3)+1);
+maxdist = max(max(pdist2(allcoords(valid,:), allcoords(valid,:))));
+
+edgevector = 0:floor(maxdist)/100:floor(maxdist);
+
+reflectance_edges = 0:1:2;
+reflectance_classes = discretize(highestResp,reflectance_edges);
+closenessthresh=.025;
+
+alldists=cell(size(allcoords,1),1);
+% If discrete
+for j=1:size(allcoords,1)
+    if valid(j)
+        withinDist = reflectance_classes==reflectance_classes(j);
+        sum(withinDist)
+        alldists{j} = pdist2(allcoords(j,:), allcoords(withinDist,:))';
+    end
+end
+
+% If relative closeness
+% for j=1:size(allcoords,1)
+%     if valid(j)
+%         withinDist = abs(highestResp(j)-highestResp) <= closenessthresh;
+%         
+%         alldists{j} = pdist2(allcoords(j,:), allcoords(withinDist,:))';
+%         
+%     end
+% end
+
+alldists = cell2mat(alldists);
+alldists(alldists==0) =[];
+histogram(alldists, edgevector);
+base_values = histcounts(alldists,edgevector,'Normalization','cdf');
+
+cumsum(base_values)
+
+
+
+RUNS = 1000;
+newvalues= zeros(RUNS, length(edgevector)-1);
+
+parfor i=1:RUNS
+   i
+%     randoResp = highestResp( randperm(size(highestResp,1)) ); 
+    randoResp = reflectance_classes( randperm(size(reflectance_classes,1)) );
+
+    alldists=cell(size(allcoords,1),1);
+    for j=1:size(allcoords,1)
+        if valid(j)
+%             withinDist = abs(randoResp(j)-randoResp) <= closenessthresh;
+            withinDist = randoResp==randoResp(j);
+            alldists{j} = pdist2(allcoords(j,:), allcoords(withinDist,:))';
+
+        end
+    end
+    alldists = cell2mat(alldists);
+    alldists(alldists==0) =[];
+    [newvalues(i,:)] = histcounts(alldists,edgevector,'Normalization','cdf');
+
+end
+runningMin = min(newvalues);
+runningMax = max(newvalues);
+runningMean = mean(newvalues);
+
+plot(edgevector, [0 runningMin],'k.-', edgevector, [0 runningMax],'k.-',edgevector,[0 runningMean],'k');
+%     drawnow;
+
+plot(runningMean,base_values,'k', runningMin,runningMean,'k--', runningMax,runningMean,'k--');
 
 %% Determine each cone's slope
 
@@ -399,7 +471,7 @@ for j=1:size(allfits,2)
 
     for i=1:size(allcoords,1)
 
-        if large_n_valid(i)
+        if small_n_valid(i)
             percentmax(i) = allfits(i,j);
 
             if percentmax(i) > upper_thresh
@@ -589,4 +661,6 @@ title('450nW vs 0nW and 450nW vs 50nW responses');hold off;
 axis equal; axis([-1 10 -1 10]); grid on;
 saveas(gcf, 'allvs_response.png');
 saveas(gcf, 'allvs_response.svg');
+
+
 
