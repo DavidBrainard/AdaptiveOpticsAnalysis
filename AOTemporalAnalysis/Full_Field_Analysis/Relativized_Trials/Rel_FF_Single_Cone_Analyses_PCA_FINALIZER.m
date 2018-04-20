@@ -104,45 +104,42 @@ fifty_to_450_inc = (allfits(valid,3)-allfits(valid,2)>0);
 
 %% Clumping analysis
 
+% logResp = log(allfits+1);
+
+lg_50=quantile(allfits(:,2),0.95);
+lg_450=quantile(allfits(:,3),0.95);
+large_n_valid = valid & ((allfits(:,2)>=lg_50) & (allfits(:,3)>=lg_450) ); 
+
+sm_50=quantile(allfits(:,2),0.05);
+sm_450=quantile(allfits(:,3),0.05);
+
+small_n_valid = valid & ((allfits(:,2)<=sm_50) & (allfits(:,3)<=sm_450) ); 
+
 
 rng('shuffle');
 
-highestResp = log(allfits(:,3)+1);
-maxdist = max(max(pdist2(allcoords(valid,:), allcoords(valid,:))));
+validcoords = allcoords(valid,:);
 
-edgevector = 0:floor(maxdist)/100:floor(maxdist);
+highestResp = (allfits(valid,2));
+maxdist = max(max(triu(pdist2(validcoords, validcoords),1) ) );
 
-reflectance_edges = 0:1:2;
+edgevector = 0:(floor(maxdist))/100:floor(maxdist);
+% edgevector = 0:(550)/100:550;
+
+reflectance_edges = [0 quantile(highestResp,0.05) mean(highestResp,'omitnan')-std(highestResp,'omitnan')  mean(highestResp,'omitnan')+std(highestResp,'omitnan') max(highestResp)];
 reflectance_classes = discretize(highestResp,reflectance_edges);
-closenessthresh=.025;
 
-alldists=cell(size(allcoords,1),1);
+COI = 1
+
 % If discrete
-for j=1:size(allcoords,1)
-    if valid(j)
-        withinDist = reflectance_classes==reflectance_classes(j);
-        sum(withinDist)
-        alldists{j} = pdist2(allcoords(j,:), allcoords(withinDist,:))';
-    end
-end
+withinDist = COI==reflectance_classes;
 
-% If relative closeness
-% for j=1:size(allcoords,1)
-%     if valid(j)
-%         withinDist = abs(highestResp(j)-highestResp) <= closenessthresh;
-%         
-%         alldists{j} = pdist2(allcoords(j,:), allcoords(withinDist,:))';
-%         
-%     end
-% end
+alldists = triu(pdist2(validcoords(withinDist,:), validcoords(withinDist,:)),1);
 
-alldists = cell2mat(alldists);
+
 alldists(alldists==0) =[];
-histogram(alldists, edgevector);
+histogram(alldists, edgevector,'Normalization','cdf');
 base_values = histcounts(alldists,edgevector,'Normalization','cdf');
-
-cumsum(base_values)
-
 
 
 RUNS = 1000;
@@ -150,19 +147,11 @@ newvalues= zeros(RUNS, length(edgevector)-1);
 
 parfor i=1:RUNS
    i
-%     randoResp = highestResp( randperm(size(highestResp,1)) ); 
     randoResp = reflectance_classes( randperm(size(reflectance_classes,1)) );
+    withinDist = COI==randoResp;
 
-    alldists=cell(size(allcoords,1),1);
-    for j=1:size(allcoords,1)
-        if valid(j)
-%             withinDist = abs(randoResp(j)-randoResp) <= closenessthresh;
-            withinDist = randoResp==randoResp(j);
-            alldists{j} = pdist2(allcoords(j,:), allcoords(withinDist,:))';
-
-        end
-    end
-    alldists = cell2mat(alldists);
+    alldists = triu(pdist2(validcoords(withinDist,:), validcoords(withinDist,:)),1);
+    
     alldists(alldists==0) =[];
     [newvalues(i,:)] = histcounts(alldists,edgevector,'Normalization','cdf');
 
@@ -171,10 +160,21 @@ runningMin = min(newvalues);
 runningMax = max(newvalues);
 runningMean = mean(newvalues);
 
+figure(4);
 plot(edgevector, [0 runningMin],'k.-', edgevector, [0 runningMax],'k.-',edgevector,[0 runningMean],'k');
 %     drawnow;
-
+figure(1);
 plot(runningMean,base_values,'k', runningMin,runningMean,'k--', runningMax,runningMean,'k--');
+axis equal; axis([0 1 0 1]);
+% saveas(gcf, 'bottom_5_clumping.svg');
+
+figure(2);
+plot(runningMean,base_values,'k', runningMin,runningMean,'k--', runningMax,runningMean,'k--');
+axis equal; axis([0 .05 0 .05]);
+% saveas(gcf, 'bottom_5_clumping_zoomie.svg');
+
+figure(3);
+plot(allcoords(withinDist,1), allcoords(withinDist,2),'*')
 
 %% Determine each cone's slope
 
@@ -191,20 +191,14 @@ x=-1:.1:10;
 plot(x, x.*overallslope(1)+overallslope(2),'k-.',allfits(valid,2), allfits(valid,3),'.')
 
 
+
 %% Reprojection - Stddev
 figure(1); clf; 
 delete('Stddev_50greaterthan450_responders.tif');
 
 timeFromStim = (0:size(stddev_stim_450nW,2)-1)/16.66666;
 
-lg_50=quantile(allfits(valid,2),0.95);
-lg_450=quantile(allfits(valid,3),0.95);
-large_n_valid = valid & ((allfits(:,2)>=lg_50) & (allfits(:,3)>=lg_450) ); 
 
-sm_50=quantile(allfits(valid,2),0.05);
-sm_450=quantile(allfits(valid,3),0.05);
-
-small_n_valid = valid & ((allfits(:,2)<=sm_50) & (allfits(:,3)<=sm_450) ); 
 
 
 for i=1:size(allcoords,1)
@@ -506,7 +500,7 @@ for j=1:size(allfits,2)
     hold off; drawnow;
     set(gcf, 'Renderer', 'painters');
     saveas(gcf, ['spatial_map_' num2str(j-1) '_lowresp.svg']);
-%     pause;
+    pause;
 end
 
 
