@@ -39,7 +39,7 @@ CUTOFF = 26;
 NUMTRIALS=20;
 CRITICAL_REGION = 66:100;
 
-CELL_OF_INTEREST = [];
+CELL_OF_INTEREST = [131];
 
 if isempty(CELL_OF_INTEREST)
     close all force;
@@ -222,6 +222,8 @@ for i=1:numstimcoords
         drawnow;
         saveas(gcf, ['Cell_' num2str(i) '_stimulus.svg']);
         
+        THEstimref = all_times_ref;
+        
         figure(5); imagesc(ref_image); colormap gray; axis image;hold on; 
         plot(ref_coords(i,1),ref_coords(i,2),'r*'); hold off;
         saveas(gcf, ['Cell_' num2str(i) '_location.svg']);
@@ -285,13 +287,19 @@ for i=1:numcontrolcoords
         subplot(3,1,2); plot(all_times_ref'); axis([2 166 -10 10]);       
         subplot(3,1,3); plot(control_cell_median(i,:)); hold on;
                         plot(sqrt(control_cell_var(i,:))); hold off; axis([2 166 -2 4]);
-        title(['Cell #:' num2str(i)]);                
+        title(['Cell #:' num2str(i)]);   
+        THEcontref = all_times_ref;
         drawnow;
         saveas(gcf, ['Cell_' num2str(i) '_control.svg']);
 %         pause;
     end
 end
 
+
+% for k=1:size(all_times_ref,1)
+% figure(1); clf; plot(THEstimref(k,:)); axis([2 166 -10 10]);
+% pause;
+% end
 
 % figure;
 % histogram(stim_prestim_means, 255); hold on; histogram(cont_prestim_means, 255);

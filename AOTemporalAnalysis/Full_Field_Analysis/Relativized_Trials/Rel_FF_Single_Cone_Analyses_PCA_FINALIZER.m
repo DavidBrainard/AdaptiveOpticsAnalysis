@@ -112,7 +112,12 @@ intercepts=slopes(1,:);
 slopes=slopes(2,:);
 
 upper_slope_thresh = quantile(slopes,0.95); 
-lower_slope_thresh = quantile(slopes,0.05);
+lower_slope_thresh = quantile(slopes,0.025);
+
+overallslope=[allfits(valid,2) ones(size(allfits(valid,2),1),1)]\allfits(valid,3);
+x=-1:.1:10;
+plot(x, x.*overallslope(1)+overallslope(2),'k-.',allfits(valid,2), allfits(valid,3),'.')
+
 
 %% Reprojection - Stddev
 figure(1); clf; 
@@ -412,9 +417,10 @@ for j=1:size(allfits,2)
 
             vertices = V(C{i},:);
 
-            if ~isnan(thiscolorind) && all(vertices(:,1)<max(allcoords(:,1))) && all(vertices(:,2)<max(allcoords(:,1))) ... % [xmin xmax ymin ymax] 
-                                    && all(vertices(:,1)>0) && all(vertices(:,2)>0) 
-    %             plot(allcoords(i,1),allcoords(i,2),'.','Color', thismap(thiscolorind,:), 'MarkerSize', 15 );
+%             if ~isnan(thiscolorind) && all(vertices(:,1)<max(allcoords(:,1))) && all(vertices(:,2)<max(allcoords(:,1))) ... % [xmin xmax ymin ymax] 
+%                                     && all(vertices(:,1)>0) && all(vertices(:,2)>0) 
+            if ~isnan(thiscolorind) && all(vertices(:,1)<460) && all(vertices(:,2)<410) ... % [xmin xmax ymin ymax] 
+                                    && all(vertices(:,1)>100) && all(vertices(:,2)>50) 
                 patch(V(C{i},1),V(C{i},2),ones(size(V(C{i},1))),'FaceColor', thismap(thiscolorind,:));
 
             end
@@ -426,7 +432,8 @@ for j=1:size(allfits,2)
     set(gca,'Color','k'); 
     title(['Spatial map ' num2str(j-1)])
     hold off; drawnow;
-    saveas(gcf, ['spatial_map_' num2str(j-1) '_highresp.svg']);
+    set(gcf, 'Renderer', 'painters');
+    saveas(gcf, ['spatial_map_' num2str(j-1) '_lowresp.svg']);
 %     pause;
 end
 
@@ -445,7 +452,7 @@ saveas(gcf, 'slope_histo.png');
 
 thismap = parula(((upper_slope_thresh-lower_slope_thresh)*100)+2); 
 
-figure(8); clf;imagesc(ref_image); hold on; colormap gray;
+figure(8); clf;%imagesc(ref_image); hold on; colormap gray;
 axis image; hold on;
 
 percentmax = zeros(size(allcoords,1));
@@ -468,8 +475,8 @@ for i=1:size(allcoords,1)
         vertices = V(C{i},:);
         
         if ~isnan(thiscolorind) && all(vertices(:,1)<max(allcoords(:,1))) && all(vertices(:,2)<max(allcoords(:,1))) ... % [xmin xmax ymin ymax] 
-                                && all(vertices(:,1)>0) && all(vertices(:,2)>0) && slopes(i)<lower_slope_thresh
-%             plot(allcoords(i,1),allcoords(i,2),'.','Color', thismap(thiscolorind,:), 'MarkerSize', 15 );
+                                && all(vertices(:,1)>0) && all(vertices(:,2)>0) %%&& slopes(i)<lower_slope_thresh
+
             patch(V(C{i},1),V(C{i},2),ones(size(V(C{i},1))),'FaceColor', thismap(thiscolorind,:));
 
             thesecoords = [thesecoords; allcoords(i,:)];
@@ -482,7 +489,9 @@ axis([min(allcoords(:,1)) max(allcoords(:,1)) min(allcoords(:,2)) max(allcoords(
 set(gca,'Color','k'); 
 title('Slope spatial map')
 hold off; drawnow;
+ set(gcf, 'Renderer', 'painters');
 saveas(gcf, 'spatial_map_slopes.png');
+% saveas(gcf, ['spatial_map_' num2str(j-1) '_lowslope.svg']);
 
 %% Individual Increase maps - change to be based on profiles, 
 % where any increase over 2sd kicks it out from the group
