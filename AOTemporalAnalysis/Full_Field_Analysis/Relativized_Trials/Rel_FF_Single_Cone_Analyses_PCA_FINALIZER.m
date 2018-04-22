@@ -88,8 +88,8 @@ allfits = [ (Stddev_0nW   + abs(Median_0nW)) ...
 
 intensities = repmat( [0 log10(50) log10(450)],[size(allfits,1) 1]);
 
-diffamp = diff(allfits,[],2);
-bigdiff = allfits(:,3)-allfits(:,1);
+diffamp = diff(allfits(valid,:),[],2);
+bigdiff = allfits(valid,3)-allfits(valid,1);
 
 total1=sum(~isnan(diffamp(:,1)));
 total2=sum(~isnan(diffamp(:,2)));
@@ -102,43 +102,44 @@ zero_to_fourfiftnW = 100*sum(sign(bigdiff( ~isnan(bigdiff))) == 1)./total3
 zero_to_50_inc = (allfits(valid,2)-allfits(valid,1)>0);
 fifty_to_450_inc = (allfits(valid,3)-allfits(valid,2)>0);
 
+lg_50=quantile(allfits(valid,2),0.95);
+lg_450=quantile(allfits(valid,3),0.95);
+large_n_valid = ((allfits(valid,2)>=lg_50) & (allfits(valid,3)>=lg_450) ); 
+
+sm_50=quantile(allfits(valid,2),0.05);
+sm_450=quantile(allfits(valid,3),0.05);
+
+small_n_valid = ((allfits(valid,2)<=sm_50) & (allfits(valid,3)<=sm_450) ); 
+
 %% Clumping analysis
 
 % logResp = log(allfits+1);
-
-lg_50=quantile(allfits(:,2),0.95);
-lg_450=quantile(allfits(:,3),0.95);
-large_n_valid = valid & ((allfits(:,2)>=lg_50) & (allfits(:,3)>=lg_450) ); 
-
-sm_50=quantile(allfits(:,2),0.05);
-sm_450=quantile(allfits(:,3),0.05);
-
-small_n_valid = valid & ((allfits(:,2)<=sm_50) & (allfits(:,3)<=sm_450) ); 
-
 
 rng('shuffle');
 
 validcoords = allcoords(valid,:);
 
-highestResp = (allfits(valid,2));
+highestResp = (allfits(valid,3));
 maxdist = max(max(triu(pdist2(validcoords, validcoords),1) ) );
 
 edgevector = 0:(floor(maxdist))/100:floor(maxdist);
 % edgevector = 0:(550)/100:550;
 
-reflectance_edges = [0 quantile(highestResp,0.05) mean(highestResp,'omitnan')-std(highestResp,'omitnan')  mean(highestResp,'omitnan')+std(highestResp,'omitnan') max(highestResp)];
-reflectance_classes = discretize(highestResp,reflectance_edges);
+reflectance_edges = [min(highestResp) mean(highestResp,'omitnan')-std(highestResp,'omitnan')  mean(highestResp,'omitnan')+std(highestResp,'omitnan') max(highestResp)];
+reflectance_classes = large_n_valid; %discretize(highestResp,reflectance_edges); %small_n_valid
 
-COI = 1
+COI = 1;
 
 % If discrete
 withinDist = COI==reflectance_classes;
 
 alldists = triu(pdist2(validcoords(withinDist,:), validcoords(withinDist,:)),1);
 
+figure(3);
+plot(allcoords(withinDist,1), allcoords(withinDist,2),'*')
 
 alldists(alldists==0) =[];
-histogram(alldists, edgevector,'Normalization','cdf');
+histogram(alldists, edgevector);
 base_values = histcounts(alldists,edgevector,'Normalization','cdf');
 
 
@@ -155,26 +156,27 @@ parfor i=1:RUNS
     alldists(alldists==0) =[];
     [newvalues(i,:)] = histcounts(alldists,edgevector,'Normalization','cdf');
 
+% plot(validcoords(withinDist,1),validcoords(withinDist,2),'.')
+% pause(0.1);
 end
 runningMin = min(newvalues);
 runningMax = max(newvalues);
 runningMean = mean(newvalues);
 
-figure(4);
+figure(4);clf;
 plot(edgevector, [0 runningMin],'k.-', edgevector, [0 runningMax],'k.-',edgevector,[0 runningMean],'k');
 %     drawnow;
-figure(1);
+figure(1); clf;
 plot(runningMean,base_values,'k', runningMin,runningMean,'k--', runningMax,runningMean,'k--');
 axis equal; axis([0 1 0 1]);
-% saveas(gcf, 'bottom_5_clumping.svg');
+saveas(gcf, 'upper_5_50n450_clumping.svg');
 
-figure(2);
-plot(runningMean,base_values,'k', runningMin,runningMean,'k--', runningMax,runningMean,'k--');
+figure(2);clf;
+plot(runningMean,base_values,'k', runningMin,runningMean,'k--', runningMax,runningMean,'k-.');
 axis equal; axis([0 .05 0 .05]);
-% saveas(gcf, 'bottom_5_clumping_zoomie.svg');
+saveas(gcf, 'upper_5_50n450_clumping_zoomie.svg');
 
-figure(3);
-plot(allcoords(withinDist,1), allcoords(withinDist,2),'*')
+
 
 %% Determine each cone's slope
 
@@ -453,7 +455,7 @@ for i=1:size(allcoords,1)
 end
 
 %% Individual Spatal maps
-
+large_n_valid = ((allfits(:,2)>=lg_50) & (allfits(:,3)>=lg_450) ); 
 for j=1:size(allfits,2)
     
     upper_thresh = quantile(allfits(:),0.95); 
@@ -470,7 +472,7 @@ for j=1:size(allfits,2)
 
     for i=1:size(allcoords,1)
 
-        if small_n_valid(i)
+        if large_n_valid(i) && valid(i)
             percentmax(i) = allfits(i,j);
 
             if percentmax(i) > upper_thresh
@@ -499,8 +501,8 @@ for j=1:size(allfits,2)
     title(['Spatial map ' num2str(j-1)])
     hold off; drawnow;
     set(gcf, 'Renderer', 'painters');
-    saveas(gcf, ['spatial_map_' num2str(j-1) '_lowresp.svg']);
-    pause;
+    saveas(gcf, ['spatial_map_' num2str(j-1) '_highresp.svg']);
+%     pause;
 end
 
 
