@@ -493,8 +493,10 @@ for j=1:size(allfits,2)
 
 %             if ~isnan(thiscolorind) && all(vertices(:,1)<max(allcoords(:,1))) && all(vertices(:,2)<max(allcoords(:,1))) ... % [xmin xmax ymin ymax] 
 %                                     && all(vertices(:,1)>0) && all(vertices(:,2)>0) 
-            if ~isnan(thiscolorind) && all(vertices(:,1)<460) && all(vertices(:,2)<410) ... % [xmin xmax ymin ymax] 
-                                    && all(vertices(:,1)>100) && all(vertices(:,2)>50)
+            if ~isnan(thiscolorind) && all(vertices(:,1)<395) && all(vertices(:,2)<450) ... % [xmin xmax ymin ymax] 
+                                    && all(vertices(:,1)>110) && all(vertices(:,2)>165)
+%             if ~isnan(thiscolorind) && all(vertices(:,1)<460) && all(vertices(:,2)<410) ... % [xmin xmax ymin ymax] 
+%                                     && all(vertices(:,1)>100) && all(vertices(:,2)>50)                                
                 patch(V(C{i},1),V(C{i},2),ones(size(V(C{i},1))),'FaceColor', thismap(thiscolorind,:));
 
             end
@@ -507,8 +509,8 @@ for j=1:size(allfits,2)
     title(['Spatial map ' num2str(j-1)])
     hold off; drawnow;
     set(gcf, 'Renderer', 'painters');
-    saveas(gcf, ['spatial_map_' num2str(j-1) '_highresp.svg']);
-%     pause;
+    saveas(gcf, ['spatial_map_' num2str(j-1) '_resp.svg']);
+%      pause;
 end
 
 
@@ -627,6 +629,17 @@ axis square; axis([-2 10 0 5]);  grid on; title('450nW'); ylabel('Absolute media
 saveas(gcf, ['comparative_responses.png']); 
 saveas(gcf, ['comparative_responses.svg']);
 
+figure(23); clf; hold on;
+errorbar(median(Stddev_0nW(valid)),median(abs(Median_0nW(valid))), median(abs(Median_0nW(valid)))-quantile(abs(Median_0nW(valid)),0.05),quantile(abs(Median_0nW(valid)),0.95)-median(abs(Median_0nW(valid))),...
+                                                                   median(Stddev_0nW(valid))-quantile(Stddev_0nW(valid),0.05),quantile(Stddev_0nW(valid),0.95)-median(Stddev_0nW(valid)));
+% axis square; axis([-2 10 0 5]); grid on; title('0nW'); ylabel('Absolute median response'); xlabel('Std dev response');
+errorbar(median(Stddev_50nW(valid)),median(abs(Median_50nW(valid))), median(abs(Median_50nW(valid)))-quantile(abs(Median_50nW),0.05),quantile(abs(Median_50nW),0.95)-median(abs(Median_50nW(valid))),...
+                                                                     median(Stddev_50nW(valid))-quantile(Stddev_50nW(valid),0.05),quantile(Stddev_50nW(valid),0.95)-median(Stddev_50nW(valid)));
+% axis square; axis([-2 10 0 5]); grid on; title('50nW'); ylabel('Absolute median response'); xlabel('Std dev response');
+errorbar(median(Stddev_450nW(valid)),median(abs(Median_450nW(valid))), median(abs(Median_450nW(valid)))-quantile(abs(Median_450nW(valid)),0.05),quantile(abs(Median_450nW(valid)),0.95)-median(abs(Median_450nW(valid))),...
+                                                                       median(Stddev_450nW(valid))-quantile(Stddev_450nW(valid),0.05),quantile(Stddev_450nW(valid),0.95)-median(Stddev_450nW(valid)));
+axis square; axis([-.5 5 0 2.5]);  grid on; title('Allerrors'); ylabel('Absolute median response'); xlabel('Std dev response');
+saveas(gcf, ['comparative_mean_responses.svg']);
 
 %% Boxplot of the amplitudes from each intensity.
 
