@@ -210,7 +210,7 @@ Std_Resp = std(StddevResp+abs(MedianResp),[],2,'omitnan');
 
 %% Output
 save([ stim_intensity '_bootstrapped.mat'],'Avg_StddevResp','Std_StddevResp','Avg_MedianResp','Std_MedianResp',...
-     'Avg_Resp', 'Std_Resp','allcoords','ref_image');
+     'Avg_Resp', 'Std_Resp','valid_boots','allcoords','ref_image');
 %% Plots
 figure(1);
 plot(Avg_StddevResp(valid_boots), Std_StddevResp(valid_boots),'.'); xlabel('Std Dev Response Average'); ylabel('Std Dev Response RMSE')

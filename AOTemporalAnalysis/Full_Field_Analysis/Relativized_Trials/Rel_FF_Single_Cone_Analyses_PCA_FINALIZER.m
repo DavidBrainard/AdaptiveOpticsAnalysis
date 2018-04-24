@@ -80,10 +80,13 @@ Median_0nW = sum(projected_ref.*med_explained_coeff_450nW,2)./sum(med_explained_
 
 
 % Create our response measure
+% allfits = [ sqrt(Stddev_0nW.^2   + abs(Median_0nW).^2 ) ...
+%             sqrt(Stddev_50nW.^2  + abs(Median_50nW).^2 ) ... 
+%             sqrt(Stddev_450nW.^2 + abs(Median_450nW).^2 ) ];      
+
 allfits = [ (Stddev_0nW   + abs(Median_0nW)) ...
-            (Stddev_50nW  + abs(Median_50nW)) ... 
-            (Stddev_450nW + abs(Median_450nW)) ];      
-       
+            (Stddev_50nW  + abs(Median_50nW) ) ... 
+            (Stddev_450nW + abs(Median_450nW) ) ];  
 
 
 intensities = repmat( [0 log10(50) log10(450)],[size(allfits,1) 1]);
@@ -109,7 +112,7 @@ large_n_valid = ((allfits(valid,2)>=lg_50) & (allfits(valid,3)>=lg_450) );
 sm_50=quantile(allfits(valid,2),0.05);
 sm_450=quantile(allfits(valid,3),0.05);
 
-small_n_valid = ((allfits(valid,2)<=sm_50) & (allfits(valid,3)<=sm_450) ); 
+small_n_valid = ((allfits(valid,2)<=sm_50) | (allfits(valid,3)<=sm_450) ); 
 
 %% Clumping analysis
 
@@ -126,7 +129,7 @@ edgevector = 0:(floor(maxdist))/100:floor(maxdist);
 % edgevector = 0:(550)/100:550;
 
 reflectance_edges = [min(highestResp) mean(highestResp,'omitnan')-std(highestResp,'omitnan')  mean(highestResp,'omitnan')+std(highestResp,'omitnan') max(highestResp)];
-reflectance_classes = large_n_valid; %discretize(highestResp,reflectance_edges); %small_n_valid
+reflectance_classes = small_n_valid(valid); %discretize(highestResp,reflectance_edges); %small_n_valid
 
 COI = 1;
 
@@ -156,8 +159,8 @@ parfor i=1:RUNS
     alldists(alldists==0) =[];
     [newvalues(i,:)] = histcounts(alldists,edgevector,'Normalization','cdf');
 
-% plot(validcoords(withinDist,1),validcoords(withinDist,2),'.')
-% pause(0.1);
+%  plot(validcoords(withinDist,1),validcoords(withinDist,2),'.')
+%  pause;
 end
 runningMin = min(newvalues);
 runningMax = max(newvalues);
@@ -186,11 +189,13 @@ intercepts=slopes(1,:);
 slopes=slopes(2,:);
 
 upper_slope_thresh = quantile(slopes,0.95); 
-lower_slope_thresh = quantile(slopes,0.025);
+lower_slope_thresh = quantile(slopes,0.05);
 
-overallslope=[allfits(valid,2) ones(size(allfits(valid,2),1),1)]\allfits(valid,3);
-x=-1:.1:10;
-plot(x, x.*overallslope(1)+overallslope(2),'k-.',allfits(valid,2), allfits(valid,3),'.')
+lowslopes= slopes<=0.05;
+
+% overallslope=[allfits(valid,2) ones(size(allfits(valid,2),1),1)]\allfits(valid,3);
+% x=-1:.1:10;
+% plot(x, x.*overallslope(1)+overallslope(2),'k-.',allfits(valid,2), allfits(valid,3),'.')
 
 
 
@@ -455,7 +460,8 @@ for i=1:size(allcoords,1)
 end
 
 %% Individual Spatal maps
-large_n_valid = ((allfits(:,2)>=lg_50) & (allfits(:,3)>=lg_450) ); 
+
+
 for j=1:size(allfits,2)
     
     upper_thresh = quantile(allfits(:),0.95); 
@@ -472,7 +478,7 @@ for j=1:size(allfits,2)
 
     for i=1:size(allcoords,1)
 
-        if large_n_valid(i) && valid(i)
+        if valid(i)
             percentmax(i) = allfits(i,j);
 
             if percentmax(i) > upper_thresh
@@ -488,7 +494,7 @@ for j=1:size(allfits,2)
 %             if ~isnan(thiscolorind) && all(vertices(:,1)<max(allcoords(:,1))) && all(vertices(:,2)<max(allcoords(:,1))) ... % [xmin xmax ymin ymax] 
 %                                     && all(vertices(:,1)>0) && all(vertices(:,2)>0) 
             if ~isnan(thiscolorind) && all(vertices(:,1)<460) && all(vertices(:,2)<410) ... % [xmin xmax ymin ymax] 
-                                    && all(vertices(:,1)>100) && all(vertices(:,2)>50) 
+                                    && all(vertices(:,1)>100) && all(vertices(:,2)>50)
                 patch(V(C{i},1),V(C{i},2),ones(size(V(C{i},1))),'FaceColor', thismap(thiscolorind,:));
 
             end
@@ -667,5 +673,103 @@ axis equal; axis([-1 10 -1 10]); grid on;
 saveas(gcf, 'allvs_response.png');
 saveas(gcf, 'allvs_response.svg');
 
+%% Error Spatal maps
+
+
+load('450nW_bootstrapped.mat');
+
+AvgResp_450 = Avg_Resp;
+StdResp_450 = Std_Resp;
+Avg_StddevResp_450 = Avg_StddevResp;
+Std_StddevResp_450 = Std_StddevResp;
+Avg_MedianResp_450 = Avg_MedianResp;
+Std_MedianResp_450 = Std_MedianResp;
+
+load('50nW_bootstrapped.mat');
+
+AvgResp_50 = Avg_Resp;
+StdResp_50 = Std_Resp;
+Avg_StddevResp_50 = Avg_StddevResp;
+Std_StddevResp_50 = Std_StddevResp;
+Avg_MedianResp_50 = Avg_MedianResp;
+Std_MedianResp_50 = Std_MedianResp;
+
+load('0nW_bootstrapped.mat');
+
+AvgResp_0 = Avg_Resp;
+StdResp_0 = Std_Resp;
+Avg_StddevResp_0 = Avg_StddevResp;
+Std_StddevResp_0 = Std_StddevResp;
+Avg_MedianResp_0 = Avg_MedianResp;
+Std_MedianResp_0 = Std_MedianResp;
+
+
+sm_50=quantile(AvgResp_50(valid),0.05);
+sm_450=quantile(AvgResp_450(valid),0.05);
+
+small_n_valid = ((AvgResp_50<=quantile(AvgResp_0(valid),0.95)) & (AvgResp_450<=quantile(AvgResp_0(valid),0.95)) );
+small_n_valid = small_n_valid & ((StdResp_50<=max(StdResp_0(valid))) & (StdResp_450<=max(StdResp_0(valid))) );
+
+lowrespond_percent=100*sum(small_n_valid)./size(allcoords,1)
+
+
+
+figure(20); clf; %imagesc(ref_image); hold on; colormap gray;
+axis image; hold on;
+
+percentmax = zeros(size(allcoords,1));
+
+[V,C] = voronoin(allcoords,{'QJ'});
+
+upper_thresh = quantile(allfits(valid,3),0.95); 
+lower_thresh = quantile(allfits(valid,1),0.05);
+thismap = parula( ((upper_thresh-lower_thresh)*100)+2); 
+
+for i=1:size(allcoords(valid),1)
+
+    if small_n_valid(i)
+        percentmax(i) = AvgResp_450(i);
+
+        if percentmax(i) > upper_thresh
+            percentmax(i) = upper_thresh;
+        elseif percentmax(i) < lower_thresh
+            percentmax(i) = lower_thresh;
+        end
+
+        thiscolorind = round((percentmax(i)-lower_thresh)*100)+1;
+
+        vertices = V(C{i},:);
+
+            if ~isnan(thiscolorind) && all(vertices(:,1)<max(allcoords(:,1))) && all(vertices(:,2)<max(allcoords(:,1))) ... % [xmin xmax ymin ymax] 
+                                    && all(vertices(:,1)>0) && all(vertices(:,2)>0) 
+%         if ~isnan(thiscolorind) && all(vertices(:,1)<460) && all(vertices(:,2)<410) ... % [xmin xmax ymin ymax] 
+%                                 && all(vertices(:,1)>100) && all(vertices(:,2)>50) 
+                                
+            patch(V(C{i},1),V(C{i},2),ones(size(V(C{i},1))),'FaceColor', thismap(thiscolorind,:));
+
+        end
+    end
+end
+colorbar
+axis([min(allcoords(:,1)) max(allcoords(:,1)) min(allcoords(:,2)) max(allcoords(:,2)) ])
+caxis([lower_thresh upper_thresh])
+set(gca,'Color','k'); 
+title('Lower 5% of cones')
+hold off; drawnow;
+%     set(gcf, 'Renderer', 'painters');
+%     saveas(gcf, ['spatial_map_' num2str(j-1) '_highresp.svg']);
+%     pause;
+
+
+figure;
+
+plot(allfits(valid,1),AvgResp_0(valid),'.'); hold on;
+plot(allfits(valid,2),AvgResp_50(valid),'.');
+plot(allfits(valid,3),AvgResp_450(valid),'.');
+plot([-1 12],[-1 12],'k')
+xlabel('Unbootstrapped response')
+ylabel('Bootstrapped response')
+title('Bootstrapped vs unboostrapped responses');
+axis equal; axis([-1 12 -1 12]);
 
 
