@@ -17,7 +17,7 @@ for i=1:length(confocal_fname)
 end
 
 %%
-cropsize = min(imsize);
+cropsize = min(imsize,[],1);
 
 cropped_ims = zeros(cropsize(1),cropsize(2),length(confocal_fname));
 
@@ -137,6 +137,31 @@ for i=1:length(confocal_fname)
         end
     end
     close(confocal_vidout);
+    
+    avg_name_in = [confocal_fname{i}(1:end-8) '.avi'];    
+    avg_name_in = fullfile(pathname, strrep(avg_name_in, 'confocal', 'avg'));
+    
+    if exist(avg_name_in,'file')
+        avg_name_out = [confocal_fname{i}(1:end-8) '_piped.avi'];
+        avg_name_out = fullfile(pathname, strrep(avg_name_out, 'confocal', 'avg'));
+        
+        avg_vidin = VideoReader( avg_name_in );
+        avg_vidout = VideoWriter( avg_name_out, 'Grayscale AVI' );
+        avg_vidout.FrameRate = 16.6;
+        open(avg_vidout);    
+        while hasFrame(avg_vidin)
+            frm_in = readFrame(avg_vidin);
+
+            if ~isempty(tforms{ref_im,i})
+                writeVideo( avg_vidout, imwarp(frm_in, imref2d(size(frm_in)), tforms{ref_im,i},...
+                                                    'OutputView', imref2d(size(trial_im{ref_im}))) );
+            else
+                writeVideo( avg_vidout, frm_in );
+            end
+        end
+        close(avg_vidout);
+        
+    end
     
     split_name_in = [confocal_fname{i}(1:end-8) '.avi'];    
     split_name_in = fullfile(pathname, strrep(split_name_in, 'confocal', 'split_det'));

@@ -208,10 +208,14 @@ for thisfile in os.listdir(dmp_folder_path):
                            delimiter=',', fmt='%f')
                 
                 if "confocal" in writtenfile[0]:
-                     print("Culling excess frames from: " + writtenfile[0] + "...")
-                     writtenfile = mat_engi.Automatic_Frame_Culler_Pipl(writtenfile[0], writtenfile[1], nargout=2)
-                     fixed_images += [ writtenfile[0] ]
-                     THEpath = writtenfile[1]
+                    print("Culling excess frames from: " + writtenfile[0] + "...")
+                    try:
+                        writtenfile = mat_engi.Automatic_Frame_Culler_Pipl(writtenfile[0], writtenfile[1], nargout=2)
+                        fixed_images += [ writtenfile[0] ]
+                        THEpath = writtenfile[1]
+                    except(RuntimeError) as err:
+                        print(err)
+                        print("Failed to process video: " + writtenfile[0] + "!")
             else:
                 print("Accompanying AVI not found, or not enough images in stimulus region to continue the pipeline.")
 

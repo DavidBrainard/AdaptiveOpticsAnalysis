@@ -22,6 +22,14 @@ for k=1:length(video_fname)
 
     confind = strfind(video_fname{k},'confocal');
 
+    avg_fname = strrep(video_fname{k}, 'confocal', 'avg');
+
+    if exist(fullfile(pathname,avg_fname),'file')
+       loadavg = 1;       
+    else
+       loadavg = 0;
+    end
+    
     split_fname = strrep(video_fname{k}, 'confocal', 'split_det');
 
     if exist(fullfile(pathname,split_fname),'file')
@@ -109,6 +117,11 @@ for k=1:length(video_fname)
         split_fname_out = [video_fname{k}(1:confind-1) confocal_fname_out '_crop_affine'];
         split_fname_out = strrep(split_fname_out, 'confocal', 'split_det');
     end
+
+    if loadavg
+        avg_fname_out = [video_fname{k}(1:confind-1) confocal_fname_out '_crop_affine'];
+        avg_fname_out = strrep(avg_fname_out, 'confocal', 'avg');
+    end
     
     if loadvisible
         vis_fname_out = [video_fname{k}(1:confind-1) confocal_fname_out '_crop_affine'];
@@ -122,6 +135,9 @@ for k=1:length(video_fname)
 
     if loadsplit
         split_vidobj = VideoReader( fullfile(pathname, split_fname) );
+    end
+    if loadavg
+        avg_vidobj = VideoReader( fullfile(pathname, avg_fname) );
     end
     if loadvisible
         vis_vidobj = VideoReader( fullfile(pathname, visible_fname) );
@@ -139,6 +155,10 @@ for k=1:length(video_fname)
         split_vid = cell(1, vid_length);
         split_f_mean = zeros(vid_length,1);
     end
+    if loadavg
+        avg_vid = cell(1, vid_length);
+        avg_f_mean = zeros(vid_length,1);
+    end
     if loadvisible
         vis_vid = cell(1, vid_length);
         vis_f_mean = zeros(vid_length,1);
@@ -152,6 +172,10 @@ for k=1:length(video_fname)
         if loadsplit
             split_vid{i} = readFrame(split_vidobj);
             split_f_mean(i) = mean(double(split_vid{i}(split_vid{i}~=0)));
+        end
+        if loadavg
+            avg_vid{i} = readFrame(avg_vidobj);
+            avg_f_mean(i) = mean(double(avg_vid{i}(avg_vid{i}~=0)));
         end
         if loadvisible
             vis_vid{i} = readFrame(vis_vidobj);
@@ -180,6 +204,10 @@ for k=1:length(video_fname)
         split_mean = mean(split_f_mean);
         split_dev = std(split_f_mean);
     end
+    if loadavg
+        avg_mean = mean(avg_f_mean);
+        avg_dev = std(avg_f_mean);
+    end
     if loadvisible
         vis_mean = mean(vis_f_mean);
         vis_dev = std(vis_f_mean);
@@ -195,6 +223,9 @@ for k=1:length(video_fname)
     acc_frame_list = acc_frame_list(contenders);
     if loadsplit
         split_vid = split_vid(contenders);
+    end
+    if loadavg
+        avg_vid = avg_vid(contenders);
     end
     if loadvisible
         vis_vid = vis_vid(contenders);
@@ -285,6 +316,9 @@ for k=1:length(video_fname)
     if loadsplit
         split_vid = split_vid(contenders);
     end
+    if loadavg
+        avg_vid = avg_vid(contenders);
+    end
     if loadvisible
         vis_vid = vis_vid(contenders);
     end
@@ -365,6 +399,9 @@ for k=1:length(video_fname)
         if loadsplit
             split_im_only_vid{n} = split_vid{n}( cropregion(2):cropregion(4),cropregion(1):cropregion(3) );
         end
+        if loadavg
+            avg_im_only_vid{n} = avg_vid{n}( cropregion(2):cropregion(4),cropregion(1):cropregion(3) );
+        end
         if loadvisible
             vis_im_only_vid{n} = vis_vid{n}( cropregion(2):cropregion(4),cropregion(1):cropregion(3) );
         end
@@ -422,6 +459,7 @@ for k=1:length(video_fname)
     %%
     reg_confocal_vid = cell(length(confocal_vid),1);
     reg_split_vid = cell(length(confocal_vid),1);
+    reg_avg_vid = cell(length(confocal_vid),1);
     reg_vis_vid = cell(length(confocal_vid),1);
 
     for f=1:length(im_only_vid)    
@@ -457,6 +495,9 @@ for k=1:length(video_fname)
             if loadsplit
                 reg_split_vid{f}= imwarp(split_im_only_vid{f}, affine2d(tfo),'OutputView', imref2d(size(im_only_vid{1})) );
             end
+            if loadavg
+                reg_avg_vid{f}= imwarp(avg_im_only_vid{f}, affine2d(tfo),'OutputView', imref2d(size(im_only_vid{1})) );
+            end
             if loadvisible
                 reg_vis_vid{f}= imwarp(vis_im_only_vid{f}, affine2d(tfo),'OutputView', imref2d(size(im_only_vid{1})) );
             end
@@ -466,6 +507,9 @@ for k=1:length(video_fname)
             reg_confocal_vid{f}= im_only_vid{f};
             if loadsplit
                 reg_split_vid{f}= split_im_only_vid{f};
+            end
+            if loadavg
+                reg_avg_vid{f}= avg_im_only_vid{f};
             end
             if loadvisible
                 reg_vis_vid{f}= vis_im_only_vid{f};
@@ -533,6 +577,9 @@ for k=1:length(video_fname)
     if loadsplit
         split_vid_out = uint8( zeros( size(reg_split_vid{1},1), size(reg_split_vid{1},2), length(confocal_vid) ));
     end
+    if loadavg
+        avg_vid_out = uint8( zeros( size(reg_avg_vid{1},1), size(reg_avg_vid{1},2), length(confocal_vid) ));
+    end
     if loadvisible
         vis_vid_out = uint8( zeros( size(reg_vis_vid{1},1), size(reg_vis_vid{1},2), length(confocal_vid) ));
     end
@@ -543,6 +590,9 @@ for k=1:length(video_fname)
 
         if loadsplit
             split_vid_out(:,:,i) = uint8( reg_split_vid{i} );
+        end
+        if loadavg
+            avg_vid_out(:,:,i) = uint8( reg_avg_vid{i} );
         end
         if loadvisible
             vis_vid_out(:,:,i) = uint8( reg_vis_vid{i} );
@@ -560,6 +610,9 @@ for k=1:length(video_fname)
     if loadsplit
         split_vidobj = VideoWriter( fullfile(pathname, [split_fname_out frmcount '.avi']), 'Grayscale AVI' );
     end
+    if loadavg
+        avg_vidobj = VideoWriter( fullfile(pathname, [avg_fname_out frmcount '.avi']), 'Grayscale AVI' );
+    end
     if loadvisible
         vis_vidobj = VideoWriter( fullfile(pathname, [vis_fname_out frmcount '.avi']), 'Grayscale AVI' );
     end
@@ -573,6 +626,12 @@ for k=1:length(video_fname)
         open(split_vidobj);
         writeVideo(split_vidobj,split_vid_out);
         close(split_vidobj);
+    end
+    if loadavg
+        open(avg_vidobj);
+        writeVideo(avg_vidobj,avg_vid_out);
+        close(avg_vidobj);
+        delete(fullfile(pathname,avg_fname));
     end
     if loadvisible
         open(vis_vidobj);
