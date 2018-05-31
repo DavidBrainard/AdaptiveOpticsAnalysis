@@ -1,4 +1,4 @@
-function [fitCharacteristics]=FF_Aggregate_Analyses_TwoSource(stimRootDir, controlRootDir)
+function [response_characteristics]=FF_Aggregate_Analyses_TwoSource(stimRootDir, controlRootDir)
 % [fitCharacteristics]=FF_Aggregate_Analyses_TwoSource(stimRootDir, controlRootDir)
 %
 %   Calculates pooled variance across a set of pre-analyzed 
@@ -139,12 +139,14 @@ end
 if (length(stim_cell_times) + length(control_cell_times)) > max_cones
     max_cones = (length(stim_cell_times) + length(control_cell_times));
 end
-
+%%
 pooled_variance_stim = zeros(allmax,1);
 pooled_variance_stim_count = zeros(allmax,1);
+all_variance_stim = nan(length(profileSDataNames),allmax);
 
 pooled_variance_control = zeros(allmax,1);
 pooled_variance_control_count = zeros(allmax,1);
+all_variance_control = nan(length(profileCDataNames), allmax);
 
 % Create the pooled variance for each of these
 
@@ -154,8 +156,9 @@ for j=1:length(profileSDataNames)
         % Create the upper and lower halves of our pooled variance
         pooled_variance_stim( ref_stim_times{j}(i) ) = pooled_variance_stim( ref_stim_times{j}(i) ) + ref_variance_stim{j}(i);
         pooled_variance_stim_count( ref_stim_times{j}(i) ) = pooled_variance_stim_count( ref_stim_times{j}(i) ) + (ref_stim_count{j}(i)-1);
-
+        
     end
+    all_variance_stim(j, ref_stim_times{j}) = ref_variance_stim{j}./(ref_stim_count{j}-1);
 end
 
 for j=1:length(profileCDataNames) 
@@ -166,8 +169,9 @@ for j=1:length(profileCDataNames)
         pooled_variance_control_count( ref_control_times{j}(i) ) = pooled_variance_control_count( ref_control_times{j}(i) ) + (ref_control_count{j}(i)-1);
 
     end
+    all_variance_control(j, ref_control_times{j}) = ref_variance_control{j}./(ref_control_count{j}-1);
 end
-
+%%
 for i=1:length(pooled_variance_stim)    
     pooled_variance_stim(i) = pooled_variance_stim(i)/pooled_variance_stim_count(i);
 end
@@ -185,7 +189,7 @@ end
 [remain stimwave] = getparent(remain);
 [~, id] = getparent(remain);
 
-outFname = [id '_' stimwave '_' stim_intensity '_' stim_time '_aggregate_' num2str(length(profileSDataNames)) '_signals_twosource'];
+outFname = [id '_' stimwave '_' stim_intensity '_' stim_time  '_' stim_loc '_aggregate_' num2str(length(profileSDataNames)) '_signals_twosource'];
 
 figure(8);  title('All control signals'); xlabel('Frame #'); ylabel('Standard deviations'); %axis([0 249 -20 75]);
 saveas(gcf, fullfile(pwd, [outFname '_allcontrol.png']), 'png' );
@@ -226,26 +230,25 @@ saveas(gcf, fullfile(pwd, [outFname '.png']), 'png' );
 % dlmwrite(fullfile(pwd, [date '_all_plots.csv']), [ [str2double(id(4:end)), str2double(stim_intensity(1:3)), stimlen] ;[ timeBase sqrt(pooled_variance_stim) sqrt(pooled_variance_control) ] ]',...
 %          '-append', 'delimiter', ',', 'roffset',1);
 
+%%
+NUM_COMPONENTS =3;
+CRITICAL_REGION = 66:100;
+allcontrolstd = mean(sqrt(all_variance_control),1,'omitnan');
+norm_nonan_ref = sqrt(all_variance_stim) -allcontrolstd;
+norm_nonan_ref = norm_nonan_ref(:,2:end);
+critical_nonnan_ref = sqrt(all_variance_stim(:,CRITICAL_REGION));
 
-[fitCharacteristics, residuals] = modelFit(timeBase, pooled_std_stim);
-figure(2); hold on;
-plot(trainlocs, (.2+max(pooled_std_stim))*ones(size(trainlocs)),'y*'); hold off;
 
-saveas(gcf, fullfile(pwd, [outFname '_wfit.png']) );
-% saveas(gcf, fullfile(pwd, [outFname '_wfit.fig']) );
-% saveas(gcf, fullfile(pwd, [outFname '_wfit.svg']), 'svg' );
-% figure(1);
-% saveas(gcf, fullfile(pwd, [outFname '_meanratio.svg']), 'svg' );
-% close(8);
+% [std_dev_coeff, std_dev_score, std_dev_latent, tquare, std_dev_explained, std_dev_mu]=pca(critical_nonnan_ref);
+% 
+% 
+% std_dev_explained = std_dev_explained(1:NUM_COMPONENTS)';
 
-fitCharacteristics.min_cones = min_cones;
-fitCharacteristics.max_cones = max_cones;
-fitCharacteristics.avg_num_cones = num_control_cones/length(profileSDataNames);
-fitCharacteristics.num_pooled = length(profileSDataNames);
-fitCharacteristics.subject = id;
-fitCharacteristics.stim_intensity = stim_intensity;
-fitCharacteristics.stim_length = stimlen;
-fitCharacteristics.stim_wavelength = stimwave;
-fitCharacteristics.stim_loc = stim_loc;
-fitCharacteristics
+load('reference_projection.mat');
 
+critical_pooled_std_stim = pooled_std_stim(CRITICAL_REGION)';
+
+projected_ref = (critical_pooled_std_stim-mean(critical_pooled_std_stim,2,'omitnan'))*std_dev_coeff(:,1:NUM_COMPONENTS);
+Population_Stddev_response = sum(abs(projected_ref).*std_dev_explained,2)./sum(std_dev_explained);
+
+response_characteristics.Population_Stddev_response = Population_Stddev_response
