@@ -14,7 +14,8 @@ mov_path = pwd;
 fNames = read_folder_contents(mov_path,'avi');
 
 for f=1:length(fNames)
-    if strcmp('_piped.avi', fNames{f}(end-length('_piped.avi')+1:end))
+    if strcmp('_piped.avi', fNames{f}(end-length('_piped.avi')+1:end)) && ...
+       contains(fNames{f}, 'confocal')
         temporal_stack_reader = VideoReader( fullfile(mov_path,fNames{f}) );
         varImages = nan(temporal_stack_reader.Height, temporal_stack_reader.Width, length(fNames));
         break;
@@ -25,7 +26,8 @@ end
 %% Load the files
 parfor f=1:length(fNames)
 
-    if strcmp('_piped.avi', fNames{f}(end-length('_piped.avi')+1:end))
+    if strcmp('_piped.avi', fNames{f}(end-length('_piped.avi')+1:end)) && ...
+       contains(fNames{f}, 'confocal')
         fNames{f}
         temporal_stack_reader = VideoReader( fullfile(mov_path,fNames{f}) );
 
@@ -55,14 +57,25 @@ varImages = varImages(:,:,tokeep);
 %%
 undefsd = (isnan(varImages) | isinf(varImages) );
 
-varImages( undefsd ) = 1;
+edgemask = 15;
+varImages( undefsd ) = 0;
+varImages(1:edgemask,:,:) = 0;
+varImages(:,1:edgemask,:) = 0;
+varImages(end-edgemask-1:end,:,:) = 0;
+varImages(:,end-edgemask-1:end,:) = 0;
+
 gausfiltImages = zeros(size(varImages));
 sum_map = zeros(size(varImages,1),size(varImages,2));
 
 for i=1:size(varImages,3)
     
-    sum_map = sum_map+(varImages(:,:,i)>0);
-    gausfiltImages(:,:,i) = imgaussfilt(varImages(:,:,i),15,'FilterSize',71);
+    nonzmask = imerode((varImages(:,:,i)>0),ones(7)); % Try and get rid of any edge artifacts from each map.
+    
+    sum_map = sum_map+nonzmask;
+    gausfiltImages(:,:,i) = imgaussfilt(nonzmask.*varImages(:,:,i),15,'FilterSize',71);
+    
+%     figure(1); imagesc(gausfiltImages(:,:,i)); colormap gray;
+%     pause;
 end
 
 sdImage = exp( real(sqrt( sum(gausfiltImages,3)./(sum_map-1))) );
@@ -70,7 +83,7 @@ sdImage = exp( real(sqrt( sum(gausfiltImages,3)./(sum_map-1))) );
 sdImage(isinf(sdImage))=1;
 sdImage(isnan(sdImage))=1;
 
-edgemask = 15;
+
 sdImage(1:edgemask,:)=min(sdImage(:));
 sdImage(:,1:edgemask)=min(sdImage(:));
 sdImage(end-edgemask+1:end,:)=min(sdImage(:));

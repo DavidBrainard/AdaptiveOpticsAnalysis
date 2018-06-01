@@ -47,7 +47,7 @@ for k=1:series_length % Plot average
             has_content = true;
         end
     end
-    ref_stddev(k) = sqrt(ref_stddev(k)/n-1);
+    ref_stddev(k) = sqrt(ref_stddev(k)/(n-1));
     
     if has_content
         ref_times = [ref_times; k];

@@ -57,7 +57,9 @@ stack_fnames = read_folder_contents( mov_path,'avi' );
 
 for i=1:length(stack_fnames)
     if ~isempty( strfind( stack_fnames{i}, ref_image_fname(1:end - length('_AVG.tif') ) ) )
-        temporal_stack_fname = stack_fnames{i};
+%         temporal_stack_fname = stack_fnames{i};
+        temporal_stack_fname = strrep(stack_fnames{i},'confocal','split_det'); % Analyze AVG or split for Jess's grant!
+        
         acceptable_frames_fname = [stack_fnames{i}(1:end-4) '_acceptable_frames.csv'];
         break;
     end
@@ -114,13 +116,13 @@ stim_times = stimd_images(stim_inds);
 %% Create the capillary mask, if we can't find the all trial based one.
 if ~exist('capillary_mask','var')
     capillary_mask = double(~tam_etal_capillary_func( temporal_stack ));
-end
-if ~exist( fullfile(mov_path, 'Capillary_Maps'), 'dir' )
-    mkdir(fullfile(mov_path, 'Capillary_Maps'))
-end
-   
-imwrite(uint8(capillary_mask*255), fullfile(mov_path, 'Capillary_Maps' ,[ref_image_fname(1:end - length('_AVG.tif') ) '_cap_map.png' ] ) );
 
+    if ~exist( fullfile(mov_path, 'Capillary_Maps'), 'dir' )
+        mkdir(fullfile(mov_path, 'Capillary_Maps'))
+    end
+   
+    imwrite(uint8(capillary_mask*255), fullfile(mov_path, 'Capillary_Maps' ,[ref_image_fname(1:end - length('_AVG.tif') ) '_cap_map.png' ] ) );
+end
 % Mask the images to exclude zones with capillaries on top of them.
 capillary_masks = repmat(capillary_mask,[1 1 size(temporal_stack,3)]);
 
@@ -247,17 +249,17 @@ for t=1:size(cell_ref,2)
 end
 
 
-figure(9); plot(ref_mean,'k'); title('Cell Mean Reflectance');
-if ~exist( fullfile(mov_path, 'Frame_Mean_Plots'), 'dir' )
-    mkdir(fullfile(mov_path, 'Frame_Mean_Plots'))
-end
-saveas(gcf, fullfile(mov_path, 'Frame_Mean_Plots' , [ref_image_fname(1:end - length('_AVG.tif') ) '_' profile_method '_cutoff_' norm_type '_' vid_type '_mean_plot.svg' ] ) );
-
-figure(90); plot(ref_std,'k'); title('Cell Reflectance Std Dev');
-if ~exist( fullfile(mov_path, 'Frame_Stddev_Plots'), 'dir' )
-    mkdir(fullfile(mov_path, 'Frame_Stddev_Plots'))
-end
-saveas(gcf, fullfile(mov_path, 'Frame_Stddev_Plots' , [ref_image_fname(1:end - length('_STD_DEV.tif') ) '_' profile_method '_cutoff_' norm_type '_' vid_type '_mean_plot.png' ] ) );
+% figure(9); plot(ref_mean,'k'); title('Cell Mean Reflectance');
+% if ~exist( fullfile(mov_path, 'Frame_Mean_Plots'), 'dir' )
+%     mkdir(fullfile(mov_path, 'Frame_Mean_Plots'))
+% end
+% saveas(gcf, fullfile(mov_path, 'Frame_Mean_Plots' , [ref_image_fname(1:end - length('_AVG.tif') ) '_' profile_method '_cutoff_' norm_type '_' vid_type '_mean_plot.svg' ] ) );
+% 
+% figure(90); plot(ref_std,'k'); title('Cell Reflectance Std Dev');
+% if ~exist( fullfile(mov_path, 'Frame_Stddev_Plots'), 'dir' )
+%     mkdir(fullfile(mov_path, 'Frame_Stddev_Plots'))
+% end
+% saveas(gcf, fullfile(mov_path, 'Frame_Stddev_Plots' , [ref_image_fname(1:end - length('_STD_DEV.tif') ) '_' profile_method '_cutoff_' norm_type '_' vid_type '_mean_plot.png' ] ) );
 
 
 %% Normalization to the mean
@@ -266,11 +268,11 @@ cell_prestim_mean = nan(size(cell_reflectance));
 
 for i=1:length( cell_reflectance )
     
-    if ~isempty( strfind( norm_type, 'global_norm') )
+    if contains(  norm_type, 'global_norm' )
         norm_cell_reflectance{i} = cell_reflectance{i} ./ ref_mean;
-    elseif ~isempty( strfind( norm_type, 'regional_norm') )
+    elseif contains(  norm_type, 'regional_norm' )
         norm_cell_reflectance{i} = cell_reflectance{i} ./ ref_mean;
-    elseif ~isempty( strfind( norm_type, 'no_norm') )
+    elseif contains(  norm_type, 'no_norm' )
         norm_cell_reflectance{i} = cell_reflectance{i};
         error('No normalization selected!')
     end
@@ -289,7 +291,7 @@ end
 
 
 %% Standardization
-if ~isempty( strfind(norm_type, 'prestim_stdiz'))
+if contains( norm_type, 'prestim_stdiz')
     % Then normalize to the average intensity of each cone BEFORE stimulus.
     prestim_std=nan(1,length( norm_cell_reflectance ));
     prestim_mean=nan(1,length( norm_cell_reflectance ));
@@ -304,7 +306,7 @@ if ~isempty( strfind(norm_type, 'prestim_stdiz'))
         
         norm_cell_reflectance{i} = norm_cell_reflectance{i}/( prestim_std(i) ); % /sqrt(length(norm_control_cell_reflectance{i})) );
     end
-elseif ~isempty( strfind(norm_type, 'poststim_stdiz'))
+elseif contains( norm_type, 'poststim_stdiz')
     % Then normalize to the average intensity of each cone AFTER stimulus.
     poststim_std=nan(1,length( norm_cell_reflectance ));
     poststim_mean=nan(1,length( norm_cell_reflectance ));
@@ -361,6 +363,7 @@ hold off;
 ylabel('Standard deviation'); xlabel('Time (s)'); title( strrep( [ref_image_fname(1:end - length('_AVG.tif') ) '_' profile_method '_stddev_ref_plot' ], '_',' ' ) );
 axis([0 15 -1 4])
 
+ref_image_fname = strrep(ref_image_fname,'confocal','split_det');
 if ~exist( fullfile(mov_path, 'Std_Dev_Plots'), 'dir' )
     mkdir(fullfile(mov_path, 'Std_Dev_Plots'))
 end
@@ -371,7 +374,7 @@ if ~exist( fullfile(mov_path, 'Profile_Data'), 'dir' )
 end
 % Dump all the analyzed data to disk
 save(fullfile(mov_path, 'Profile_Data' ,[ref_image_fname(1:end - length('_AVG.tif') ) '_' profile_method '_' norm_type '_' vid_type '_profiledata.mat']), ...
-     'cell_times', 'norm_cell_reflectance','ref_coords','ref_image','ref_mean','ref_stddev','vid_type','cell_prestim_mean' );
+     'cell_times', 'norm_cell_reflectance','ref_coords','ref_image','ref_mean','ref_stddev','vid_type','cell_prestim_mean','cell_reflectance' );
 
   
 %% Remove the empty cells
@@ -389,7 +392,7 @@ hold off;
 
 
 %% Save the plots
-if ~exist( fullfile(mov_path, 'Raw_Plots'), 'dir' )
-    mkdir(fullfile(mov_path, 'Raw_Plots'))
-end
-saveas(gcf, fullfile(mov_path,  'Raw_Plots' ,[ref_image_fname(1:end - length('_AVG.tif') ) '_' profile_method  '_' norm_type '_' vid_type '_raw_plot.png' ] ) );
+% if ~exist( fullfile(mov_path, 'Raw_Plots'), 'dir' )
+%     mkdir(fullfile(mov_path, 'Raw_Plots'))
+% end
+% saveas(gcf, fullfile(mov_path,  'Raw_Plots' ,[ref_image_fname(1:end - length('_AVG.tif') ) '_' profile_method  '_' norm_type '_' vid_type '_raw_plot.png' ] ) );

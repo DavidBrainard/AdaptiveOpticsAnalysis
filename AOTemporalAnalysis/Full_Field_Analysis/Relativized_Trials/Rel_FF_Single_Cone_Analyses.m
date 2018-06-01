@@ -31,12 +31,21 @@
 %
 
 clear;
-close all;
+
+
+% load('lowest_responders.mat');
 
 CUTOFF = 26;
+NUMTRIALS=20;
+CRITICAL_REGION = 66:100;
+
+CELL_OF_INTEREST = [];
+
+if isempty(CELL_OF_INTEREST)
+    close all force;
+end
 
 if ~exist('stimRootDir','var')
-    close all force;
     stimRootDir = uigetdir(pwd, 'Select the directory containing the stimulus profiles');
     controlRootDir = uigetdir(pwd, 'Select the directory containing the control profiles');
 end
@@ -66,7 +75,10 @@ max_index=0;
 load(fullfile(stimRootDir, profileSDataNames{1}));
 stim_coords = ref_coords;
 
-stim_cell_reflectance = cell(length(profileSDataNames),1);
+if ~isempty(CELL_OF_INTEREST)
+    stim_cell_reflectance = cell(length(profileSDataNames),1);
+end
+stim_cell_reflectance_nonorm = cell(length(profileSDataNames),1);
 stim_time_indexes = cell(length(profileSDataNames),1);
 stim_cell_prestim_mean = cell(length(profileSDataNames),1);
 
@@ -78,6 +90,9 @@ for j=1:length(profileSDataNames)
     profileSDataNames{j}
     load(fullfile(stimRootDir,profileSDataNames{j}));
     
+    if ~isempty(CELL_OF_INTEREST)
+        stim_cell_reflectance_nonorm{j} = cell_reflectance;
+    end
     stim_cell_reflectance{j} = norm_cell_reflectance;
     stim_time_indexes{j} = cell_times;
     stim_cell_prestim_mean{j} = cell_prestim_mean;
@@ -96,7 +111,10 @@ for j=1:length(profileSDataNames)
 end
 
 %%
-control_cell_reflectance = cell(length(profileCDataNames),1);
+if ~isempty(CELL_OF_INTEREST)
+    control_cell_reflectance = cell(length(profileCDataNames),1);
+end
+control_cell_reflectance_nonorm = cell(length(profileCDataNames),1);
 control_time_indexes = cell(length(profileCDataNames),1);
 control_cell_prestim_mean = cell(length(profileCDataNames),1);
 
@@ -110,7 +128,10 @@ for j=1:length(profileCDataNames)
     ref_coords=[];
     profileCDataNames{j}
     load(fullfile(controlRootDir,profileCDataNames{j}));
-        
+    
+    if ~isempty(CELL_OF_INTEREST)
+        control_cell_reflectance_nonorm{j} = cell_reflectance;
+    end
     control_cell_reflectance{j} = norm_cell_reflectance;
     control_time_indexes{j} = cell_times;
     control_cell_prestim_mean{j} = cell_prestim_mean;
@@ -143,221 +164,205 @@ allcoords = stim_coords;
 
 percentparula = parula(101);
 
-stim_cell_var = nan(size(stim_coords,1), max_index);
-stim_cell_median = nan(size(stim_coords,1), max_index);
-stim_trial_count = zeros(size(stim_coords,1),1);
-stim_posnegratio = nan(size(stim_coords,1),max_index);
-% ratioplotnums=[];
+numstimcoords = size(stim_coords,1);
 
-for i=1:size(stim_coords,1)
+stim_cell_var = nan(numstimcoords, max_index);
+stim_cell_median = nan(numstimcoords, max_index);
+stim_cell_pca_std = nan(numstimcoords, 1);
+stim_trial_count = zeros(numstimcoords,1);
+stim_posnegratio = nan(numstimcoords,max_index);
+stim_prestim_means=[];
+
+i=1;
+
+
+        
+for i=1:numstimcoords
     waitbar(i/size(stim_coords,1),THEwaitbar,'Processing stimulus signals...');
-    
-%     figure(1);
-%     clf;
-%     hold on;
-    
+
     numtrials = 0;
     all_times_ref = nan(length(profileSDataNames), max_index);
+    if ~isempty(CELL_OF_INTEREST)
+        nonorm_ref = nan(length(profileSDataNames), max_index);
+    end
     for j=1:length(profileSDataNames)
         
         if ~isempty(stim_cell_reflectance{j}{i}) && ...
            sum(stim_time_indexes{j}{i} >= 67 & stim_time_indexes{j}{i} <=99) >= CUTOFF
-            
-            % Find out what percentage of time the signal spends negative
-            % or positive after stimulus delivery (66th frame)
-            numposneg = sign(stim_cell_reflectance{j}{i}(stim_time_indexes{j}{i}>66));
-            pos = sum(numposneg == 1);
 
-%             subplot(3,1,1);hold on; plot(stim_time_indexes{j}{i}, (stim_cell_reflectance{j}{i}) );
-%             xlabel('Frame #'); ylabel('Standardized reflectance'); title(num2str(i));
+            stim_prestim_means = [stim_prestim_means; stim_cell_prestim_mean{j}(i)];
 
-            stim_posnegratio(i,j) = round(100*pos/length(numposneg))+1;                        
-%             if ~isnan(stim_posnegratio(i,j)) && ~isinf(stim_posnegratio(i,j))
-% %                 ratioplotnums = [ratioplotnums;stim_cell_prestim_mean{j}(i) posnegatio];
-%                 subplot(3,1,2);hold on; plot(j, stim_cell_prestim_mean{j}(i),'.','Color',percentparula(stim_posnegratio(i,j),:),'MarkerSize', 15 );
-%                 axis([0 50 0 255]); xlabel('Trial #'); ylabel('Prestimulus reflectance (AU)');
-%             end
-        
             numtrials = numtrials+1;
+            if ~isempty(CELL_OF_INTEREST)
+                nonorm_ref(j, stim_time_indexes{j}{i} ) = stim_cell_reflectance_nonorm{j}{i}(~isnan(stim_cell_reflectance_nonorm{j}{i}));
+            end
             all_times_ref(j, stim_time_indexes{j}{i} ) = stim_cell_reflectance{j}{i};
         end
     end 
     stim_trial_count(i) = numtrials;
+            
     
-
-    for j=1:size(stim_cell_var,2)
+    for j=1:max_index
         nonan_ref = all_times_ref(~isnan(all_times_ref(:,j)), j);
         refcount = sum(~isnan(all_times_ref(:,j)));
         refmedian = median(nonan_ref);
         if ~isnan(refmedian)
-            stim_cell_median(i,j) = refmedian;            
-            stim_cell_var(i,j) = ( sum((nonan_ref-refmedian).^2)./ (refcount-1) );
+            stim_cell_median(i,j) = double(median(nonan_ref));
+            stim_cell_var(i,j) = ( sum((nonan_ref-mean(nonan_ref)).^2)./ (refcount-1) );
         end
     end
-%     subplot(3,1,3);
-%     plot(stim_cell_mean(i,:));hold on;
-%     plot(sqrt(stim_cell_var(i,:)));
     
-    
-%     figure(2); 
-%     hold on;
-%     clf;
-%     subplot(4,1,4);
-%     plot(abs(stim_cell_mean(i,:)) +sqrt(stim_cell_var(i,:)) ); 
-%      drawnow; hold off;
-
-%     if i == 400
+    if i==CELL_OF_INTEREST 
+        figure(1); clf;
+        subplot(3,1,1); plot( bsxfun(@minus,nonorm_ref, nonorm_ref(:,2))');axis([2 166 -75 75]);
+        subplot(3,1,2); plot(all_times_ref');  axis([2 166 -10 10]);       
+        subplot(3,1,3); plot(stim_cell_median(i,:)); hold on;
+                        plot(sqrt(stim_cell_var(i,:))); hold off; axis([2 166 -2 4]);
+        title(['Cell #:' num2str(i)]);
+        drawnow;
+        saveas(gcf, ['Cell_' num2str(i) '_stimulus.svg']);
+        
+        THEstimref = all_times_ref;
+        
+        figure(5); imagesc(ref_image); colormap gray; axis image;hold on; 
+        plot(ref_coords(i,1),ref_coords(i,2),'r*'); hold off;
+        saveas(gcf, ['Cell_' num2str(i) '_location.svg']);
+        drawnow;
+        
+        
 %         pause;
-%     end
-%     saveas(gcf,['NC_11043_stimulus_cone_' num2str(i) '_stddev_' num2str(numtrials) '_trials.png']);
+    end
+
 end
 
 
 %%
+numcontrolcoords = size(control_coords,1);
+
 control_cell_var = nan(size(control_coords,1), max_index);
 control_cell_median = nan(size(control_coords,1), max_index);
+control_cell_pca_std = nan(size(stim_coords,1), 1);
 control_trial_count = zeros(size(control_coords,1),1);
 control_posnegratio = nan(size(control_coords,1),max_index);
+cont_prestim_means=[];
 
-for i=1:size(control_coords,1)
+
+for i=1:numcontrolcoords
     waitbar(i/size(control_coords,1),THEwaitbar,'Processing control signals...');
-%     figure(3);
-%     clf;
-%     hold on;
-    
+
     numtrials = 0;
     all_times_ref = nan(length(profileCDataNames), max_index);
+    if ~isempty(CELL_OF_INTEREST)
+        nonorm_ref = nan(length(profileCDataNames), max_index);
+    end
     for j=1:length(profileCDataNames)
-                
-        % Find out what percentage of time the signal spends negative
-        % or positive after stimulus delivery (66th frame)
-        numposneg = sign(control_cell_reflectance{j}{i}(control_time_indexes{j}{i}>66));
-        pos = sum(numposneg == 1);
-
-%         subplot(2,1,1);hold on; plot(control_time_indexes{j}{i}, (control_cell_reflectance{j}{i}) );
-%         xlabel('Frame #'); ylabel('Standardized reflectance'); title(num2str(i));
-
-        control_posnegratio(i,j) = round(100*pos/length(numposneg))+1;
-%         if ~isnan(posnegatio) && ~isinf(posnegatio)
-%             subplot(2,1,2);hold on; plot(j, control_cell_prestim_mean{j}(i),'.','Color',percentparula(posnegatio,:),'MarkerSize', 15 );
-%             axis([0 100 0 255]); xlabel('Trial #'); ylabel('Prestimulus reflectance (AU)');
-%         end
-        
+                        
         if ~isempty(control_cell_reflectance{j}{i}) && ...
            sum(control_time_indexes{j}{i} >= 67 & control_time_indexes{j}{i} <=99) >=  CUTOFF
        
+            cont_prestim_means = [cont_prestim_means; control_cell_prestim_mean{j}(i)];
             numtrials = numtrials+1;
+            if ~isempty(CELL_OF_INTEREST)
+                nonorm_ref(j, control_time_indexes{j}{i} ) = control_cell_reflectance_nonorm{j}{i}(~isnan(control_cell_reflectance_nonorm{j}{i}));
+            end
             all_times_ref(j, control_time_indexes{j}{i} ) = control_cell_reflectance{j}{i};
         end
     end
     control_trial_count(i) = numtrials;
-%     drawnow;
-%     saveas(gcf,['NC_11043_control_cone_' num2str(i) '_signals_' num2str(numtrials) '_trials.png']);
-
-%     if i == 400
-%             pause;
-%     end
-%     if numtrials > 75
-%         drawnow;
-%         frm = getframe(gcf);        
-%         imwrite(frm.cdata, 'Signal_vs_prestim_ref_controls.tif','WriteMode','append');
-%     end
     
-    for j=1:size(control_cell_var,2)
+
+    for j=1:max_index
         nonan_ref = all_times_ref(~isnan(all_times_ref(:,j)), j);
         refcount = sum(~isnan(all_times_ref(:,j)));
         refmedian = median(nonan_ref);
         if ~isnan(refmedian)
             control_cell_median(i,j) = refmedian;
-            control_cell_var(i,j) = ( sum((nonan_ref-refmedian).^2)./ (refcount-1) );
+            control_cell_var(i,j) = ( sum((nonan_ref-mean(nonan_ref)).^2)./ (refcount-1) );
         end
     end
-%     figure(4);
-%     hold on;
-%     clf;
-%     plot(control_cell_stddev(i,:)); drawnow;
-%     saveas(gcf,['NC_11043_control_cone_' num2str(i) '_stddev_' num2str(numtrials) '_trials.png']);
+    
+    if i==CELL_OF_INTEREST 
+        figure(2); clf;
+        subplot(3,1,1); plot(bsxfun(@minus,nonorm_ref, nonorm_ref(:,2))'); axis([2 166 -75 75]);
+        subplot(3,1,2); plot(all_times_ref'); axis([2 166 -10 10]);       
+        subplot(3,1,3); plot(control_cell_median(i,:)); hold on;
+                        plot(sqrt(control_cell_var(i,:))); hold off; axis([2 166 -2 4]);
+        title(['Cell #:' num2str(i)]);   
+        THEcontref = all_times_ref;
+        drawnow;
+        saveas(gcf, ['Cell_' num2str(i) '_control.svg']);
+%         pause;
+    end
 end
 
 
+% for k=1:size(all_times_ref,1)
+% figure(1); clf; plot(THEstimref(k,:)); axis([2 166 -10 10]);
+% pause;
+% end
+
+% figure;
+% histogram(stim_prestim_means, 255); hold on; histogram(cont_prestim_means, 255);
+% numover = sum(stim_prestim_means>200) + sum(cont_prestim_means>200);
+% title(['Pre-stimulus means of all available trials (max 50) from ' num2str(size(control_coords,1)) ' cones. ' num2str(numover) ' trials >200 ']);
 
 
+valid = (stim_trial_count >= NUMTRIALS) & (control_trial_count >= NUMTRIALS);
 
-%% Calculate the pooled std deviation
+% Calculate the pooled std deviation
 std_dev_sub = sqrt(stim_cell_var)-sqrt(control_cell_var);
 median_sub = stim_cell_median-control_cell_median;
+%%
 
-% Possible bug- first index is always nan?
-std_dev_sub = std_dev_sub(:,2:end);
-median_sub = median_sub(:,2:end);
+if ~isempty(CELL_OF_INTEREST )
+    figure(3);clf;
+    
+    load('control_avgs.mat')
+    
+    plot( stim_cell_median(CELL_OF_INTEREST,:)-allcontrolmed );  hold on;
+    plot(sqrt(stim_cell_var(CELL_OF_INTEREST,:))-allcontrolstd);
+    axis([2 166 -3 3]);
+    title(['Cell #:' num2str(CELL_OF_INTEREST)]);  
+    drawnow;
+    saveas(gcf, ['Cell_' num2str(CELL_OF_INTEREST) '_subs.svg']);
+end
+%% Calculate PCA on the crtiical area of the signals
+critical_nonnan_ref = sqrt(stim_cell_var(:,CRITICAL_REGION));
+[std_dev_coeff, std_dev_score, std_dev_latent, tquare, std_dev_explained, std_dev_mu]=pca(critical_nonnan_ref);
+
+
+critical_nonnan_ref = stim_cell_median(:,CRITICAL_REGION);
+[median_coeff, median_score, latent, tquare, median_explained]=pca(critical_nonnan_ref);
 
 timeBase = ((1:max_index-1)/16.6)';
 
+%% Analyze the signals
+
 fitAmp = nan(size(std_dev_sub,1),1);
 fitMedian = nan(size(std_dev_sub,1),1);
-fitAngle = nan(size(std_dev_sub,1),1);
-% waitbar(1/size(std_dev_sub,1),THEwaitbar,'Fitting subtracted signals...');
 
-parfor i=1:size(std_dev_sub,1)
 
-% Filtering
+for i=1:size(std_dev_sub,1)
+waitbar(i/size(std_dev_sub,1),THEwaitbar,'Analyzing subtracted signals...');
+
     std_dev_sig = std_dev_sub(i,:);
-%     padding_amt = ceil((2^(nextpow2(length(std_dev_sig)))-length(std_dev_sig)) /2);
-%     padded_stddev_sig = padarray(std_dev_sig, [0  padding_amt],'symmetric', 'both');
-%     padded_stddev_sig=wavelet_denoise( padded_stddev_sig );
-%     filt_stddev_sig = padded_stddev_sig(padding_amt+1:end-padding_amt);
-% 
     median_sig = median_sub(i,:);
-%     padding_amt = ceil((2^(nextpow2(length(median_sig)))-length(median_sig)) /2);
-%     padded_mean_sig = padarray(median_sig, [0  padding_amt],'symmetric', 'both');
-%     padded_mean_sig=wavelet_denoise( padded_mean_sig );
-%     filt_mean_sig = padded_mean_sig(padding_amt+1:end-padding_amt);
-             
-    
 
-    
-    if ~all( isnan(std_dev_sig) ) && (stim_trial_count(i) >= 25) && (control_trial_count(i) >= 25)
-%         figure(2);clf; plot(timeBase,std_dev_sig);
+    if ~all( isnan(std_dev_sig) ) && (stim_trial_count(i) >= NUMTRIALS) && (control_trial_count(i) >= NUMTRIALS)
 
-% Fitting
-%         fitData = modelFit_beta(timeBase, std_dev_sig', []);
-%         fitAmp(i) = fitData.amplitude;
-%         
-%         fitData = modelFit_beta(timeBase, median_sig', [] );
-%         fitMedian(i) = fitData.amplitude;
-        
-%         fitMean(i) = fitDataStim.amplitude - fitDataCont.amplitude;
-
-% Filtering AUC
-%         [~, themaxind]=max( abs(filt_stddev_sig(67:116)) );
-
-%         fitAmp(i) = filt_stddev_sig(66+themaxind) - mean(filt_stddev_sig(1:66));
-%         fitAmp(i) = sum(filt_stddev_sig(67:116)) - sum(filt_stddev_sig(17:66));
-%         if fitAmp(i)==0
-%            figure(200); plot(timeBase,std_dev_sig,timeBase,filt_stddev_sig);
-%            figure(201); plot(timeBase,mean_sub(i,:), timeBase, filt_mean_sig); 
-%            fitAmp(i) 
-%         end
-        
-%         [~, themaxind]=max(abs(filt_mean_sig(67:116)));
-%         
-%         fitMean(i) = filt_mean_sig(66+themaxind) - mean(filt_mean_sig(1:66));
-%         fitMean(i) = sum(filt_mean_sig(67:116)) - sum(filt_mean_sig(17:66));
-        
-% AUC        
-        fitAmp(i) = sum(std_dev_sig(66:100)) - sum(std_dev_sig(31:65));
-        fitMedian(i) = sum(median_sig(66:100)) - sum(median_sig(31:65));
-
-%         figure(2);clf; 
-%         plot(timeBase,stim_cell_mean(i, 2:end)); hold on;
-%         plot(timeBase,control_cell_mean(i, 2:end)); hold off;
-%         title( num2str(fitMean(i)));
-        
-
+        % AUC        
+        fitAmp(i) = sum(std_dev_sig(CRITICAL_REGION));
+        fitMedian(i) = sum(median_sig(CRITICAL_REGION));
 
     end
 end
 close(THEwaitbar);
+%%
+save([ stim_intensity '.mat'],'fitAmp','fitMedian','std_dev_coeff','valid','std_dev_explained','median_explained',...
+     'median_coeff','std_dev_score','median_score','allcoords','ref_image','control_cell_median',...
+     'control_cell_var','stim_cell_median','stim_cell_var');
+
+ 
 
 %% Plot the pos/neg ratio of the mean vs the amplitude
 posnegratio=nan(size(control_coords,1),1);
@@ -373,7 +378,7 @@ for i=1:size(control_coords,1)
 % 
 %         posnegratio(i) = 100*pos/length(numposneg);
 
-        plot( fitAmp(i),fitMedian(i),'k.');        
+        plot( fitAmp(i), fitMedian(i),'k.');        
     end
 end
 ylabel('Median response amplitude');
@@ -382,22 +387,17 @@ title('Median reflectance vs reflectance response amplitude')
 hold off;
 saveas(gcf,['posneg_vs_amp_' num2str(stim_intensity) '.png']);
 %% Plot histograms of the amplitudes
-% figure(5); 
-% histogram( ( control_amps(~isnan(control_amps)) ),'Binwidth',0.1); hold on;
-% histogram( ( stim_amps(~isnan(stim_amps)) ),'Binwidth',0.1);  hold off;
-% title('Stimulus and control inter-trial stddev amplitudes');
-% xlabel('Amplitude');
-% ylabel('Number of cones');
-
 figure(7);
 histogram( fitAmp(~isnan(fitAmp)) ,'Binwidth',0.1);
 title('Stim-Control per cone subtraction amplitudes');
 xlabel('Amplitude difference from control');
 ylabel('Number of cones');
 
-%% Output
-
-
-save([ stim_intensity '.mat'],'fitAmp','fitMedian','fitAngle',...
-     'allcoords','ref_image','control_cell_median',...
-     'control_cell_var','stim_cell_median','stim_cell_var');
+%% TEMP to prove control equivalence!
+% stim_resp = sum(sqrt(stim_cell_var(:,critical_region)),2) + abs(sum(stim_cell_median(:,critical_region),2));
+% control_resp = sum(sqrt(control_cell_var(:,critical_region)),2) + abs(sum(control_cell_median(:,critical_region),2));
+% 
+% figure(8); plot(stim_resp,control_resp,'k.'); hold on;
+% plot([25 90],[25 90],'k'); hold off; axis square;
+% ylabel('450nW control response');
+% xlabel('0nW control response');
