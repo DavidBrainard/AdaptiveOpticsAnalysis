@@ -40,7 +40,8 @@ refractiveIndex2 = 1.328;
 nCones = 400;
 
 % Length between reflecting surfaces
-reflectingSurfaceDifferenceNm = 30*1e3;
+reflectingSurfaceDifferenceNm1 = 10*1e3;
+reflectingSurfaceDifferenceNm2 = 7*1e3;
 
 % How much variation in the starting length between surfces is there
 % across cones (or trials within measurements for one cone), experessed as a
@@ -79,6 +80,7 @@ theDeltaTimesSecs = linspace(0,stimEffectTimeSecs,nDeltaLengths);
 % surface both on the way in and on the way out.
 firstSurfaceReflectance = 0.2;
 secondSurfaceReflectance = 0.4;
+thirdSurfaceReflectance = 0.4;
 
 % Coherent fraction
 %
@@ -97,7 +99,8 @@ secondSurfaceIntensity = (1-firstSurfaceReflectance)^2*secondSurfaceReflectance;
 %% Different starting lengths, drawn at random from a uniform distribution
 %
 % Distribution is centered on the assumed length
-theStartingDeltas = reflectingSurfaceRandomizationFraction*reflectingSurfaceDifferenceNm*(rand(1,nCones)-0.5);
+randValues = rand(1,nCones);
+theStartingDeltas = reflectingSurfaceRandomizationFraction*reflectingSurfaceDifferenceNm1*(randValues-0.5);
 
 %% Set first phase to 0 without loss of generality
 phase0 = 0;
@@ -114,9 +117,14 @@ for jj = 1:nCones
         
         % Get starting distance between surfaces for this cone, and compute phase of
         % second light at the point of interference.
-        distanceNm(jj,ii) = reflectingSurfaceDifferenceNm + theStartingDeltas(jj) + theDeltaLengthsNm{jj}(ii);
-        phase1(jj,ii) = 2*pi*(2*distanceNm(jj,ii))*refractiveIndex1/firstLightWavelengthNm;
-        phase2(jj,ii) = 2*pi*(2*distanceNm(jj,ii))*refractiveIndex2/secondLightWavelengthNm;
+        distanceNm1(jj,ii) = reflectingSurfaceDifferenceNm1 + theStartingDeltas(jj) + theDeltaLengthsNm{jj}(ii);
+        distanceNm2(jj,ii) = reflectingSurfaceDifferenceNm2 + theStartingDeltas(jj) + theDeltaLengthsNm{jj}(ii);
+
+        phaseWl1Sur1(jj,ii) = 2*pi*(2*distanceNm1(jj,ii))*refractiveIndex1/firstLightWavelengthNm;
+        phaseWl2Sur1(jj,ii) = 2*pi*(2*distanceNm1(jj,ii))*refractiveIndex2/secondLightWavelengthNm;
+        
+        phaseWl1Sur2(jj,ii) = 2*pi*(2*distanceNm2(jj,ii))*refractiveIndex1/firstLightWavelengthNm;
+        phaseWl2Sur2(jj,ii) = 2*pi*(2*distanceNm2(jj,ii))*refractiveIndex2/secondLightWavelengthNm;
         
         % Get amplitude of coherent component of reflected light, taking interference
         % into account.
@@ -124,10 +132,10 @@ for jj = 1:nCones
         % Formula from Hecht, Optics, 3rd ed, p. 291
         coherentAmplitude1(jj,ii) = sqrt(...
             firstSurfaceIntensity^2 + secondSurfaceIntensity^2 + ...
-            2*firstSurfaceIntensity*secondSurfaceIntensity*cos(phase0-phase1(jj,ii)));
+            2*firstSurfaceIntensity*secondSurfaceIntensity*cos(phase0-phaseWl1Sur1(jj,ii)));
         coherentAmplitude2(jj,ii) = sqrt(...
             firstSurfaceIntensity^2 + secondSurfaceIntensity^2 + ...
-            2*firstSurfaceIntensity*secondSurfaceIntensity*cos(phase0-phase2(jj,ii)));
+            2*firstSurfaceIntensity*secondSurfaceIntensity*cos(phase0-phaseWl2Sur1(jj,ii)));
         
         % Put together coherent and incoherent reflected light to get
         % intensity of total reflected light.  This is a model of what
@@ -146,19 +154,19 @@ for jj = 1:nCones
 end
 
 %% Make a plot of responses
-nConesToPlot = 50;
+nConesToPlot = 9;
 theColors = ['r' 'g' 'b' 'k' 'y' 'c'];
 nColors = length(theColors);
-responseFig = figure; clf; 
+responseFig1 = figure; clf; hold on
+responseFig2 = figure; clf; hold on
 correlationFig = figure; clf; hold on
 whichColor = 1;
 for jj = 1:nConesToPlot
-    figure(responseFig);
-    subplot(1,2,1); hold on;
-    plot(theDeltaTimesSecs,totalAmplitude1(jj,:),theColors(whichColor),'LineWidth',2);
+    figure(responseFig1);
+    plot(theDeltaTimesSecs,totalAmplitude1(jj,:),theColors(whichColor),'LineWidth',3);
     
-    subplot(1,2,2); hold on;
-    plot(theDeltaTimesSecs,totalAmplitude2(jj,:),theColors(whichColor),'LineWidth',2);
+    figure(responseFig2);
+    plot(theDeltaTimesSecs,totalAmplitude2(jj,:),theColors(whichColor),'LineWidth',3);
 
     figure(correlationFig);
     plot(totalAmplitude1(jj,:),totalAmplitude2(jj,:),'o','Color',theColors(whichColor),'MarkerFaceColor',theColors(whichColor), ...
@@ -169,37 +177,43 @@ for jj = 1:nConesToPlot
         whichColor = 1;
     end
 end
-figure(responseFig);
-subplot(1,2,1);
+figure(responseFig1);
+set(gca,'YTick',[0.2 0.3 0.4 0.5]);
+set(gca,'FontName','Helvetica','FontSize', 16);
+xlabel('Time','FontName','Helvetica','FontSize',18);
+ylabel('Reflectance','FontName','Helvetica','FontSize',18);
+xlim([0 2]);
+ylim([0.2 0.5]);
+set(gca,'XTickLabel',''); set(gca,'YTickLabel','');
+FigureSave('ExampleResponses',responseFig1,'tif');
+figure(responseFig2);
 xlabel('Time (secs)');
 ylabel('Reflectance');
-title('Total Reflection');
-ylim([0.2 0.6]);
-subplot(1,2,2);
-xlabel('Time (secs)');
-ylabel('Reflectance');
-title('Total Reflection');
 ylim([0.2 0.6]);
 figure(correlationFig);
-xlabel(sprintf('Reflectance %d nm',firstLightWavelengthNm));
-ylabel(sprintf('Reflectance %d nm',secondLightWavelengthNm));
+set(gca,'FontName','Helvetica','FontSize', 16);
+xlabel(sprintf('Standardized Reflectance %d nm',firstLightWavelengthNm),'FontName','Helvetica','FontSize',18);
+ylabel(sprintf('Standardized Reflectance %d nm',secondLightWavelengthNm),'FontName','Helvetica','FontSize',18);
 axis('square');
-xlim([0.2 0.6]);
-ylim([0.2 0.6]);
+xlim([0.2 0.5]);
+set(gca,'XTick',[0.2 0.3 0.4 0.5]);
+set(gca,'YTick',[0.2 0.3 0.4 0.5]);
+ylim([0.2 0.5]);
+FigureSave('TwoWavelengthCompare',correlationFig,'tif');
 
 %% Make a plot of initial slopes at two wavelengths
 slopeFig = figure; clf;
-plot(initialSlope1,initialSlope2,'ro','MarkerFaceColor','r','MarkerSize',10);
+plot(initialSlope1,initialSlope2,'ro','MarkerFaceColor','r','MarkerSize',14);
 xlabel(sprintf('Initial response slope (%d nm)',firstLightWavelengthNm));
 ylabel(sprintf('Initial response slope (%d nm)',secondLightWavelengthNm));
 xlim([-0.3 0.3]); ylim([-0.3 0.3]); axis('square');
 
-%% Make a plot of initial slopes versus starting reflectance
+%% Make a plot of reflectance versus reflectance
 slopeFig1 = figure; clf; hold on;
 plot(totalAmplitude1(:,1),initialSlope1,'ro','MarkerFaceColor','r','MarkerSize',8);
 plot(totalAmplitude2(:,1),initialSlope2,'bo','MarkerFaceColor','b','MarkerSize',8);
 xlabel(sprintf('Initial reflectance amplitude',firstLightWavelengthNm));
 ylabel(sprintf('Initial response slope',secondLightWavelengthNm));
 xlim([0.2 0.6]); ylim([-0.3 0.3]); 
-legend({sprintf('%d nm',firstLightWavelengthNm),sprintf('%d nm',secondLightWavelengthNm)},'Location','NorthEast')
+legend({sprintf('%d nm',round(firstLightWavelengthNm)),sprintf('%d nm',round(secondLightWavelengthNm))},'Location','NorthEast')
 
