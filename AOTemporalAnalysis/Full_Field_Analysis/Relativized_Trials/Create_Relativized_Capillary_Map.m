@@ -14,7 +14,8 @@ mov_path = pwd;
 fNames = read_folder_contents(mov_path,'avi');
 
 for f=1:length(fNames)
-    if strcmp('_piped.avi', fNames{f}(end-length('_piped.avi')+1:end))
+    if strcmp('_piped.avi', fNames{f}(end-length('_piped.avi')+1:end)) && ...
+       contains(fNames{f}, 'confocal')
         temporal_stack_reader = VideoReader( fullfile(mov_path,fNames{f}) );
         varImages = nan(temporal_stack_reader.Height, temporal_stack_reader.Width, length(fNames));
         break;
@@ -25,7 +26,8 @@ end
 %% Load the files
 parfor f=1:length(fNames)
 
-    if strcmp('_piped.avi', fNames{f}(end-length('_piped.avi')+1:end))
+    if strcmp('_piped.avi', fNames{f}(end-length('_piped.avi')+1:end)) && ...
+       contains(fNames{f}, 'confocal')
         fNames{f}
         temporal_stack_reader = VideoReader( fullfile(mov_path,fNames{f}) );
 

@@ -638,7 +638,7 @@ errorbar(median(Stddev_50nW(valid)),median(abs(Median_50nW(valid))), median(abs(
 % axis square; axis([-2 10 0 5]); grid on; title('50nW'); ylabel('Absolute median response'); xlabel('Std dev response');
 errorbar(median(Stddev_450nW(valid)),median(abs(Median_450nW(valid))), median(abs(Median_450nW(valid)))-quantile(abs(Median_450nW(valid)),0.05),quantile(abs(Median_450nW(valid)),0.95)-median(abs(Median_450nW(valid))),...
                                                                        median(Stddev_450nW(valid))-quantile(Stddev_450nW(valid),0.05),quantile(Stddev_450nW(valid),0.95)-median(Stddev_450nW(valid)));
-axis square; axis([-.5 5 0 2.5]);  grid on; title('Allerrors'); ylabel('Absolute median response'); xlabel('Std dev response');
+axis square; axis([-.5 2 0 1]);  grid on; title('Allerrors'); ylabel('Absolute median response'); xlabel('Std dev response');
 saveas(gcf, ['comparative_mean_responses.svg']);
 
 %% Boxplot of the amplitudes from each intensity.
@@ -685,6 +685,22 @@ title('450nW vs 0nW and 450nW vs 50nW responses');hold off;
 axis equal; axis([-1 10 -1 10]); grid on;
 saveas(gcf, 'allvs_response.png');
 saveas(gcf, 'allvs_response.svg');
+
+%% Histograms of the amplitudes from each intensity.
+
+[~, edges]=histcounts(allfits(valid,1),10);
+
+binwidth = diff(edges);
+
+figure(34);clf; hold on;
+histogram(allfits(valid,1),'BinWidth',binwidth(1));
+histogram(allfits(valid,2),'BinWidth',binwidth(1));
+histogram(allfits(valid,3),'BinWidth',binwidth(1));
+xlabel('Aggregate Response');
+ylabel('Number of Cones');
+axis square;
+% axis([0 4 -1 10])
+saveas(gcf, 'allamps_histogramsplot.svg');
 
 %% Error Spatal maps
 
