@@ -198,21 +198,23 @@ for k=1:length(video_fname)
     end
 
     %% Filter by image mean
-    confocal_mean = mean(confocal_f_mean);
-    confocal_dev = std(confocal_f_mean);
+    confocal_mean = mean(confocal_f_mean,'omitnan');
+    confocal_dev = std(confocal_f_mean,'omitnan');
     if loadsplit
-        split_mean = mean(split_f_mean);
-        split_dev = std(split_f_mean);
+        split_mean = mean(split_f_mean,'omitnan');
+        split_dev = std(split_f_mean,'omitnan');
     end
     if loadavg
-        avg_mean = mean(avg_f_mean);
-        avg_dev = std(avg_f_mean);
+        avg_mean = mean(avg_f_mean,'omitnan');
+        avg_dev = std(avg_f_mean,'omitnan');
     end
     if loadvisible
-        vis_mean = mean(vis_f_mean);
-        vis_dev = std(vis_f_mean);
+        vis_mean = mean(vis_f_mean,'omitnan');
+        vis_dev = std(vis_f_mean,'omitnan');
     end
 
+    confocal_mean(isnan(confocal_mean)) = 0;
+    
     contenders = false(1,length(frame_nums));
     for n=1:length(frame_nums)        
         contenders(n) =  (confocal_f_mean(n) > confocal_mean-2*confocal_dev);
@@ -383,8 +385,9 @@ for k=1:length(video_fname)
     %% Register these frames together, removing residual rotation.
 
     im_only_vid = cell(length(confocal_vid),1);
-    im_only_vid_ref = cell(length(confocal_vid),1);
+    reg_only_vid = cell(length(confocal_vid),1);
     split_im_only_vid = cell(length(confocal_vid),1);
+    avg_im_only_vid = cell(length(confocal_vid),1);
     vis_im_only_vid = cell(length(confocal_vid),1);
 
     for n=1:length(confocal_vid)
@@ -430,6 +433,7 @@ for k=1:length(video_fname)
 
     tic;
 
+    forward_reg_tform = cell(length(reg_only_vid),1);
     % Register the image stack forward. It is more stable if we align to the 
     % frame with the largest percentage of the cropped region covered.
     parfor n=1:length(reg_only_vid)
