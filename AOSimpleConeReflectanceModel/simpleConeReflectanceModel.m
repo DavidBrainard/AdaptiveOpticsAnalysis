@@ -7,7 +7,7 @@
 %
 %   Based on a very simple model where there are two reflecting surfaces.  Light
 %   reflects from each surface and interferes at the source side of the first surface.
-%   
+%
 %   The fraction of coherent (interfering) versus incoherent light is simply specified,
 %   not computed.  Adding this computation would be a good extension.
 %
@@ -20,7 +20,7 @@
 %   more graded definition is used.  We need to understand which the one we
 %   calculate represents, if we are to add coherence length into this
 %   cacluation.]
-% 
+%
 
 % History:
 %   10/28/17  dhb  Wrote it.
@@ -31,13 +31,17 @@ clear; close all;
 %% Parameters
 %
 % Imaging light wavelength
-lightWavelengthNm = 790;
+firstLightWavelengthNm = 720;
+secondLightWavelengthNm = 1.25*firstLightWavelengthNm; % 850;
+refractiveIndex1 = 1.331;
+refractiveIndex2 = 1.328;
 
 % Number of cones to simulate
-nCones = 10;
+nCones = 400;
 
 % Length between reflecting surfaces
-reflectingSurfaceDifferenceNm = 30*1e3;
+reflectingSurfaceDifferenceNm1 = 10*1e3;
+reflectingSurfaceDifferenceNm2 = 7*1e3;
 
 % How much variation in the starting length between surfces is there
 % across cones (or trials within measurements for one cone), experessed as a
@@ -55,7 +59,7 @@ maxDeltaLengthNm = 150;
 % Set the fraction to 1 if you think what happens is that the cone
 % swells and then contracts to about its original length.  Set the
 % fraction to 0.5 if you think it swells and then sits at the swollen
-% length over the relevant time frame of the experiment.  
+% length over the relevant time frame of the experiment.
 %
 % The randomization is also expressed as a fraction of the full half
 % sinusoid
@@ -76,6 +80,7 @@ theDeltaTimesSecs = linspace(0,stimEffectTimeSecs,nDeltaLengths);
 % surface both on the way in and on the way out.
 firstSurfaceReflectance = 0.2;
 secondSurfaceReflectance = 0.4;
+thirdSurfaceReflectance = 0.4;
 
 % Coherent fraction
 %
@@ -94,10 +99,11 @@ secondSurfaceIntensity = (1-firstSurfaceReflectance)^2*secondSurfaceReflectance;
 %% Different starting lengths, drawn at random from a uniform distribution
 %
 % Distribution is centered on the assumed length
-theStartingDeltas = reflectingSurfaceRandomizationFraction*reflectingSurfaceDifferenceNm*(rand(1,nCones)-0.5);
+randValues = rand(1,nCones);
+theStartingDeltas = reflectingSurfaceRandomizationFraction*reflectingSurfaceDifferenceNm1*(randValues-0.5);
 
 %% Set first phase to 0 without loss of generality
-phase1 = 0;
+phase0 = 0;
 
 %% Loop over cones/trials
 for jj = 1:nCones
@@ -106,43 +112,108 @@ for jj = 1:nCones
     % around a half sinusoid
     %
     % Get delta lengths as a function of time.
-    theDeltaLengthsNm{jj} = maxDeltaLengthNm*sin(halfSinusoidFraction*(1+halfSinusoidFractionRandomizationFraction*(rand(1,1)-0.5))*pi*(0:nDeltaLengths-1)/nDeltaLengths);     
+    theDeltaLengthsNm{jj} = maxDeltaLengthNm*sin(halfSinusoidFraction*(1+halfSinusoidFractionRandomizationFraction*(rand(1,1)-0.5))*pi*(0:nDeltaLengths-1)/nDeltaLengths);
     for ii = 1:nDeltaLengths
-          
+        
         % Get starting distance between surfaces for this cone, and compute phase of
         % second light at the point of interference.
-        distanceNm(jj,ii) = reflectingSurfaceDifferenceNm + theStartingDeltas(jj) + theDeltaLengthsNm{jj}(ii);
-        phase2(jj,ii) = 2*pi*(2*distanceNm(jj,ii))/lightWavelengthNm;        
-       
+        distanceNm1(jj,ii) = reflectingSurfaceDifferenceNm1 + theStartingDeltas(jj) + theDeltaLengthsNm{jj}(ii);
+        distanceNm2(jj,ii) = reflectingSurfaceDifferenceNm2 + theStartingDeltas(jj) + theDeltaLengthsNm{jj}(ii);
+
+        phaseWl1Sur1(jj,ii) = 2*pi*(2*distanceNm1(jj,ii))*refractiveIndex1/firstLightWavelengthNm;
+        phaseWl2Sur1(jj,ii) = 2*pi*(2*distanceNm1(jj,ii))*refractiveIndex2/secondLightWavelengthNm;
+        
+        phaseWl1Sur2(jj,ii) = 2*pi*(2*distanceNm2(jj,ii))*refractiveIndex1/firstLightWavelengthNm;
+        phaseWl2Sur2(jj,ii) = 2*pi*(2*distanceNm2(jj,ii))*refractiveIndex2/secondLightWavelengthNm;
+        
         % Get amplitude of coherent component of reflected light, taking interference
         % into account.
         %
         % Formula from Hecht, Optics, 3rd ed, p. 291
-        coherentAmplitude(jj,ii) = sqrt(...
+        coherentAmplitude1(jj,ii) = sqrt(...
             firstSurfaceIntensity^2 + secondSurfaceIntensity^2 + ...
-            2*firstSurfaceIntensity*secondSurfaceIntensity*cos(phase1-phase2(jj,ii)));
+            2*firstSurfaceIntensity*secondSurfaceIntensity*cos(phase0-phaseWl1Sur1(jj,ii)));
+        coherentAmplitude2(jj,ii) = sqrt(...
+            firstSurfaceIntensity^2 + secondSurfaceIntensity^2 + ...
+            2*firstSurfaceIntensity*secondSurfaceIntensity*cos(phase0-phaseWl2Sur1(jj,ii)));
         
         % Put together coherent and incoherent reflected light to get
         % intensity of total reflected light.  This is a model of what
         % we measure.
-        totalAmplitude(jj,ii) = coherentFraction*coherentAmplitude(jj,ii) + (1-coherentFraction)*(firstSurfaceIntensity + secondSurfaceIntensity);
+        totalAmplitude1(jj,ii) = coherentFraction*coherentAmplitude1(jj,ii) + (1-coherentFraction)*(firstSurfaceIntensity + secondSurfaceIntensity);
+        totalAmplitude2(jj,ii) = coherentFraction*coherentAmplitude2(jj,ii) + (1-coherentFraction)*(firstSurfaceIntensity + secondSurfaceIntensity);
+        
+        
     end
+    
+    % Get initial slope of responses at both wavelengths
+    nTimes = 50;
+    initialSlope1(jj) = (totalAmplitude1(jj,nTimes+1)-totalAmplitude1(jj,1))/(theDeltaTimesSecs(nTimes+1)-theDeltaTimesSecs(1));
+    initialSlope2(jj) = (totalAmplitude2(jj,nTimes+1)-totalAmplitude2(jj,1))/(theDeltaTimesSecs(nTimes+1)-theDeltaTimesSecs(1));
+    
 end
 
-%% Make a plot
+%% Make a plot of responses
+nConesToPlot = 9;
 theColors = ['r' 'g' 'b' 'k' 'y' 'c'];
 nColors = length(theColors);
-figure; clf; hold on;
+responseFig1 = figure; clf; hold on
+responseFig2 = figure; clf; hold on
+correlationFig = figure; clf; hold on
 whichColor = 1;
-for jj = 1:nCones
-    plot(theDeltaTimesSecs,totalAmplitude(jj,:),theColors(whichColor),'LineWidth',2);
+for jj = 1:nConesToPlot
+    figure(responseFig1);
+    plot(theDeltaTimesSecs,totalAmplitude1(jj,:),theColors(whichColor),'LineWidth',3);
+    
+    figure(responseFig2);
+    plot(theDeltaTimesSecs,totalAmplitude2(jj,:),theColors(whichColor),'LineWidth',3);
+
+    figure(correlationFig);
+    plot(totalAmplitude1(jj,:),totalAmplitude2(jj,:),'o','Color',theColors(whichColor),'MarkerFaceColor',theColors(whichColor), ...
+        'MarkerSize',8);
+    
     whichColor = whichColor + 1;
     if (whichColor > nColors)
         whichColor = 1;
     end
 end
+figure(responseFig1);
+set(gca,'YTick',[0.2 0.3 0.4 0.5]);
+set(gca,'FontName','Helvetica','FontSize', 16);
+xlabel('Time','FontName','Helvetica','FontSize',18);
+ylabel('Reflectance','FontName','Helvetica','FontSize',18);
+xlim([0 2]);
+ylim([0.2 0.5]);
+set(gca,'XTickLabel',''); set(gca,'YTickLabel','');
+FigureSave('ExampleResponses',responseFig1,'tif');
+figure(responseFig2);
 xlabel('Time (secs)');
 ylabel('Reflectance');
-title('Total Reflection');
 ylim([0.2 0.6]);
+figure(correlationFig);
+set(gca,'FontName','Helvetica','FontSize', 16);
+xlabel(sprintf('Standardized Reflectance %d nm',firstLightWavelengthNm),'FontName','Helvetica','FontSize',18);
+ylabel(sprintf('Standardized Reflectance %d nm',secondLightWavelengthNm),'FontName','Helvetica','FontSize',18);
+axis('square');
+xlim([0.2 0.5]);
+set(gca,'XTick',[0.2 0.3 0.4 0.5]);
+set(gca,'YTick',[0.2 0.3 0.4 0.5]);
+ylim([0.2 0.5]);
+FigureSave('TwoWavelengthCompare',correlationFig,'tif');
+
+%% Make a plot of initial slopes at two wavelengths
+slopeFig = figure; clf;
+plot(initialSlope1,initialSlope2,'ro','MarkerFaceColor','r','MarkerSize',14);
+xlabel(sprintf('Initial response slope (%d nm)',firstLightWavelengthNm));
+ylabel(sprintf('Initial response slope (%d nm)',secondLightWavelengthNm));
+xlim([-0.3 0.3]); ylim([-0.3 0.3]); axis('square');
+
+%% Make a plot of reflectance versus reflectance
+slopeFig1 = figure; clf; hold on;
+plot(totalAmplitude1(:,1),initialSlope1,'ro','MarkerFaceColor','r','MarkerSize',8);
+plot(totalAmplitude2(:,1),initialSlope2,'bo','MarkerFaceColor','b','MarkerSize',8);
+xlabel(sprintf('Initial reflectance amplitude',firstLightWavelengthNm));
+ylabel(sprintf('Initial response slope',secondLightWavelengthNm));
+xlim([0.2 0.6]); ylim([-0.3 0.3]); 
+legend({sprintf('%d nm',round(firstLightWavelengthNm)),sprintf('%d nm',round(secondLightWavelengthNm))},'Location','NorthEast')
 

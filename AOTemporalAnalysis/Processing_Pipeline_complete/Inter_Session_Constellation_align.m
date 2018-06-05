@@ -70,14 +70,15 @@ saveFlag = 1;
 ref_image = imread( fullfile(reference_path,reference_fname) );
 
 tforms = cell(1,num_a_im);
+align_image = cell(1,num_a_im);
 removelist = false(size(ref_coords,1),1);
 
 for n = 1:num_a_im
     
-    align_image = imread(align_fullfile{n});
+    align_image{n} = imread(align_fullfile{n});
     
 
-    [bestH, numOkMatches, numMatches, bestScale]= sift_mosaic_fast_MultiModal({ref_image}, {align_image},...
+    [bestH, numOkMatches, numMatches, bestScale]= sift_mosaic_fast_MultiModal({ref_image}, {align_image{n}},...
                                                                               pwd, saveFlag,...
                                                                               f_all_A, d_all_A,...
                                                                               f_all_B(n),d_all_B(n),TransType,[],featureType);
@@ -86,22 +87,66 @@ for n = 1:num_a_im
     
     tif_name_out = fullfile(align_path{n},[align_fnames{n}(1:end-4) '_to_' num2str(aligndate) '.tif']);
     
-    warped_im = imwarp(align_image, imref2d(size(align_image)), tforms{n}, 'OutputView', imref2d(size(ref_image)) );
+    warped_im = imwarp(align_image{n}, imref2d(size(align_image{n})), tforms{n}, 'OutputView', imref2d(size(ref_image)) );
     
     imwrite(uint8(warped_im), tif_name_out);
     
     warped_coords{n} = transformPointsForward(affine2d(bestH'),ref_coords);
     
     removelist = removelist | (warped_coords{n}(:,1) < 1 | warped_coords{n}(:,2) < 1 ...
-                            | warped_coords{n}(:,1) > size(align_image,2)-1 ...
-                            | warped_coords{n}(:,2) > size(align_image,1)-1);
+                            | warped_coords{n}(:,1) > size(align_image{n},2)-1 ...
+                            | warped_coords{n}(:,2) > size(align_image{n},1)-1);
 end
 
+
+%% Write the moved coords.
 
 dlmwrite(fullfile(reference_path, [reference_fname(1:end-4) '_coords.csv']), ref_coords(~removelist,:), 'delimiter',',')
 for n = 1:num_a_im
     
-    dlmwrite([align_fullfile{n}(1:end-4) '_coords.csv'], warped_coords{n}(~removelist,:), 'delimiter',',')
+    these_coords = warped_coords{n}(~removelist,:);
+    this_image = align_image{n};
+%     [fx,fy]=gradient(double(this_image));
+%     lapacie = del2(double(this_image));
+    for c=1:size(these_coords,1)
+        
+        thiscoord = round(these_coords(c,:));
+        offc = -10;
+        offr = -10;
+        if all(thiscoord>1) && (thiscoord(1) < size(this_image,2)-1) && (thiscoord(2) < size(this_image,1)-1) 
+%               (offc~=0 || offr~=0)
+            
+        % 1st iteration
+        thisroi = this_image(thiscoord(2)-1:thiscoord(2)+1, thiscoord(1)-1:thiscoord(1)+1);
+
+        [val, ind]=max(thisroi(:));
+        [offr, offc]=ind2sub([3 3],ind);
+
+        offc=(offc-2);
+        offr=(offr-2);
+
+        thiscoord(1) = thiscoord(1)+offc;
+        thiscoord(2) = thiscoord(2)+offr;
+            
+            if all(thiscoord>1) && (thiscoord(1) < size(this_image,2)-1) && (thiscoord(2) < size(this_image,1)-1) 
+                % 2nd iteration
+                thisroi = this_image(thiscoord(2)-1:thiscoord(2)+1, thiscoord(1)-1:thiscoord(1)+1);
+
+                [val, ind]=max(thisroi(:));
+                [offr, offc]=ind2sub([3 3],ind);
+
+                offc=(offc-2);
+                offr=(offr-2);
+
+                thiscoord(1) = thiscoord(1)+offc;
+                thiscoord(2) = thiscoord(2)+offr;
+            end
+        end
+        these_coords(c,:) = thiscoord;
+    end
+    
+    
+    dlmwrite([align_fullfile{n}(1:end-4) '_coords.csv'], these_coords, 'delimiter',',')
     
 end
 
