@@ -57,8 +57,8 @@ stack_fnames = read_folder_contents( mov_path,'avi' );
 
 for i=1:length(stack_fnames)
     if ~isempty( strfind( stack_fnames{i}, ref_image_fname(1:end - length('_AVG.tif') ) ) )
-%         temporal_stack_fname = stack_fnames{i};
-        temporal_stack_fname = strrep(stack_fnames{i},'confocal','split_det'); % Analyze AVG or split for Jess's grant!
+        temporal_stack_fname = stack_fnames{i};
+%         temporal_stack_fname = strrep(stack_fnames{i},'confocal','split_det'); % Analyze AVG or split for Jess's grant!
         
         acceptable_frames_fname = [stack_fnames{i}(1:end-4) '_acceptable_frames.csv'];
         break;
@@ -363,7 +363,7 @@ hold off;
 ylabel('Standard deviation'); xlabel('Time (s)'); title( strrep( [ref_image_fname(1:end - length('_AVG.tif') ) '_' profile_method '_stddev_ref_plot' ], '_',' ' ) );
 axis([0 15 -1 4])
 
-ref_image_fname = strrep(ref_image_fname,'confocal','split_det');
+% ref_image_fname = strrep(ref_image_fname,'confocal','split_det');
 if ~exist( fullfile(mov_path, 'Std_Dev_Plots'), 'dir' )
     mkdir(fullfile(mov_path, 'Std_Dev_Plots'))
 end
