@@ -315,16 +315,16 @@ median_sub = stim_cell_median-control_cell_median;
 %%
 
 if ~isempty(CELL_OF_INTEREST )
-    figure(3);clf;
-    
-    load('control_avgs.mat')
-    
-    plot( stim_cell_median(CELL_OF_INTEREST,:)-allcontrolmed );  hold on;
-    plot(sqrt(stim_cell_var(CELL_OF_INTEREST,:))-allcontrolstd);
-    axis([2 166 -3 3]);
-    title(['Cell #:' num2str(CELL_OF_INTEREST)]);  
-    drawnow;
-    saveas(gcf, ['Cell_' num2str(CELL_OF_INTEREST) '_subs.svg']);
+%     figure(3);clf;
+%     
+% %     load('control_avgs.mat')
+%     
+%     plot( stim_cell_median(CELL_OF_INTEREST,:)-allcontrolmed );  hold on;
+%     plot(sqrt(stim_cell_var(CELL_OF_INTEREST,:))-allcontrolstd);
+%     axis([2 166 -3 3]);
+%     title(['Cell #:' num2str(CELL_OF_INTEREST)]);  
+%     drawnow;
+%     saveas(gcf, ['Cell_' num2str(CELL_OF_INTEREST) '_subs.svg']);
 end
 %% Calculate PCA on the crtiical area of the signals
 critical_nonnan_ref = sqrt(stim_cell_var(:,CRITICAL_REGION));
