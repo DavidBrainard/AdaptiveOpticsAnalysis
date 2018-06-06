@@ -1,6 +1,6 @@
 function [ denoised_signal ] = wavelet_denoise( signal )
 
-wavelet = 'db4';
+wavelet = 'haar';
 level=5;
 sorh = 's';
 

@@ -3,33 +3,25 @@ clear;
 % close all;
 
 load('0nW.mat');
-fitAmp_0nW = fitAmp;
-fitAmp_0nW_Std = fitAmpStd;
-fitMedian_0nW = fitMedian;
-fitMedian_0nW_Std = fitMedianStd;
+fitAmp_0nW = AmpResp;
+fitMedian_0nW = MedianResp;
+fitTTP_0nW = TTPResp;
 
 load('50nW.mat');
-fitAmp_50nW = fitAmp;
-fitAmp_50nW_Std = fitAmpStd;
-fitMedian_50nW = fitMedian;
-fitMedian_50nW_Std = fitMedianStd;
+fitAmp_50nW = AmpResp;
+fitMedian_50nW = MedianResp;
+fitTTP_50nW = TTPResp;
 
 load('450nW.mat');
-fitAmp_450nW = fitAmp;
-fitAmp_450nW_Std = fitAmpStd;
-fitMedian_450nW = fitMedian;
-fitMedian_450nW_Std = fitMedianStd;
+fitAmp_450nW = AmpResp;
+fitMedian_450nW = MedianResp;
+fitTTP_450nW = TTPResp;
 
 % Just Amp
 allfits = [ (fitAmp_0nW   + abs(fitMedian_0nW)) ...
             (fitAmp_50nW  + abs(fitMedian_50nW)) ... 
             (fitAmp_450nW + abs(fitMedian_450nW)) ];
     
-        
-allfitampserr = [ fitAmp_0nW./fitAmp_0nW_Std fitAmp_50nW./fitAmp_50nW_Std fitAmp_450nW./fitAmp_450nW_Std ];
-
-allfitmedianserr = [ fitMedian_0nW./fitMedian_0nW_Std fitMedian_50nW./fitMedian_50nW_Std fitMedian_450nW./fitMedian_450nW_Std ];
-                    
 
 valid = all(~isnan(allfits),2);
 
@@ -315,6 +307,23 @@ xlabel('Stimulus irradiance');
 ylabel('Stimulus amplitude');
 title('Stimulus amplitudes for each stimulus irradiance')
 saveas(gcf, 'allamps_boxplot.png');
+
+%% Histograms of the amplitudes from each intensity.
+
+[~, edges]=histcounts(allfits(valid,1),10);
+
+binwidth = diff(edges);
+
+figure(34);clf; hold on;
+histogram(allfits(valid,1),'BinWidth',binwidth(1));
+histogram(allfits(valid,2),'BinWidth',binwidth(1));
+histogram(allfits(valid,3),'BinWidth',binwidth(1));
+xlabel('Aggregate Response');
+ylabel('Number of Cones');
+axis square;
+% axis([0 4 -1 10])
+saveas(gcf, 'allamps_histogramsplot.svg');
+
 
 %% Vs plots
 figure(15); clf; hold on;

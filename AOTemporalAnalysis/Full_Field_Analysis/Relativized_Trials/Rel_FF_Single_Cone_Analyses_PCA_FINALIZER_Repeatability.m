@@ -3,7 +3,7 @@ clear;
 % close all;
 
 NUM_COMPONENTS=3;
-CRITICAL_REGION = 66:100; %1:166; %
+CRITICAL_REGION = 67:115; %1:166; %
 % 450nW timepoint 1
 load('450nW_20171117.mat');
 stddev_coeff_450nW1 = std_dev_coeff;
