@@ -13,7 +13,6 @@ fPaths = read_folder_contents_rec(rootDir,'tif');
 
 wbh = waitbar(0,['Processing trial 0 of ' num2str(length(fPaths)) '.']);
 
-
 parfor i=1:size(fPaths,1)
     i
 %     tic;

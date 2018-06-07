@@ -1,4 +1,4 @@
-function []=Rel_FF_Temporal_Reflectivity_Analysis(mov_path, ref_image_fname, stimulus_frames, vid_type)
+function []=Rel_FF_Temporal_Reflectivity_Analysis(mov_path, this_image_fname, stimulus_frames, vid_type)
 % []=Rel_FF_Temporal_Reflectivity_Analysis(mov_path, ref_image_fname)
 % Robert F Cooper 06-20-2017
 %
@@ -40,9 +40,9 @@ profile_method = 'box';
 norm_type = 'global_norm_prestim_stdiz'; 
 
 % mov_path=pwd;
-if ~exist('mov_path','var') || ~exist('ref_image_fname','var')
+if ~exist('mov_path','var') || ~exist('this_image_fname','var')
     close all force;
-    [ref_image_fname, mov_path]  = uigetfile(fullfile(pwd,'*.tif'));
+    [this_image_fname, mov_path]  = uigetfile(fullfile(pwd,'*.tif'));
     stimulus_frames=[67 99];
     
     rply = input('Stimulus (s) or Control (c)? [s]: ','s');
@@ -52,11 +52,12 @@ if ~exist('mov_path','var') || ~exist('ref_image_fname','var')
         vid_type='control';
     end
 end
-ref_coords_fname = [ref_image_fname(1:end-4) '_coords.csv'];
+ref_image_fname = this_image_fname;
+ref_coords_fname = [this_image_fname(1:end-4) '_coords.csv'];
 stack_fnames = read_folder_contents( mov_path,'avi' );
 
 for i=1:length(stack_fnames)
-    if ~isempty( strfind( stack_fnames{i}, ref_image_fname(1:end - length('_AVG.tif') ) ) )
+    if ~isempty( strfind( stack_fnames{i}, this_image_fname(1:end - length('_AVG.tif') ) ) )
         temporal_stack_fname = stack_fnames{i};
 %         temporal_stack_fname = strrep(stack_fnames{i},'confocal','split_det'); % Analyze AVG or split for Jess's grant!
         
@@ -73,7 +74,7 @@ if ~exist(fullfile(mov_path,ref_coords_fname),'file')
     for i=1:length(tifnames)
         if ~isempty( strfind( tifnames{i}, 'ALL_TRIALS.tif')) %%&& ...
 %             exist( [tifnames{i}(1:end-4) '_coords.csv'],'file')
-            
+            ref_image_fname = tifnames{i};
             ref_coords_fname = [tifnames{i}(1:end-4) '_coords.csv'];
             
             if exist(fullfile(mov_path, [tifnames{i}(1:end-4) '_cap_map.mat']), 'file')
@@ -89,6 +90,7 @@ end
 %% Load the dataset(s)
 
 ref_image  = double(imread(  fullfile(mov_path, ref_image_fname) ));
+mask_image  = double(imread(  fullfile(mov_path, this_image_fname) ));
 stimd_images = dlmread( fullfile(mov_path,acceptable_frames_fname) );
 stimd_images = sort(stimd_images)' +1; % For some dumb reason it doesn't store them in the order they're put in the avi.
 
@@ -121,14 +123,14 @@ if ~exist('capillary_mask','var')
         mkdir(fullfile(mov_path, 'Capillary_Maps'))
     end
    
-    imwrite(uint8(capillary_mask*255), fullfile(mov_path, 'Capillary_Maps' ,[ref_image_fname(1:end - length('_AVG.tif') ) '_cap_map.png' ] ) );
+    imwrite(uint8(capillary_mask*255), fullfile(mov_path, 'Capillary_Maps' ,[this_image_fname(1:end - length('_AVG.tif') ) '_cap_map.png' ] ) );
 end
 % Mask the images to exclude zones with capillaries on top of them.
 capillary_masks = repmat(capillary_mask,[1 1 size(temporal_stack,3)]);
 
-var_ref_image = stdfilt(ref_image,ones(3));
+var_ref_image = stdfilt(mask_image,ones(3));
 
-ref_image = ref_image.*capillary_mask;
+mask_image = mask_image.*capillary_mask;
 temporal_stack = temporal_stack.*capillary_masks;
 
 %% Isolate individual profiles
@@ -144,17 +146,17 @@ for i=1:size(ref_coords,1)
         
     roiradius = 1;
 
-    if (ref_coords(i,1) - roiradius) > 1 && (ref_coords(i,1) + roiradius) < size(ref_image,2) &&...
-       (ref_coords(i,2) - roiradius) > 1 && (ref_coords(i,2) + roiradius) < size(ref_image,1)
+    if (ref_coords(i,1) - roiradius) > 1 && (ref_coords(i,1) + roiradius) < size(mask_image,2) &&...
+       (ref_coords(i,2) - roiradius) > 1 && (ref_coords(i,2) + roiradius) < size(mask_image,1)
 
         [R, C ] = meshgrid((ref_coords(i,2) - roiradius) : (ref_coords(i,2) + roiradius), ...
                            (ref_coords(i,1) - roiradius) : (ref_coords(i,1) + roiradius));
 
-        cellseg_inds{i} = sub2ind( size(ref_image), R, C );
+        cellseg_inds{i} = sub2ind( size(mask_image), R, C );
 
         cellseg_inds{i} = cellseg_inds{i}(:);
 
-        ref_image(cellseg_inds{i})= -1;
+        mask_image(cellseg_inds{i})= -1;
 
     end
 
@@ -360,20 +362,20 @@ if strcmp(vid_type,'stimulus')
     plot(stim_times/hz, max(ref_stddev)*ones(size(stim_times)),'r*'); 
 end
 hold off;
-ylabel('Standard deviation'); xlabel('Time (s)'); title( strrep( [ref_image_fname(1:end - length('_AVG.tif') ) '_' profile_method '_stddev_ref_plot' ], '_',' ' ) );
+ylabel('Standard deviation'); xlabel('Time (s)'); title( strrep( [this_image_fname(1:end - length('_AVG.tif') ) '_' profile_method '_stddev_ref_plot' ], '_',' ' ) );
 axis([0 15 -1 4])
 
 % ref_image_fname = strrep(ref_image_fname,'confocal','split_det');
 if ~exist( fullfile(mov_path, 'Std_Dev_Plots'), 'dir' )
     mkdir(fullfile(mov_path, 'Std_Dev_Plots'))
 end
-saveas(gcf, fullfile(mov_path, 'Std_Dev_Plots' , [ref_image_fname(1:end - length('_AVG.tif') ) '_' profile_method '_' norm_type '_' vid_type '_stddev.png' ] ) );
+saveas(gcf, fullfile(mov_path, 'Std_Dev_Plots' , [this_image_fname(1:end - length('_AVG.tif') ) '_' profile_method '_' norm_type '_' vid_type '_stddev.png' ] ) );
 
 if ~exist( fullfile(mov_path, 'Profile_Data'), 'dir' )
     mkdir(fullfile(mov_path, 'Profile_Data'))
 end
 % Dump all the analyzed data to disk
-save(fullfile(mov_path, 'Profile_Data' ,[ref_image_fname(1:end - length('_AVG.tif') ) '_' profile_method '_' norm_type '_' vid_type '_profiledata.mat']), ...
+save(fullfile(mov_path, 'Profile_Data' ,[this_image_fname(1:end - length('_AVG.tif') ) '_' profile_method '_' norm_type '_' vid_type '_profiledata.mat']), ...
      'cell_times', 'norm_cell_reflectance','ref_coords','ref_image','ref_mean','ref_stddev','vid_type','cell_prestim_mean','cell_reflectance' );
 
   

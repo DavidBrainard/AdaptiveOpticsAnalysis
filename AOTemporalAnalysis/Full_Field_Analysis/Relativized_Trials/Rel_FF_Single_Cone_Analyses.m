@@ -171,7 +171,7 @@ stim_cell_median = nan(numstimcoords, max_index);
 stim_cell_pca_std = nan(numstimcoords, 1);
 stim_trial_count = zeros(numstimcoords,1);
 stim_posnegratio = nan(numstimcoords,max_index);
-stim_prestim_means=[];
+stim_prestim_means = nan(numstimcoords,length(profileSDataNames));
 
 i=1;
 
@@ -180,6 +180,7 @@ i=1;
 for i=1:numstimcoords
     waitbar(i/size(stim_coords,1),THEwaitbar,'Processing stimulus signals...');
 
+    
     numtrials = 0;
     all_times_ref = nan(length(profileSDataNames), max_index);
     if ~isempty(CELL_OF_INTEREST)
@@ -190,11 +191,13 @@ for i=1:numstimcoords
         if ~isempty(stim_cell_reflectance{j}{i}) && ...
            sum(stim_time_indexes{j}{i} >= 67 & stim_time_indexes{j}{i} <=99) >= CUTOFF
 
-            stim_prestim_means = [stim_prestim_means; stim_cell_prestim_mean{j}(i)];
-
+            
+            stim_prestim_means(i,j) = stim_cell_prestim_mean{j}(i);
             numtrials = numtrials+1;
             if ~isempty(CELL_OF_INTEREST)
                 nonorm_ref(j, stim_time_indexes{j}{i} ) = stim_cell_reflectance_nonorm{j}{i}(~isnan(stim_cell_reflectance_nonorm{j}{i}));
+                
+%                 figure(10); plot(stim_cell_reflectance{j}{i}); title(num2str(stim_prestim_means(i,j)));
             end
             all_times_ref(j, stim_time_indexes{j}{i} ) = stim_cell_reflectance{j}{i};
         end
@@ -208,11 +211,12 @@ for i=1:numstimcoords
         refmedian = median(nonan_ref);
         if ~isnan(refmedian)
             stim_cell_median(i,j) = double(median(nonan_ref));
+            
             stim_cell_var(i,j) = ( sum((nonan_ref-mean(nonan_ref)).^2)./ (refcount-1) );
         end
     end
     
-    if i==CELL_OF_INTEREST 
+    if any(i==CELL_OF_INTEREST)
         figure(1); clf;
         subplot(3,1,1); plot( bsxfun(@minus,nonorm_ref, nonorm_ref(:,2))');axis([2 166 -75 75]);
         subplot(3,1,2); plot(all_times_ref');  axis([2 166 -10 10]);       
@@ -229,7 +233,8 @@ for i=1:numstimcoords
         saveas(gcf, ['Cell_' num2str(i) '_location.svg']);
         drawnow;
         
-        
+        figure(6); plot(stim_prestim_means(i,:),'*')
+%         stim_prestim_means
 %         pause;
     end
 
@@ -341,6 +346,7 @@ timeBase = ((1:max_index-1)/16.6)';
 AmpResp = nan(size(std_dev_sub,1),1);
 MedianResp = nan(size(std_dev_sub,1),1);
 TTPResp = nan(size(std_dev_sub,1),1);
+PrestimVal = nan(size(std_dev_sub,1),1);
 
 
 for i=1:size(std_dev_sub,1)
@@ -372,12 +378,12 @@ waitbar(i/size(std_dev_sub,1),THEwaitbar,'Analyzing subtracted signals...');
         padded_mean_sig=wavelet_denoise( padded_mean_sig );
         filt_median_sig = padded_mean_sig(padding_amt+1:end-padding_amt);
 
-        critical_filt = filt_stddev_sig(CRITICAL_REGION );
-        [~, TTPResp(i)] = max(abs(critical_filt) );    
-        AmpResp(i) = mean(filt_stddev_sig(CRITICAL_REGION));%critical_filt(TTPResp(i))-mean(filt_stddev_sig(1:CRITICAL_REGION(1)));
+        critical_filt = filt_stddev_sig( CRITICAL_REGION );
+        [~, TTPResp(i)] = max( abs(critical_filt) );    
+        AmpResp(i) = median(filt_stddev_sig(CRITICAL_REGION));%critical_filt(TTPResp(i))-mean(filt_stddev_sig(1:CRITICAL_REGION(1)));
         MedianResp(i) = mean(abs(filt_median_sig(CRITICAL_REGION)));%abs( max(abs(filt_median_sig(CRITICAL_REGION)))-mean(filt_median_sig(1:CRITICAL_REGION(1))) );
-        
-        
+        PrestimVal(i) = mean( stim_prestim_means(i,:), 'omitnan');
+%         histogram(filt_stddev_sig(CRITICAL_REGION),20)
 %         if AmpResp(i) == 0
 %            plot( filt_stddev_sig ); hold on; plot(std_dev_sig); hold off; drawnow; pause;
 %         end
