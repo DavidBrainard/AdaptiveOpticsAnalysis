@@ -76,13 +76,78 @@ for i=1:size(stack_fname,1)
 end
 stack_fname = stack_fname(keep_row,:);
 
-[dmb_fname, dmb_path]=uigetfile(fullfile(pwd,'*.mat'),'Select DEWARP file:');
 
-load(fullfile(dmb_path,dmb_fname),'vertical_fringes_desinusoid_matrix');
+[lut_fname, lut_path]=uigetfile(fullfile(mov_path{1},'*.xlsx'),'Select LUT file:');
+
+[~,~,lut]=xlsread(fullfile(lut_path,lut_fname));
+
+
+keep_row = false(size(lut,1),1);
+for l=1:size(lut,1)
+    for f=1 : size(stack_fname,1)
+        if ~all(isnan(lut{l,1})) && contains(stack_fname{f,1},lut{l,1})
+            keep_row(l)=true;
+            continue;
+        end
+    end
+end
+lut=lut(keep_row,:);
+
+pp_fringes = cell2mat(lut(:,4));
+unique_pp_fringes = unique(pp_fringes);
+
+dmb_file_to_load=cell(size(lut,1),1);
+dmb_path_to_load=cell(size(lut,1),1);
+
+for p=1:size(unique_pp_fringes,1)
+    [dmb_fname, dmb_path]=uigetfile(fullfile(pwd,'*.mat'),['Select the ***' num2str(unique_pp_fringes(p)) '*** pixels per fringe DESINUSOIDING file!' ]);
+    dmb_file_to_load(pp_fringes==unique_pp_fringes(p))={dmb_fname};
+    dmb_path_to_load(pp_fringes==unique_pp_fringes(p))={dmb_path};
+end
+
+load(fullfile(dmb_path_to_load{1}, dmb_file_to_load{1}),'horizontal_fringes_n_rows','vertical_fringes_desinusoid_matrix');
 
 desinusoid_matrix = vertical_fringes_desinusoid_matrix';
 
+LPS = 12;
+LBSS = 6;
 
+default_dmb_contents = struct('frame_strip_ncc_threshold', 0.7,...
+       'n_columns_desinusoided', size(vertical_fringes_desinusoid_matrix,1),...       
+       'strip_n_frames_with_highest_ncc_value', 50,...
+       'image_sequence_file_name', stack_fname{f,1},...
+       'reference_frame', 0,...
+       'secondary_sequences_file_names', [],...
+       'secondary_sequences_absolute_paths', [],...
+       'frame_strip_lines_per_strip', LPS,...
+       'frame_strip_lines_between_strips_start', LBSS,...
+       'n_frames', 0,...
+       'save_strip_registered_sequence', true,...
+       'frame_strip_ncc_n_columns_to_ignore', 150,...       
+       'image_sequence_absolute_path', mov_path{1},...
+       'n_columns_raw_sequence', size(vertical_fringes_desinusoid_matrix,2),...
+       'fast_scanning_horizontal', true,...
+       'n_rows_desinusoided', horizontal_fringes_n_rows,...
+       'n_rows_raw_sequence', horizontal_fringes_n_rows,...
+       'desinusoid_data_filename', dmb_file_to_load{1},...
+       'desinusoid_data_absolute_path', dmb_path_to_load{1},...    
+       'strip_DCT_terms_retained_percentage', 50,...
+       'frame_strip_ncc_n_rows_to_ignore', 3,...
+       'desinusoid_matrix', desinusoid_matrix(:),...
+       'strip_max_displacement_threshold', 200,...
+       'full_frame_max_displacement_threshold', 200,...
+       'full_frame_ncc_n_lines_to_ignore', 150,...
+       'min_overlap_for_cropping_strip_image', 5,...
+       'strip_registration_required', true,...
+       'save_full_frame_registered_image', false,...
+       'save_strip_registered_image', true,...
+       'frame_strip_calculation_precision', 'single',...
+       'desinusoiding_required', true,...
+       'clinical_version', false,...
+       'full_frame_calculation_precision', 'single',...
+       'save_full_frame_registered_sequence', false,...
+       'user_defined_suffix', ['_ref_0_lps_' num2str(LPS) '_lbss_' num2str(LBSS) ]);
+   
 % [stack_fname, mov_path] = uigetfile(fullfile(dmb_path,'*.avi'),'Select movies from single timepoint:', 'MultiSelect', 'on');
 
 % stack_fname = {stack_fname};
@@ -95,8 +160,17 @@ delete(fullfile(mov_path{1},'Reference_Frames.csv'));
 
 %% Analyze the list.
 refs = cell(size(stack_fname));
+num_frames = zeros(size(stack_fname));
 
 for f=1 : size(stack_fname,1)
+    
+    load(fullfile(dmb_path_to_load{f}, dmb_file_to_load{f}),'horizontal_fringes_n_rows','vertical_fringes_desinusoid_matrix');
+    
+    default_dmb_contents.desinusoid_matrix = vertical_fringes_desinusoid_matrix';
+    default_dmb_contents.desinusoid_matrix = default_dmb_contents.desinusoid_matrix';
+    default_dmb_contents.n_rows_desinusoided = horizontal_fringes_n_rows;
+    default_dmb_contents.n_rows_raw_sequence = horizontal_fringes_n_rows;
+    
     for m=1:size(stack_fname,2)
         if ~isempty(stack_fname{f,m})
             waitbar(f/size(stack_fname,1),h,['Processing video #' num2str(stack_fname{f,m}(end-7:end-4)) '...']);
@@ -109,7 +183,7 @@ for f=1 : size(stack_fname,1)
             
             if ~isempty(stack_fname{f,m})
                 tic;
-                refs{f,m} = extract_candidate_reference_frames(stack_fname{f,m}, desinusoid_matrix, STRIP_SIZE, BAD_STRIP_THRESHOLD, MIN_NUM_FRAMES_PER_GROUP);
+                [refs{f,m}, num_frames(f,m)] = extract_candidate_reference_frames(stack_fname{f,m}, desinusoid_matrix, STRIP_SIZE, BAD_STRIP_THRESHOLD, MIN_NUM_FRAMES_PER_GROUP);
                 toc;
             end
             
@@ -206,6 +280,7 @@ for f=1 : size(stack_fname,1)
             bestrefs = padarray(newrefs{g},[NUM_REF_OUTPUT-length(newrefs{g}) 0], -1,'post')';
         end
         ref_best_modality = cell(size(bestrefs));
+        ref_best_modality_inds = zeros(size(bestrefs));
         
         for r=1:length(bestrefs)
             thisrefrank = 100*ones(1,size(refs,2));
@@ -216,7 +291,8 @@ for f=1 : size(stack_fname,1)
                 end
             end
             [~, refrank_ind] = min(thisrefrank); % Whichever has the lowest index (best rank), record as the suggested modality.
-            ref_best_modality{r} = MODALITIES{refrank_ind}; 
+            ref_best_modality{r} = MODALITIES{refrank_ind};
+            ref_best_modality_inds(r) = refrank_ind;
         end
         
         % Write all of this to disk.
@@ -230,14 +306,35 @@ for f=1 : size(stack_fname,1)
         fprintf(fid,'\n');
         
         fclose(fid);
-            
-%         dlmwrite(fullfile(mov_path{1},'Reference_Frames.csv'), [str2double(vidnum)  newrefs{g}(1:NUM_REF_OUTPUT)'], 'delimiter',',','-append');
         
+        for r=1:length(bestrefs)
+            dmb_contents = default_dmb_contents;
+                
+            dmb_contents.reference_frame = bestrefs(r);
+            for m=1:length(MODALITIES)
+                if m== ref_best_modality_inds(r)
+                    dmb_contents.image_sequence_file_name = getparent(stack_fname{f,m});
+                    dmb_contents.image_sequence_absolute_path = mov_path{m};
+                else
+                    dmb_contents.secondary_sequences_file_names = [dmb_contents.secondary_sequences_file_names; stack_fname(f,m)];
+                    dmb_contents.secondary_sequences_absolute_paths = [dmb_contents.secondary_sequences_absolute_paths; mov_path(m)];                    
+                end
+            end
+            dmb_contents.user_defined_suffix = ['_ref_' num2str(bestrefs(r)) '_lps_' num2str(LPS) '_lbss_' num2str(LBSS) '_autogen' ];
+            
+            save('test.mat','dmb_contents');
+%             write_dmb_file(dmb_contents);
+        end
+
     end
 
     
     
 end
+
+
+       
+
 close(h);
 
 

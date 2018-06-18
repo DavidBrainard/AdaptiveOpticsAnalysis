@@ -1,4 +1,4 @@
-function [ reference_frames ] = extract_candidate_reference_frames( fPathName, desinusoid_matrix, STRIP_SIZE, BAD_STRIP_THRESHOLD, NUM_FRM_PER_GROUP )
+function [ reference_frames, totalNumFrames ] = extract_candidate_reference_frames( fPathName, desinusoid_matrix, STRIP_SIZE, BAD_STRIP_THRESHOLD, NUM_FRM_PER_GROUP )
 %EXTRACT_CANDIDATE_REFERENCE_FRAMES Extracts a list of candidate reference
 % frames from a input video.
 %   [reference_frames] = EXTRACT_CANDIDATE_REFERENCE_FRAMES( fName, pName,desinusoid_matrix, STRIP_SIZE, BAD_STRIP_THRESHOLD, NUM_FRM_PER_GROUP )
@@ -20,7 +20,7 @@ function [ reference_frames ] = extract_candidate_reference_frames( fPathName, d
     mode_dev = std(frame_mean(:));
 
     frame_contenders = (1:numFrames);
-    
+    totalNumFrames = numFrames;
 
     strip_inds = 0:STRIP_SIZE:size(image_stack(:,:,1),1);
     strip_inds(1) = 1;
