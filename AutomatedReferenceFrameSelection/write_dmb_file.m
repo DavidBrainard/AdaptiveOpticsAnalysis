@@ -48,7 +48,7 @@ thispath = getparent(which('write_dmb_file'));
 if count(py.sys.path,thispath) == 0
     insert(py.sys.path,int32(0),thispath);
 end
-dmb_fullpath='test.dmb';
+
 py.matlab_pickler.pickle_mat(dmb_fullpath,dmb_dict);   
 
 end
