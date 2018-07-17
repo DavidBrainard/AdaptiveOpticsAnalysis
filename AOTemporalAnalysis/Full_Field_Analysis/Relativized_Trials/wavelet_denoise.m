@@ -1,11 +1,11 @@
 function [ denoised_signal ] = wavelet_denoise( signal )
 
-wavelet = 'haar';
+wavelet = 'db6';
 level=5;
 sorh = 's';
 
 nextpowpad = (2^nextpow2(length(signal)))-length(signal);
-padsignal = padarray(signal, [0 nextpowpad],'symmetric','pre');
+padsignal = padarray(signal, [0 nextpowpad],'symmetric','post');
 
 
 % *** Generated using wavemenu input. ***
@@ -44,7 +44,7 @@ end
 denoised_signal = iswt(SWC_thresh, wavelet);
 %-------------------------------------------
 
-denoised_signal = denoised_signal((nextpowpad+1):end);
+denoised_signal = denoised_signal(1:end-nextpowpad);
 
 end
 

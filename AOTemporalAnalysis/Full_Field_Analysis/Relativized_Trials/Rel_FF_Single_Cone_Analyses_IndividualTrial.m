@@ -90,9 +90,9 @@ for j=1:length(profileSDataNames)
     profileSDataNames{j}
     load(fullfile(stimRootDir,profileSDataNames{j}));
     
-    if ~isempty(CELL_OF_INTEREST)
+%     if ~isempty(CELL_OF_INTEREST)
         stim_cell_reflectance_nonorm{j} = cell_reflectance;
-    end
+%     end
     stim_cell_reflectance{j} = norm_cell_reflectance;
     stim_time_indexes{j} = cell_times;
     stim_cell_prestim_mean{j} = cell_prestim_mean;
@@ -129,9 +129,9 @@ for j=1:length(profileCDataNames)
     profileCDataNames{j}
     load(fullfile(controlRootDir,profileCDataNames{j}));
     
-    if ~isempty(CELL_OF_INTEREST)
-        control_cell_reflectance_nonorm{j} = cell_reflectance;
-    end
+
+    control_cell_reflectance_nonorm{j} = cell_reflectance;
+
     control_cell_reflectance{j} = norm_cell_reflectance;
     control_time_indexes{j} = cell_times;
     control_cell_prestim_mean{j} = cell_prestim_mean;
@@ -161,6 +161,120 @@ allcoords = stim_coords;
 
 
 %% Aggregation of all trials
+numcontrolcoords = size(control_coords,1);
+
+control_cell_var = nan(size(control_coords,1), max_index);
+control_cell_median = nan(size(control_coords,1), max_index);
+control_cell_pca_std = nan(size(stim_coords,1), 1);
+control_trial_count = zeros(size(control_coords,1),1);
+control_posnegratio = nan(size(control_coords,1),max_index);
+cont_prestim_means=[];
+
+allinterpsigs=nan(numcontrolcoords*length(profileCDataNames),165);
+for i=1:numcontrolcoords
+    waitbar(i/size(control_coords,1),THEwaitbar,'Processing control signals...');
+
+    numtrials = 0;
+    all_times_ref = nan(length(profileCDataNames), max_index);
+    nonorm_ref = nan(length(profileCDataNames), max_index);
+
+%     figure(10);  clf; hold on; 
+%     figure(11);  clf; hold on;
+        
+    for j=1:length(profileCDataNames)
+                        
+        if ~isempty(control_cell_reflectance{j}{i}) && ...
+           sum(control_time_indexes{j}{i} >= 67 & control_time_indexes{j}{i} <=99) >=  CUTOFF && ...
+           control_cell_prestim_mean{j}(i) <= 240
+       
+            cont_prestim_means = [cont_prestim_means; control_cell_prestim_mean{j}(i)];
+            numtrials = numtrials+1;
+
+            nonorm_ref(j, control_time_indexes{j}{i} ) = control_cell_reflectance_nonorm{j}{i}(~isnan(control_cell_reflectance_nonorm{j}{i}));
+
+            all_times_ref(j, control_time_indexes{j}{i} ) = control_cell_reflectance{j}{i};
+        end
+    end
+    control_trial_count(i) = numtrials;
+    
+%     if control_trial_count(i) >= NUMTRIALS
+%         
+%         figure(10);  clf; hold on; 
+%         figure(11);  clf; hold on;
+% %         figure(12); clf; hold on;
+% 
+%         cmapped = parula(101);
+%         minmean = min(cont_prestim_means(i,:));
+%         maxmean = max(cont_prestim_means(i,:))-minmean;
+%         
+%         for j=1:length(profileCDataNames)
+%             
+%             thissig = all_times_ref(j,2:end);
+%             thisnonormsig = nonorm_ref(j,2:end);
+% 
+%             nanners = ~isnan(thissig);
+%             if any(nanners)
+%                 
+%                 firstind=find(cumsum(nanners)>0);
+%                 [~, lastind] = max(cumsum(nanners)-sum(nanners));
+%                 
+%                 interpinds = firstind(1):lastind;
+%                 allinds = 1:length(thissig);
+%                 goodinds = allinds(nanners);
+% 
+%                 thissig = interp1(goodinds, thissig(nanners), interpinds, 'linear');
+%                 
+% %                 thissig=thissig-mean(thissig(1:5),'omitnan');
+% 
+%                 filt_sig = wavelet_denoise( thissig );
+%                 
+%                 
+%                 allinterpsigs( ((i-1)*length(profileCDataNames))+j,interpinds) = thissig;
+%                 
+%                 
+%                 
+%                 figure(10); plot(thissig-mean(thissig(1:5),'omitnan'),'k'); axis([0 165 -1 1])
+% 
+%                 figure(11); plot(filt_sig-mean(filt_sig(1:5),'omitnan'),'k'); axis([0 165 -1 1])
+%                 
+% %                 figure(12); plot(thisnonormsig, 'Color', cmapped(round( 100*(stim_prestim_means(i,j)-minmean)./maxmean )+1,:)); 
+% %                             colorbar; caxis([0 255])
+%                               
+%             end            
+%         end
+% 
+% %         allthissig = allinterpsigs( ((i-1)*length(profileCDataNames))+1:((i-1)*length(profileCDataNames))+length(profileCDataNames),:);
+% %         allthissig = allthissig - mean(allthissig(:,1:66),2,'omitnan');
+% 
+%         drawnow;
+%         pause(1);
+%     end
+
+    for j=1:max_index
+        nonan_ref = all_times_ref(~isnan(all_times_ref(:,j)), j);
+        refcount = sum(~isnan(all_times_ref(:,j)));
+        refmedian = median(nonan_ref);
+        if ~isnan(refmedian)
+            control_cell_median(i,j) = refmedian;
+            control_cell_var(i,j) = ( sum((nonan_ref-mean(nonan_ref)).^2)./ (refcount-1) );
+        end
+    end
+    
+    if i==CELL_OF_INTEREST 
+        figure(2); clf;
+        subplot(3,1,1); plot(bsxfun(@minus,nonorm_ref, nonorm_ref(:,2))');axis([2 166 -150 150]);  xlabel('Time index'); ylabel('Raw Response');
+        subplot(3,1,2); plot(all_times_ref'); axis([2 166 -20 20]); xlabel('Time index'); ylabel('Standardized Response');
+        subplot(3,1,3); plot(control_cell_median(i,:)); hold on;
+                        plot(sqrt(control_cell_var(i,:))); hold off; axis([2 166 -2 10]); xlabel('Time index'); ylabel('Response');
+        title(['Cell #:' num2str(i)]);   
+        THEcontref = all_times_ref;
+        drawnow;
+        saveas(gcf, ['Cell_' num2str(i) '_control.png']);
+%         pause;
+    end
+end
+
+%%
 
 percentparula = parula(101);
 
@@ -174,18 +288,22 @@ stim_posnegratio = nan(numstimcoords,max_index);
 stim_prestim_means = nan(numstimcoords,length(profileSDataNames));
 
 i=1;
+premednonormsig = nan(numstimcoords,1);
+prestdnonormsig = nan(numstimcoords,1);
+postmednonormsig = nan(numstimcoords,1);
+poststdnonormsig = nan(numstimcoords,1);
 
 
-        
-for i=1:numstimcoords
+allinterpsigs=nan(numstimcoords*length(profileSDataNames),165);
+for i=1000:numstimcoords
     waitbar(i/size(stim_coords,1),THEwaitbar,'Processing stimulus signals...');
 
     
     numtrials = 0;
     all_times_ref = nan(length(profileSDataNames), max_index);
-    if ~isempty(CELL_OF_INTEREST)
+%     if ~isempty(CELL_OF_INTEREST)
         nonorm_ref = nan(length(profileSDataNames), max_index);
-    end
+%     end
     for j=1:length(profileSDataNames)
         
         if ~isempty(stim_cell_reflectance{j}{i}) && ...
@@ -195,25 +313,78 @@ for i=1:numstimcoords
             
             stim_prestim_means(i,j) = stim_cell_prestim_mean{j}(i);
             numtrials = numtrials+1;
-            if ~isempty(CELL_OF_INTEREST)
+%             if ~isempty(CELL_OF_INTEREST)
                 nonorm_ref(j, stim_time_indexes{j}{i} ) = stim_cell_reflectance_nonorm{j}{i}(~isnan(stim_cell_reflectance_nonorm{j}{i}));
                 
 %                 figure(10); plot(stim_cell_reflectance{j}{i}); title(num2str(stim_prestim_means(i,j)));
-            end
+%             end
             all_times_ref(j, stim_time_indexes{j}{i} ) = stim_cell_reflectance{j}{i};
         end
     end 
     stim_trial_count(i) = numtrials;
-            
     
-    for j=1:max_index
-        nonan_ref = all_times_ref(~isnan(all_times_ref(:,j)), j);
-        refcount = sum(~isnan(all_times_ref(:,j)));
-        refmedian = median(nonan_ref);
-        if ~isnan(refmedian)
-            stim_cell_median(i,j) = double(median(nonan_ref));
+    if stim_trial_count(i) >= NUMTRIALS
+        
+%         figure(10);  clf; %hold on; 
+%         figure(11);  clf; %hold on;
+%         figure(12); clf; hold on;
+
+        cmapped = parula(101);
+        minmean = min(stim_prestim_means(i,:));
+        maxmean = max(stim_prestim_means(i,:))-minmean;
+        amp_ratio = zeros(length(profileSDataNames),1);
+        for j=1:length(profileSDataNames)
             
-            stim_cell_var(i,j) = ( sum((nonan_ref-mean(nonan_ref)).^2)./ (refcount-1) );
+            thissig = all_times_ref(j,2:end);
+            thisnonormsig = nonorm_ref(j,2:end);
+
+            nanners = ~isnan(thissig);
+            if any(nanners)
+                
+                firstind=find(cumsum(nanners)>0);
+                [~, lastind] = max(cumsum(nanners)-sum(nanners));
+                
+                interpinds = firstind(1):lastind;
+                allinds = 1:length(thissig);
+                goodinds = allinds(nanners);
+
+                thissig = interp1(goodinds, thissig(nanners), interpinds, 'linear');
+                thissig= thissig-mean(thissig(1:66),'omitnan');
+                
+                filt_sig = wavelet_denoise( thissig );
+                
+                allinterpsigs( ((i-1)*length(profileSDataNames))+j,interpinds) = thissig;
+                
+                amp_ratio(j) = (max(filt_sig(CRITICAL_REGION))-min(filt_sig(CRITICAL_REGION)))./(max(filt_sig(1:66))-min(filt_sig(1:66)));
+                
+%                 figure(10); plot(thissig, 'Color', cmapped(round( 100*(stim_prestim_means(i,j)-minmean)./maxmean )+1,:)); 
+%                             colorbar; caxis([0 255])
+% 
+%                 figure(11); plot(filt_sig, 'Color', cmapped(round( 100*(stim_prestim_means(i,j)-minmean)./maxmean )+1,:)); 
+%                             colorbar; caxis([0 255]); title(num2str(amp_ratio(j)));
+                
+%                 figure(12); plot(thisnonormsig, 'Color', cmapped(round( 100*(stim_prestim_means(i,j)-minmean)./maxmean )+1,:)); 
+%                             colorbar; caxis([0 255])
+%                 profileSDataNames{j}
+                
+%                 pause;
+            end            
+        end
+
+        [amp_ratio, highest_ratio_inds] = sort(amp_ratio,'descend');
+
+
+        all_times_ref=all_times_ref(highest_ratio_inds(1:6),:);
+    
+        for j=1:max_index
+            nonan_ref = all_times_ref(~isnan(all_times_ref(:,j)), j);
+            refcount = sum(~isnan(all_times_ref(:,j)));
+            refmedian = median(nonan_ref);
+            if ~isnan(refmedian)
+                stim_cell_median(i,j) = double(median(nonan_ref));
+
+                stim_cell_var(i,j) = ( sum((nonan_ref-mean(nonan_ref)).^2)./ (refcount-1) );
+            end
         end
     end
     
@@ -242,68 +413,23 @@ for i=1:numstimcoords
 
 end
 
+% allinterpsigs = allinterpsigs(~all(allinterpsigs==0,2),:);
+%%
+% numover=0;
+% numunder=0;
+% for a=1:size(allinterpsigs,1)
+%    
+%     if sum(allinterpsigs(a,67:end)>1 | allinterpsigs(a,67:end)<-1) > 20
+%         figure(1); hold on; plot(allinterpsigs(a,:));
+%         numover=numover+1;
+%     else
+%         figure(2); hold on; plot(allinterpsigs(a,:));
+%         numunder=numunder+1;
+%     end
+%     
+% end
 
 %%
-numcontrolcoords = size(control_coords,1);
-
-control_cell_var = nan(size(control_coords,1), max_index);
-control_cell_median = nan(size(control_coords,1), max_index);
-control_cell_pca_std = nan(size(stim_coords,1), 1);
-control_trial_count = zeros(size(control_coords,1),1);
-control_posnegratio = nan(size(control_coords,1),max_index);
-cont_prestim_means=[];
-
-
-for i=1:numcontrolcoords
-    waitbar(i/size(control_coords,1),THEwaitbar,'Processing control signals...');
-
-    numtrials = 0;
-    all_times_ref = nan(length(profileCDataNames), max_index);
-    if ~isempty(CELL_OF_INTEREST)
-        nonorm_ref = nan(length(profileCDataNames), max_index);
-    end
-    for j=1:length(profileCDataNames)
-                        
-        if ~isempty(control_cell_reflectance{j}{i}) && ...
-           sum(control_time_indexes{j}{i} >= 67 & control_time_indexes{j}{i} <=99) >=  CUTOFF && ...
-           control_cell_prestim_mean{j}(i) <= 240
-       
-            cont_prestim_means = [cont_prestim_means; control_cell_prestim_mean{j}(i)];
-            numtrials = numtrials+1;
-            if ~isempty(CELL_OF_INTEREST)
-                nonorm_ref(j, control_time_indexes{j}{i} ) = control_cell_reflectance_nonorm{j}{i}(~isnan(control_cell_reflectance_nonorm{j}{i}));
-            end
-            all_times_ref(j, control_time_indexes{j}{i} ) = control_cell_reflectance{j}{i};
-        end
-    end
-    control_trial_count(i) = numtrials;
-    
-
-    for j=1:max_index
-        nonan_ref = all_times_ref(~isnan(all_times_ref(:,j)), j);
-        refcount = sum(~isnan(all_times_ref(:,j)));
-        refmedian = median(nonan_ref);
-        if ~isnan(refmedian)
-            control_cell_median(i,j) = refmedian;
-            control_cell_var(i,j) = ( sum((nonan_ref-mean(nonan_ref)).^2)./ (refcount-1) );
-        end
-    end
-    
-    if i==CELL_OF_INTEREST 
-        figure(2); clf;
-        subplot(3,1,1); plot(bsxfun(@minus,nonorm_ref, nonorm_ref(:,2))');axis([2 166 -150 150]);  xlabel('Time index'); ylabel('Raw Response');
-        subplot(3,1,2); plot(all_times_ref'); axis([2 166 -20 20]); xlabel('Time index'); ylabel('Standardized Response');
-        subplot(3,1,3); plot(control_cell_median(i,:)); hold on;
-                        plot(sqrt(control_cell_var(i,:))); hold off; axis([2 166 -2 10]); xlabel('Time index'); ylabel('Response');
-        title(['Cell #:' num2str(i)]);   
-        THEcontref = all_times_ref;
-        drawnow;
-        saveas(gcf, ['Cell_' num2str(i) '_control.png']);
-%         pause;
-    end
-end
-
-
 % for k=1:size(all_times_ref,1)
 % figure(1); clf; plot(THEstimref(k,:)); axis([2 166 -10 10]);
 % pause;
@@ -322,7 +448,7 @@ std_dev_sub = sqrt(stim_cell_var)-mean(sqrt(control_cell_var),'omitnan');
 median_sub = stim_cell_median-mean(control_cell_median,'omitnan');
 %%
 
-if ~isempty(CELL_OF_INTEREST )
+% if ~isempty(CELL_OF_INTEREST )
 %     figure(3);clf;
 %     
 % %     load('control_avgs.mat')
@@ -333,7 +459,7 @@ if ~isempty(CELL_OF_INTEREST )
 %     title(['Cell #:' num2str(CELL_OF_INTEREST)]);  
 %     drawnow;
 %     saveas(gcf, ['Cell_' num2str(CELL_OF_INTEREST) '_subs.svg']);
-end
+% end
 %% Calculate PCA on the crtiical area of the signals
 critical_nonnan_ref = sqrt(stim_cell_var(:,CRITICAL_REGION));
 [std_dev_coeff, std_dev_score, std_dev_latent, tquare, std_dev_explained, std_dev_mu] = pca(critical_nonnan_ref);
@@ -359,27 +485,28 @@ waitbar(i/size(std_dev_sub,1),THEwaitbar,'Analyzing subtracted signals...');
         std_dev_sig = std_dev_sub(i,2:end);
         
         nanners = ~isnan(std_dev_sig);
-        allinds = 1:length(std_dev_sig);
+        
+        firstind=find(cumsum(nanners)>0);
+        [~, lastind] = max(cumsum(nanners)-sum(nanners));
+        interpinds = firstind(1):lastind;
         goodinds = allinds(nanners);
         
-        std_dev_sig = interp1(goodinds, std_dev_sig(nanners), allinds, 'spline');        
-        padding_amt = ceil((2^(nextpow2(length(std_dev_sig)))-length(std_dev_sig)) /2);
-        padded_stddev_sig = padarray(std_dev_sig, [0  padding_amt],'symmetric', 'both');
-        padded_stddev_sig=wavelet_denoise( padded_stddev_sig );
-        filt_stddev_sig = padded_stddev_sig(padding_amt+1:end-padding_amt);
+        std_dev_sig = interp1(goodinds, std_dev_sig(nanners), interpinds, 'linear');        
+
+        filt_stddev_sig = wavelet_denoise( std_dev_sig );
 
         median_sig = median_sub(i,2:end);
         
         nanners = ~isnan(median_sig);
-        allinds = 1:length(median_sig);
+        
+        firstind=find(cumsum(nanners)>0);
+        [~, lastind] = max(cumsum(nanners)-sum(nanners));
+        interpinds = firstind(1):lastind;
         goodinds = allinds(nanners);
         
-        median_sig = interp1(goodinds, median_sig(nanners), allinds, 'spline');
+        median_sig = interp1(goodinds, median_sig(nanners), interpinds, 'linear');
         
-        padding_amt = ceil((2^(nextpow2(length(median_sig)))-length(median_sig)) /2);
-        padded_mean_sig = padarray(median_sig, [0  padding_amt],'symmetric', 'both');
-        padded_mean_sig=wavelet_denoise( padded_mean_sig );
-        filt_median_sig = padded_mean_sig(padding_amt+1:end-padding_amt);
+        filt_median_sig = wavelet_denoise( median_sig );
 
         critical_filt = filt_stddev_sig( CRITICAL_REGION );
         [~, TTPResp(i)] = max( abs(critical_filt) );    
@@ -392,6 +519,7 @@ waitbar(i/size(std_dev_sub,1),THEwaitbar,'Analyzing subtracted signals...');
 %         end
     end
 end
+%%
 close(THEwaitbar);
 %%
 save([ stim_intensity '.mat'],'AmpResp','MedianResp','TTPResp', 'std_dev_coeff','valid','std_dev_explained','median_explained',...

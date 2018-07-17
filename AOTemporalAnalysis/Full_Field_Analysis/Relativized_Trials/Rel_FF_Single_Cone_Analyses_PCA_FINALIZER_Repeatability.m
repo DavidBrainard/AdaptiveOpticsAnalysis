@@ -25,18 +25,24 @@ valid_450nW1 = valid;
 load('450nW_20180529.mat');
 valid_450nW2 = valid;
 
-
-
-
 stddev_stim_450nW2 = sqrt(stim_cell_var(:,CRITICAL_REGION));
 stddev_control_450nW2 = sqrt(control_cell_var(:,CRITICAL_REGION));
 median_stim_450nW2 = stim_cell_median(:,CRITICAL_REGION);
 median_control_450nW2 = control_cell_median(:,CRITICAL_REGION);
 
-valid = valid_450nW2 & valid_450nW1;
+% 450nW timepoint 2
+load('450nW_20180607.mat');
+valid_450nW3 = valid;
 
-allcontrolstd = mean([stddev_control_450nW1(valid,:);stddev_control_450nW2(valid,:)]);
-allcontrolmed = mean([median_control_450nW1(valid,:);median_control_450nW2(valid,:)]);
+stddev_stim_450nW3 = sqrt(stim_cell_var(:,CRITICAL_REGION));
+stddev_control_450nW3 = sqrt(control_cell_var(:,CRITICAL_REGION));
+median_stim_450nW3 = stim_cell_median(:,CRITICAL_REGION);
+median_control_450nW3 = control_cell_median(:,CRITICAL_REGION);
+
+valid = valid_450nW3 & valid_450nW2 & valid_450nW1;
+
+allcontrolstd = mean([stddev_control_450nW1(valid,:);stddev_control_450nW2(valid,:);stddev_control_450nW3(valid,:)]);
+allcontrolmed = mean([median_control_450nW1(valid,:);median_control_450nW2(valid,:);median_control_450nW3(valid,:)]);
 
 %plot(allcontrolstd); hold on; plot(allcontrolmed); hold off; axis([2 166 -2 4])
 % title('All averaged control values');
@@ -62,9 +68,19 @@ norm_nonan_ref = median_stim_450nW2 -allcontrolmed;
 projected_ref = (norm_nonan_ref-mean(norm_nonan_ref,2,'omitnan'))*median_coeff_450nW(:,1:NUM_COMPONENTS);
 Median_450nW2 = sum(projected_ref.*med_explained_coeff_450nW,2)./sum(med_explained_coeff_450nW);
 
+% 450nW 2
+norm_nonan_ref = stddev_stim_450nW3 -allcontrolstd;
+projected_ref = (norm_nonan_ref-mean(norm_nonan_ref,2,'omitnan'))*stddev_coeff_450nW(:,1:NUM_COMPONENTS);
+Stddev_450nW3 = sum(projected_ref.*std_explained_coeff_450nW,2)./sum(std_explained_coeff_450nW);
+
+norm_nonan_ref = median_stim_450nW3 -allcontrolmed;
+projected_ref = (norm_nonan_ref-mean(norm_nonan_ref,2,'omitnan'))*median_coeff_450nW(:,1:NUM_COMPONENTS);
+Median_450nW3 = sum(projected_ref.*med_explained_coeff_450nW,2)./sum(med_explained_coeff_450nW);
+
 
 allfits = [ (Stddev_450nW1 + abs(Median_450nW1) ) ...
-            (Stddev_450nW2  + abs(Median_450nW2) )];  
+            (Stddev_450nW2  + abs(Median_450nW2) ) ...
+            (Stddev_450nW3  + abs(Median_450nW3) ) ];  
         
 stdfits =  log10(allfits+1);
 stdfits = stdfits-mean(stdfits(valid,:));
@@ -446,8 +462,8 @@ end
 
 for j=1:size(allfits,2)
     
-    upper_thresh = quantile(allfits(:),0.95); 
-    lower_thresh = quantile(allfits(:),0.05);
+    upper_thresh = quantile(allfits(:,j),0.95); 
+    lower_thresh = quantile(allfits(:,j),0.05);
 
     thismap = parula( ((upper_thresh-lower_thresh)*100)+2); 
 
@@ -491,9 +507,55 @@ for j=1:size(allfits,2)
     title(['Spatial map ' num2str(j-1)])
     hold off; drawnow;
     set(gcf, 'Renderer', 'painters');
-    saveas(gcf, ['spatial_map_' num2str(j-1) '_resp.svg']);
+    saveas(gcf, ['spatial_map_' num2str(j-1) '_resp_individualscale.png']);
 %      pause;
 end
+
+%% Individual Increase maps - change to be based on profiles, 
+% where any increase over 2sd kicks it out from the group
+
+
+lower_1_thresh = quantile(allfits(:,1),0.05)
+lower_2_thresh = quantile(allfits(:,2),0.05)
+lower_3_thresh = quantile(allfits(:,3),0.05)
+
+lowest1 = (allfits(:,1)) < lower_1_thresh;
+lowest2 = (allfits(:,2)) < lower_2_thresh;
+lowest3 = (allfits(:,3)) < lower_3_thresh;
+
+figure(12); clf;%imagesc(ref_image); hold on; colormap gray;
+axis image; hold on;
+
+percentmax = zeros(size(allcoords,1));
+
+[V,C] = voronoin(allcoords,{'QJ'});
+
+for i=1:size(allcoords,1)
+
+    if valid(i)
+
+        vertices = V(C{i},:);
+
+        if all(vertices(:,1)<max(allcoords(:,1))) && all(vertices(:,2)<max(allcoords(:,1))) ... % [xmin xmax ymin ymax] 
+                                && all(vertices(:,1)>0) && all(vertices(:,2)>0) 
+
+            if lowest1(i) && lowest2(i) && lowest3(i)
+                patch(V(C{i},1),V(C{i},2),ones(size(V(C{i},1))),'FaceColor', 'r' );
+%             elseif lowest2(i)
+%                 patch(V(C{i},1),V(C{i},2),ones(size(V(C{i},1))),'FaceColor', 'b' );
+%             elseif lowest3(i)
+%                 patch(V(C{i},1),V(C{i},2),ones(size(V(C{i},1))),'FaceColor', 'g' );
+            end
+
+        end
+    end
+end
+
+axis([min(allcoords(:,1)) max(allcoords(:,1)) min(allcoords(:,2)) max(allcoords(:,2)) ])
+set(gca,'Color', 'k'); 
+title(['Increasing map '])
+hold off; drawnow;
+saveas(gcf, ['increase_map.png']);
 
 
 
@@ -585,104 +647,3 @@ ylabel('Number of Cones');
 axis square;
 % axis([0 4 -1 10])
 saveas(gcf, 'allamps_histogramsplot.svg');
-
-%% Error Spatal maps
-
-
-load('450nW_bootstrapped.mat');
-
-AvgResp_450 = Avg_Resp;
-StdResp_450 = Std_Resp;
-Avg_StddevResp_450 = Avg_StddevResp;
-Std_StddevResp_450 = Std_StddevResp;
-Avg_MedianResp_450 = Avg_MedianResp;
-Std_MedianResp_450 = Std_MedianResp;
-
-load('50nW_bootstrapped.mat');
-
-AvgResp_50 = Avg_Resp;
-StdResp_50 = Std_Resp;
-Avg_StddevResp_50 = Avg_StddevResp;
-Std_StddevResp_50 = Std_StddevResp;
-Avg_MedianResp_50 = Avg_MedianResp;
-Std_MedianResp_50 = Std_MedianResp;
-
-load('0nW_bootstrapped.mat');
-
-AvgResp_0 = Avg_Resp;
-StdResp_0 = Std_Resp;
-Avg_StddevResp_0 = Avg_StddevResp;
-Std_StddevResp_0 = Std_StddevResp;
-Avg_MedianResp_0 = Avg_MedianResp;
-Std_MedianResp_0 = Std_MedianResp;
-
-
-sm_50=quantile(AvgResp_50(valid),0.05);
-sm_450=quantile(AvgResp_450(valid),0.05);
-
-small_n_valid = ((AvgResp_50<=quantile(AvgResp_0(valid),0.95)) & (AvgResp_450<=quantile(AvgResp_0(valid),0.95)) );
-small_n_valid = small_n_valid & ((StdResp_50<=max(StdResp_0(valid))) & (StdResp_450<=max(StdResp_0(valid))) );
-
-lowrespond_percent=100*sum(small_n_valid)./size(allcoords,1)
-
-
-
-figure(20); clf; %imagesc(ref_image); hold on; colormap gray;
-axis image; hold on;
-
-percentmax = zeros(size(allcoords,1));
-
-[V,C] = voronoin(allcoords,{'QJ'});
-
-upper_thresh = quantile(allfits(valid,3),0.95); 
-lower_thresh = quantile(allfits(valid,1),0.05);
-thismap = parula( ((upper_thresh-lower_thresh)*100)+2); 
-
-for i=1:size(allcoords(valid),1)
-
-    if small_n_valid(i)
-        percentmax(i) = AvgResp_450(i);
-
-        if percentmax(i) > upper_thresh
-            percentmax(i) = upper_thresh;
-        elseif percentmax(i) < lower_thresh
-            percentmax(i) = lower_thresh;
-        end
-
-        thiscolorind = round((percentmax(i)-lower_thresh)*100)+1;
-
-        vertices = V(C{i},:);
-
-            if ~isnan(thiscolorind) && all(vertices(:,1)<max(allcoords(:,1))) && all(vertices(:,2)<max(allcoords(:,1))) ... % [xmin xmax ymin ymax] 
-                                    && all(vertices(:,1)>0) && all(vertices(:,2)>0) 
-%         if ~isnan(thiscolorind) && all(vertices(:,1)<460) && all(vertices(:,2)<410) ... % [xmin xmax ymin ymax] 
-%                                 && all(vertices(:,1)>100) && all(vertices(:,2)>50) 
-                                
-            patch(V(C{i},1),V(C{i},2),ones(size(V(C{i},1))),'FaceColor', thismap(thiscolorind,:));
-
-        end
-    end
-end
-colorbar
-axis([min(allcoords(:,1)) max(allcoords(:,1)) min(allcoords(:,2)) max(allcoords(:,2)) ])
-caxis([lower_thresh upper_thresh])
-set(gca,'Color','k'); 
-title('Lower 5% of cones')
-hold off; drawnow;
-%     set(gcf, 'Renderer', 'painters');
-%     saveas(gcf, ['spatial_map_' num2str(j-1) '_highresp.svg']);
-%     pause;
-
-
-figure;
-
-plot(allfits(valid,1),AvgResp_0(valid),'.'); hold on;
-plot(allfits(valid,2),AvgResp_50(valid),'.');
-plot(allfits(valid,3),AvgResp_450(valid),'.');
-plot([-1 12],[-1 12],'k')
-xlabel('Unbootstrapped response')
-ylabel('Bootstrapped response')
-title('Bootstrapped vs unboostrapped responses');
-axis equal; axis([-1 12 -1 12]);
-
-

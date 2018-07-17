@@ -88,6 +88,7 @@ allfits = [ (Stddev_0nW   + abs(Median_0nW)) ...
             (Stddev_50nW  + abs(Median_50nW) ) ... 
             (Stddev_450nW + abs(Median_450nW) ) ];  
 
+% allfits = log10(allfits+1);
 
 intensities = repmat( [0 log10(50) log10(450)],[size(allfits,1) 1]);
 
@@ -592,7 +593,7 @@ for i=1:size(allcoords,1)
 
         vertices = V(C{i},:);
 
-        if ~isnan(thiscolorind) && all(vertices(:,1)<max(allcoords(:,1))) && all(vertices(:,2)<max(allcoords(:,1))) ... % [xmin xmax ymin ymax] 
+        if  all(vertices(:,1)<max(allcoords(:,1))) && all(vertices(:,2)<max(allcoords(:,1))) ... % [xmin xmax ymin ymax] 
                                 && all(vertices(:,1)>0) && all(vertices(:,2)>0) 
 
             if lowestfifty(i) && lowestfourfifty(i)

@@ -37,7 +37,7 @@ profile_method = 'box';
 
 % For release, this version only contains the normalizations used in the
 % paper. However, the code is structured such that you can add more if desired.
-norm_type = 'global_norm_prestim_stdiz'; 
+norm_type = 'global_norm'; 
 
 % mov_path=pwd;
 if ~exist('mov_path','var') || ~exist('this_image_fname','var')
@@ -276,7 +276,7 @@ for i=1:length( cell_reflectance )
         norm_cell_reflectance{i} = cell_reflectance{i} ./ ref_mean;
     elseif contains(  norm_type, 'no_norm' )
         norm_cell_reflectance{i} = cell_reflectance{i};
-        error('No normalization selected!')
+        warn('No normalization selected!')
     end
 
     % Store the mean value before the stimulus was delivered.
@@ -325,6 +325,7 @@ elseif contains( norm_type, 'poststim_stdiz')
     end
 else
     % NOP - leave stub in case of change.
+
 end
 
 %% Standard deviation of all cells before first stimulus
@@ -376,7 +377,7 @@ if ~exist( fullfile(mov_path, 'Profile_Data'), 'dir' )
 end
 % Dump all the analyzed data to disk
 save(fullfile(mov_path, 'Profile_Data' ,[this_image_fname(1:end - length('_AVG.tif') ) '_' profile_method '_' norm_type '_' vid_type '_profiledata.mat']), ...
-     'cell_times', 'norm_cell_reflectance','ref_coords','ref_image','ref_mean','ref_stddev','vid_type','cell_prestim_mean','cell_reflectance' );
+     'this_image_fname', 'cell_times', 'norm_cell_reflectance','ref_coords','ref_image','ref_mean','ref_stddev','vid_type','cell_prestim_mean','cell_reflectance' );
 
   
 %% Remove the empty cells
