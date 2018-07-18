@@ -5,7 +5,7 @@ clear;
 
 
 NUM_COMPONENTS=3;
-CRITICAL_REGION = 66:100; %1:166; %
+CRITICAL_REGION = 67:115;%66:100; %1:166; %
 % 450nW
 load('450nW.mat');
 stddev_coeff_450nW = std_dev_coeff;
@@ -42,8 +42,8 @@ median_control_0nW = control_cell_median(:,CRITICAL_REGION);
 
 valid = valid_0nW & valid_50nW & valid_450nW;
 
-allcontrolstd = mean([stddev_control_450nW(valid,:);stddev_control_50nW(valid,:);stddev_control_0nW(valid,:);stddev_stim_0nW(valid,:)]);
-allcontrolmed = mean([median_control_450nW(valid,:);median_control_50nW(valid,:);median_control_0nW(valid,:);median_stim_0nW(valid,:)]);
+allcontrolstd = mean([stddev_control_450nW(valid,:);stddev_control_50nW(valid,:);stddev_control_0nW(valid,:);stddev_stim_0nW(valid,:)],'omitnan');
+allcontrolmed = mean([median_control_450nW(valid,:);median_control_50nW(valid,:);median_control_0nW(valid,:);median_stim_0nW(valid,:)],'omitnan');
 
 %plot(allcontrolstd); hold on; plot(allcontrolmed); hold off; axis([2 166 -2 4])
 % title('All averaged control values');
@@ -660,7 +660,7 @@ plot([-20 160], [-20 160],'k');
 xlabel('0nW Response');
 ylabel('450nW Response');
 title(['450nW vs 0nW responses: ' num2str(zero_to_fourfiftnW) '% increased.']);hold off;
-axis equal; axis([-.5 1.5 -1 9]); grid on;
+axis equal; %axis([-.5 1.5 -1 9]); grid on;
 saveas(gcf, '450_vs_0nW_response.png');
 
 
@@ -683,7 +683,7 @@ plot(allfits(valid,2), allfits(valid,3),'.');
 legend('50nW vs 0nW','450nW vs 0nW','450nW vs 50nW');
 title('450nW vs 0nW and 450nW vs 50nW responses');hold off;
 
-axis equal; axis([-1 10 -1 10]); grid on;
+axis equal; %axis([-1 10 -1 10]); grid on;
 saveas(gcf, 'allvs_response.png');
 saveas(gcf, 'allvs_response.svg');
 

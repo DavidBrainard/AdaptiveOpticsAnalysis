@@ -39,7 +39,7 @@ CUTOFF = 26;
 NUMTRIALS=20;
 CRITICAL_REGION = 67:115;
 
-CELL_OF_INTEREST = [];
+CELL_OF_INTEREST = [815];
 
 if isempty(CELL_OF_INTEREST)
     close all force;
@@ -351,7 +351,7 @@ MedianResp = nan(size(std_dev_sub,1),1);
 TTPResp = nan(size(std_dev_sub,1),1);
 PrestimVal = nan(size(std_dev_sub,1),1);
 
-
+allinds = 1:length(std_dev_sub);
 for i=1:size(std_dev_sub,1)
 waitbar(i/size(std_dev_sub,1),THEwaitbar,'Analyzing subtracted signals...');
 
@@ -359,27 +359,28 @@ waitbar(i/size(std_dev_sub,1),THEwaitbar,'Analyzing subtracted signals...');
         std_dev_sig = std_dev_sub(i,2:end);
         
         nanners = ~isnan(std_dev_sig);
-        allinds = 1:length(std_dev_sig);
+        
+        firstind=find(cumsum(nanners)>0);
+        [~, lastind] = max(cumsum(nanners)-sum(nanners));
+        interpinds = firstind(1):lastind;
         goodinds = allinds(nanners);
         
-        std_dev_sig = interp1(goodinds, std_dev_sig(nanners), allinds, 'spline');        
-        padding_amt = ceil((2^(nextpow2(length(std_dev_sig)))-length(std_dev_sig)) /2);
-        padded_stddev_sig = padarray(std_dev_sig, [0  padding_amt],'symmetric', 'both');
-        padded_stddev_sig=wavelet_denoise( padded_stddev_sig );
-        filt_stddev_sig = padded_stddev_sig(padding_amt+1:end-padding_amt);
+        std_dev_sig = interp1(goodinds, std_dev_sig(nanners), interpinds, 'linear');        
+
+        filt_stddev_sig = wavelet_denoise( std_dev_sig );
 
         median_sig = median_sub(i,2:end);
         
         nanners = ~isnan(median_sig);
-        allinds = 1:length(median_sig);
+        
+        firstind=find(cumsum(nanners)>0);
+        [~, lastind] = max(cumsum(nanners)-sum(nanners));
+        interpinds = firstind(1):lastind;
         goodinds = allinds(nanners);
         
-        median_sig = interp1(goodinds, median_sig(nanners), allinds, 'spline');
+        median_sig = interp1(goodinds, median_sig(nanners), interpinds, 'linear');
         
-        padding_amt = ceil((2^(nextpow2(length(median_sig)))-length(median_sig)) /2);
-        padded_mean_sig = padarray(median_sig, [0  padding_amt],'symmetric', 'both');
-        padded_mean_sig=wavelet_denoise( padded_mean_sig );
-        filt_median_sig = padded_mean_sig(padding_amt+1:end-padding_amt);
+        filt_median_sig = wavelet_denoise( median_sig );
 
         critical_filt = filt_stddev_sig( CRITICAL_REGION );
         [~, TTPResp(i)] = max( abs(critical_filt) );    
@@ -414,12 +415,15 @@ for i=1:size(control_coords,1)
 % 
 %         posnegratio(i) = 100*pos/length(numposneg);
 
-        plot3( AmpResp(i), MedianResp(i), TTPResp(i),'k.');        
+        if mean(stim_prestim_means(i,:),'omitnan') > 150 && mean(stim_prestim_means(i,:),'omitnan') < 152
+            disp(num2str(i));
+        end
+        plot( mean(stim_prestim_means(i,:),'omitnan'),AmpResp(i)+abs(MedianResp(i)),'k.');        
     end
 end
-ylabel('Median response amplitude');
-xlabel('Reflectance response amplitude');
-title('Median reflectance vs reflectance response amplitude')
+% ylabel('Median response amplitude');
+% xlabel('Reflectance response amplitude');
+% title('Median reflectance vs reflectance response amplitude')
 hold off;
 saveas(gcf,['posneg_vs_amp_' num2str(stim_intensity) '.png']);
 %% Plot histograms of the amplitudes

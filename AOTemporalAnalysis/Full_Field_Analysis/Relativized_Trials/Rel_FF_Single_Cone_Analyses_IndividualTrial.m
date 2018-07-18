@@ -355,7 +355,12 @@ for i=1000:numstimcoords
                 
                 allinterpsigs( ((i-1)*length(profileSDataNames))+j,interpinds) = thissig;
                 
-                amp_ratio(j) = (max(filt_sig(CRITICAL_REGION))-min(filt_sig(CRITICAL_REGION)))./(max(filt_sig(1:66))-min(filt_sig(1:66)));
+                prestimind = find(interpinds<=(CRITICAL_REGION(1)-1),1,'last');
+                beginstimind = find(interpinds>=CRITICAL_REGION(1),1,'first');
+                endstimind = find(interpinds<=CRITICAL_REGION(end),1,'last');
+                
+                amp_ratio(j) = (max(filt_sig(beginstimind:endstimind))-min(filt_sig(beginstimind:endstimind)))./ ...
+                               (max(filt_sig(1:prestimind))-min(filt_sig(1:prestimind)));
                 
 %                 figure(10); plot(thissig, 'Color', cmapped(round( 100*(stim_prestim_means(i,j)-minmean)./maxmean )+1,:)); 
 %                             colorbar; caxis([0 255])
