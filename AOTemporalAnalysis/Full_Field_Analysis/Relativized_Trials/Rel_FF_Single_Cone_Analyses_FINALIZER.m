@@ -6,16 +6,19 @@ load('0nW.mat');
 fitAmp_0nW = AmpResp;
 fitMedian_0nW = MedianResp;
 fitTTP_0nW = TTPResp;
+Prestim_0nW = mean(stim_prestim_means,2,'omitnan');
 
 load('50nW.mat');
 fitAmp_50nW = AmpResp;
 fitMedian_50nW = MedianResp;
 fitTTP_50nW = TTPResp;
+Prestim_50nW = mean(stim_prestim_means,2,'omitnan');
 
 load('450nW.mat');
 fitAmp_450nW = AmpResp;
 fitMedian_450nW = MedianResp;
 fitTTP_450nW = TTPResp;
+Prestim_450nW = mean(stim_prestim_means,2,'omitnan');
 
 % Just Amp
 allfits = [ (fitAmp_0nW   + abs(fitMedian_0nW)) ...

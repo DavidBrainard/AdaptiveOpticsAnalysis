@@ -39,7 +39,7 @@ CUTOFF = 26;
 NUMTRIALS=20;
 CRITICAL_REGION = 67:115;
 
-CELL_OF_INTEREST = [815];
+CELL_OF_INTEREST = [];
 
 if isempty(CELL_OF_INTEREST)
     close all force;
@@ -204,7 +204,8 @@ for i=1:numstimcoords
         end
     end 
     stim_trial_count(i) = numtrials;
-            
+    
+    quants = quantile(all_times_ref, [0.1 0.90]);
     
     for j=1:max_index
         nonan_ref = all_times_ref(~isnan(all_times_ref(:,j)), j);
@@ -350,6 +351,7 @@ AmpResp = nan(size(std_dev_sub,1),1);
 MedianResp = nan(size(std_dev_sub,1),1);
 TTPResp = nan(size(std_dev_sub,1),1);
 PrestimVal = nan(size(std_dev_sub,1),1);
+ControlPrestimVal = nan(size(std_dev_sub,1),1);
 
 allinds = 1:length(std_dev_sub);
 for i=1:size(std_dev_sub,1)
@@ -383,10 +385,14 @@ waitbar(i/size(std_dev_sub,1),THEwaitbar,'Analyzing subtracted signals...');
         filt_median_sig = wavelet_denoise( median_sig );
 
         critical_filt = filt_stddev_sig( CRITICAL_REGION );
+        
+%         [height,loc]= findpeaks(filt_stddev_sig(CRITICAL_REGION))
+        
         [~, TTPResp(i)] = max( abs(critical_filt) );    
         AmpResp(i) = median(filt_stddev_sig(CRITICAL_REGION));%critical_filt(TTPResp(i))-mean(filt_stddev_sig(1:CRITICAL_REGION(1)));
         MedianResp(i) = mean(abs(filt_median_sig(CRITICAL_REGION)));%abs( max(abs(filt_median_sig(CRITICAL_REGION)))-mean(filt_median_sig(1:CRITICAL_REGION(1))) );
-        PrestimVal(i) = mean( stim_prestim_means(i,:), 'omitnan');
+        PrestimVal(i) = mean( stim_prestim_means(i,:),2, 'omitnan');
+        ControlPrestimVal(i) = mean( cont_prestim_means(i,:),2, 'omitnan');
 %         histogram(filt_stddev_sig(CRITICAL_REGION),20)
 %         if AmpResp(i) == 0
 %            plot( filt_stddev_sig ); hold on; plot(std_dev_sig); hold off; drawnow; pause;
@@ -395,9 +401,10 @@ waitbar(i/size(std_dev_sub,1),THEwaitbar,'Analyzing subtracted signals...');
 end
 close(THEwaitbar);
 %%
-save([ stim_intensity '.mat'],'AmpResp','MedianResp','TTPResp', 'std_dev_coeff','valid','std_dev_explained','median_explained',...
-     'median_coeff','std_dev_score','median_score','allcoords','ref_image','control_cell_median',...
-     'control_cell_var','stim_cell_median','stim_cell_var');
+save([ stim_intensity '.mat'],'AmpResp','MedianResp','TTPResp', 'std_dev_coeff',...
+     'valid','std_dev_explained','median_explained','median_coeff',...
+     'std_dev_score','median_score','allcoords','ref_image','control_cell_median',...
+     'control_cell_var','stim_cell_median','stim_cell_var','stim_prestim_means');
 
  
 
@@ -415,9 +422,9 @@ for i=1:size(control_coords,1)
 % 
 %         posnegratio(i) = 100*pos/length(numposneg);
 
-        if mean(stim_prestim_means(i,:),'omitnan') > 150 && mean(stim_prestim_means(i,:),'omitnan') < 152
-            disp(num2str(i));
-        end
+%         if mean(stim_prestim_means(i,:),'omitnan') > 150 && mean(stim_prestim_means(i,:),'omitnan') < 152
+%             disp(num2str(i));
+%         end
         plot( mean(stim_prestim_means(i,:),'omitnan'),AmpResp(i)+abs(MedianResp(i)),'k.');        
     end
 end

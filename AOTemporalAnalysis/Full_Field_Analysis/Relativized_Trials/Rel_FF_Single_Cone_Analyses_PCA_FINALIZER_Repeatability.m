@@ -6,6 +6,7 @@ NUM_COMPONENTS=3;
 CRITICAL_REGION = 67:115; %1:166; %
 % 450nW timepoint 1
 load('450nW_20171117.mat');
+valid_450nW1 = valid;
 
 stddev_coeff_450nW = std_dev_coeff;
 median_coeff_450nW = median_coeff;
@@ -19,7 +20,9 @@ stddev_control_450nW1 = sqrt(control_cell_var(:,CRITICAL_REGION));
 median_stim_450nW1 = stim_cell_median(:,CRITICAL_REGION);
 median_control_450nW1 = control_cell_median(:,CRITICAL_REGION);
 
-valid_450nW1 = valid;
+Stddev_450nW1 = AmpResp;
+Median_450nW1 = MedianResp;
+Prestim_450nW1 = mean(stim_prestim_means,2,'omitnan');
 
 % 450nW timepoint 2
 load('450nW_20180529.mat');
@@ -30,6 +33,10 @@ stddev_control_450nW2 = sqrt(control_cell_var(:,CRITICAL_REGION));
 median_stim_450nW2 = stim_cell_median(:,CRITICAL_REGION);
 median_control_450nW2 = control_cell_median(:,CRITICAL_REGION);
 
+Stddev_450nW2 = AmpResp;
+Median_450nW2 = MedianResp;
+Prestim_450nW2 = mean(stim_prestim_means,2,'omitnan');
+
 % 450nW timepoint 2
 load('450nW_20180607.mat');
 valid_450nW3 = valid;
@@ -38,6 +45,10 @@ stddev_stim_450nW3 = sqrt(stim_cell_var(:,CRITICAL_REGION));
 stddev_control_450nW3 = sqrt(control_cell_var(:,CRITICAL_REGION));
 median_stim_450nW3 = stim_cell_median(:,CRITICAL_REGION);
 median_control_450nW3 = control_cell_median(:,CRITICAL_REGION);
+
+Stddev_450nW3 = AmpResp;
+Median_450nW3 = MedianResp;
+Prestim_450nW3 = mean(stim_prestim_means,2,'omitnan');
 
 valid = valid_450nW3 & valid_450nW2 & valid_450nW1;
 
@@ -51,40 +62,42 @@ allcontrolmed = mean([median_control_450nW1(valid,:);median_control_450nW2(valid
 % Process things
 
 % 450nW 1
-norm_nonan_ref = stddev_stim_450nW1 -allcontrolstd;
-projected_ref = (norm_nonan_ref-mean(norm_nonan_ref,2,'omitnan'))*stddev_coeff_450nW(:,1:NUM_COMPONENTS);
-Stddev_450nW1 = sum(projected_ref.*std_explained_coeff_450nW,2)./sum(std_explained_coeff_450nW);
-
-norm_nonan_ref = median_stim_450nW1 -allcontrolmed;
-projected_ref = (norm_nonan_ref-mean(norm_nonan_ref,2,'omitnan'))*median_coeff_450nW(:,1:NUM_COMPONENTS);
-Median_450nW1 = sum( (projected_ref.*med_explained_coeff_450nW) ,2)./sum(med_explained_coeff_450nW);
-
-% 450nW 2
-norm_nonan_ref = stddev_stim_450nW2 -allcontrolstd;
-projected_ref = (norm_nonan_ref-mean(norm_nonan_ref,2,'omitnan'))*stddev_coeff_450nW(:,1:NUM_COMPONENTS);
-Stddev_450nW2 = sum(projected_ref.*std_explained_coeff_450nW,2)./sum(std_explained_coeff_450nW);
-
-norm_nonan_ref = median_stim_450nW2 -allcontrolmed;
-projected_ref = (norm_nonan_ref-mean(norm_nonan_ref,2,'omitnan'))*median_coeff_450nW(:,1:NUM_COMPONENTS);
-Median_450nW2 = sum(projected_ref.*med_explained_coeff_450nW,2)./sum(med_explained_coeff_450nW);
-
-% 450nW 2
-norm_nonan_ref = stddev_stim_450nW3 -allcontrolstd;
-projected_ref = (norm_nonan_ref-mean(norm_nonan_ref,2,'omitnan'))*stddev_coeff_450nW(:,1:NUM_COMPONENTS);
-Stddev_450nW3 = sum(projected_ref.*std_explained_coeff_450nW,2)./sum(std_explained_coeff_450nW);
-
-norm_nonan_ref = median_stim_450nW3 -allcontrolmed;
-projected_ref = (norm_nonan_ref-mean(norm_nonan_ref,2,'omitnan'))*median_coeff_450nW(:,1:NUM_COMPONENTS);
-Median_450nW3 = sum(projected_ref.*med_explained_coeff_450nW,2)./sum(med_explained_coeff_450nW);
+% norm_nonan_ref = stddev_stim_450nW1 -allcontrolstd;
+% projected_ref = (norm_nonan_ref-mean(norm_nonan_ref,2,'omitnan'))*stddev_coeff_450nW(:,1:NUM_COMPONENTS);
+% Stddev_450nW1 = sum(projected_ref.*std_explained_coeff_450nW,2)./sum(std_explained_coeff_450nW);
+% 
+% norm_nonan_ref = median_stim_450nW1 -allcontrolmed;
+% projected_ref = (norm_nonan_ref-mean(norm_nonan_ref,2,'omitnan'))*median_coeff_450nW(:,1:NUM_COMPONENTS);
+% Median_450nW1 = sum( (projected_ref.*med_explained_coeff_450nW) ,2)./sum(med_explained_coeff_450nW);
+% 
+% % 450nW 2
+% norm_nonan_ref = stddev_stim_450nW2 -allcontrolstd;
+% projected_ref = (norm_nonan_ref-mean(norm_nonan_ref,2,'omitnan'))*stddev_coeff_450nW(:,1:NUM_COMPONENTS);
+% Stddev_450nW2 = sum(projected_ref.*std_explained_coeff_450nW,2)./sum(std_explained_coeff_450nW);
+% 
+% norm_nonan_ref = median_stim_450nW2 -allcontrolmed;
+% projected_ref = (norm_nonan_ref-mean(norm_nonan_ref,2,'omitnan'))*median_coeff_450nW(:,1:NUM_COMPONENTS);
+% Median_450nW2 = sum(projected_ref.*med_explained_coeff_450nW,2)./sum(med_explained_coeff_450nW);
+% 
+% % 450nW 2
+% norm_nonan_ref = stddev_stim_450nW3 -allcontrolstd;
+% projected_ref = (norm_nonan_ref-mean(norm_nonan_ref,2,'omitnan'))*stddev_coeff_450nW(:,1:NUM_COMPONENTS);
+% Stddev_450nW3 = sum(projected_ref.*std_explained_coeff_450nW,2)./sum(std_explained_coeff_450nW);
+% 
+% norm_nonan_ref = median_stim_450nW3 -allcontrolmed;
+% projected_ref = (norm_nonan_ref-mean(norm_nonan_ref,2,'omitnan'))*median_coeff_450nW(:,1:NUM_COMPONENTS);
+% Median_450nW3 = sum(projected_ref.*med_explained_coeff_450nW,2)./sum(med_explained_coeff_450nW);
 
 
 allfits = [ (Stddev_450nW1 + abs(Median_450nW1) ) ...
             (Stddev_450nW2  + abs(Median_450nW2) ) ...
             (Stddev_450nW3  + abs(Median_450nW3) ) ];  
+
+allfits = log10(allfits+1);        
         
-stdfits =  log10(allfits+1);
-stdfits = stdfits-mean(stdfits(valid,:));
-stdfits = stdfits./std(stdfits(valid,:));
+% stdfits = log10(allfits+1);
+% stdfits = stdfits-mean(stdfits(valid,:));
+% stdfits = stdfits./std(stdfits(valid,:));
 %%
 
 intensities = repmat( [0 log10(50) log10(450)],[size(allfits,1) 1]);
@@ -540,11 +553,13 @@ for i=1:size(allcoords,1)
                                 && all(vertices(:,1)>0) && all(vertices(:,2)>0) 
 
             if lowest1(i) && lowest2(i) && lowest3(i)
+                patch(V(C{i},1),V(C{i},2),ones(size(V(C{i},1))),'FaceColor', 'y' );
+            elseif lowest1(i)% && lowest2(i) && lowest3(i)
                 patch(V(C{i},1),V(C{i},2),ones(size(V(C{i},1))),'FaceColor', 'r' );
-%             elseif lowest2(i)
-%                 patch(V(C{i},1),V(C{i},2),ones(size(V(C{i},1))),'FaceColor', 'b' );
-%             elseif lowest3(i)
-%                 patch(V(C{i},1),V(C{i},2),ones(size(V(C{i},1))),'FaceColor', 'g' );
+            elseif lowest2(i)
+                patch(V(C{i},1),V(C{i},2),ones(size(V(C{i},1))),'FaceColor', 'b' );
+            elseif lowest3(i)
+                patch(V(C{i},1),V(C{i},2),ones(size(V(C{i},1))),'FaceColor', 'g' );
             end
 
         end
@@ -634,7 +649,7 @@ saveas(gcf, 'allvs_response.svg');
 
 %% Histograms of the amplitudes from each intensity.
 
-[~, edges]=histcounts(allfits(valid,1),10);
+[~, edges]=histcounts(allfits(valid,1),20);
 
 binwidth = diff(edges);
 
