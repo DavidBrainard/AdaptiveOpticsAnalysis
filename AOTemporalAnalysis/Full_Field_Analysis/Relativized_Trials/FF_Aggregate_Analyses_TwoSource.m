@@ -90,7 +90,7 @@ for j=1:length(profileCDataNames)
     figure(8); plot(ref_control_times{j}/16.6, sqrt(ref_variance_control{j}./ref_control_count{j})-sqrt(mean(precontrol)) ); hold on; drawnow;      
 end
 
-
+%%
 hold off;axis([0 16 0 4])
 
 for j=1:length(profileSDataNames)
@@ -244,11 +244,11 @@ critical_nonnan_ref = sqrt(all_variance_stim(:,CRITICAL_REGION));
 % 
 % std_dev_explained = std_dev_explained(1:NUM_COMPONENTS)';
 
-load('reference_projection.mat');
-
-critical_pooled_std_stim = pooled_std_stim(CRITICAL_REGION)';
-
-projected_ref = (critical_pooled_std_stim-mean(critical_pooled_std_stim,2,'omitnan'))*std_dev_coeff(:,1:NUM_COMPONENTS);
-Population_Stddev_response = sum(abs(projected_ref).*std_dev_explained,2)./sum(std_dev_explained);
-
-response_characteristics.Population_Stddev_response = Population_Stddev_response
+% load('reference_projection.mat');
+% 
+% critical_pooled_std_stim = pooled_std_stim(CRITICAL_REGION)';
+% 
+% projected_ref = (critical_pooled_std_stim-mean(critical_pooled_std_stim,2,'omitnan'))*std_dev_coeff(:,1:NUM_COMPONENTS);
+% Population_Stddev_response = sum(abs(projected_ref).*std_dev_explained,2)./sum(std_dev_explained);
+% 
+% response_characteristics.Population_Stddev_response = Population_Stddev_response
