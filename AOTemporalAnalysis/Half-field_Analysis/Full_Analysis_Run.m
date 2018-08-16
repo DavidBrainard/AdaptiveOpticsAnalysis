@@ -1,7 +1,6 @@
 % Created by Robert F Cooper 12-19-2017
 %
 
-
 clear;
 close all force;
 clc;
@@ -11,24 +10,57 @@ rootDir = uigetdir(pwd);
 %% Multi-trial run temporal analysis
 fPaths = read_folder_contents_rec(rootDir,'tif');
 
-wbh = waitbar(0,['Converting image 0 of ' num2str(length(fPaths)) '.']);
+isparallel = exist('parfeval','file') == 2;
 
+if isparallel
+    wbh = waitbar(0,'Connecting to parallel pool...');
+
+    p = gcp();
+else
+    wbh = waitbar(0,'Processing dataset...');
+end
 for i=1:size(fPaths,1)
-        
+    
     [mov_path, ref_image_fname] = getparent(fPaths{i});
     
-    waitbar(i/length(fPaths), wbh, ['Analyzing image ' ref_image_fname ' (' num2str(i) ' of ' num2str(length(fPaths)) ').']);
-        
-    if reprocess || ~exist(fullfile(mov_path,'Mat_Profile_Data',[ref_image_fname(1:end - length('AVG.tif') ) 'box_cutoff_regional_norm_prestimminusdiv_sub_90_profiledata.mat'] ), 'file' );
-        
-        try    
-            Temporal_Reflectivity_Analysis(mov_path,ref_image_fname);
+    if isparallel
+        waitbar(i/length(fPaths), wbh, ['Queuing dataset ' num2str(i) ' of ' num2str(length(fPaths)) '.']);
+    else
+        waitbar(i/length(fPaths), wbh, ['Processing dataset ' num2str(i) ' of ' num2str(length(fPaths)) '.']);
+    end
+
+    try 
+        if isparallel
+            tevaled(i) = parfeval(p, @Temporal_Reflectivity_Analysis,0,mov_path,ref_image_fname,true);
+        else
+            Temporal_Reflectivity_Analysis(mov_path,ref_image_fname,false);
+        end
+    catch ex
+       disp([ref_image_fname ' failed to process:']);
+       disp([ex.message ': line ' num2str(ex.stack(1).line)] );
+    end
+end
+
+if isparallel
+    waitbar(0, wbh, ['Waiting for first processed dataset to complete.']);
+    for i=1:size(fPaths,1)
+
+        try
+            [completedIdx] = fetchNext(tevaled);
+            waitbar(i/length(fPaths), wbh, ['Processed dataset ' num2str(i) ' of ' num2str(length(fPaths)) '.' ]);
         catch ex
-           disp([ref_image_fname ' failed to process:']);
-           disp([ex.message ': line ' num2str(ex.stack(1).line)] );
+            disp('Error detected. Continuing with rest of processes.');
+            disp([ex.message ': line ' num2str(ex.stack(end).line)] );
         end
     end
-    close all;
+
+    warning on;
+    for i=1:size(fPaths,1)    
+        if ~isempty(tevaled(i).Error)
+            [~, ref_image_fname] = getparent(fPaths{i});
+            warning([ref_image_fname ' failed to process.'])
+        end
+    end
 end
 
 % Output: mat files for each acquisition.
@@ -39,6 +71,10 @@ fPaths = read_folder_contents_rec(rootDir,'mat');
 
 for i=1:size(fPaths,1)        
     [dataPath{i}, ref_image_fname] = getparent(fPaths{i});    
+end
+
+if ~exist( fullfile(rootDir, 'Aggregated'), 'dir' )
+    mkdir(fullfile(rootDir, 'Aggregated'))
 end
 
 dataPath = unique(dataPath)';
@@ -70,9 +106,9 @@ for i=1:length(dataPath)
             outFname = [id '_' stimwave '_' stim_intensity '_' stim_time '_all_amps'];
 
             all_amps = fitData(i).all_amps;
-            figure(1); hist(all_amps,20); title(outFname,'Interpreter','none');
-            saveas(gcf,[outFname '.png']);
-            save([outFname '.mat'],'all_amps');
+%             figure(1); hist(all_amps,20); title(outFname,'Interpreter','none');
+%             saveas(gcf,[outFname '.png']);
+            save(fullfile(rootDir, 'Aggregated',[outFname '.mat']),'all_amps');
         elseif ~strcmp(controlpath,dataPath{i})
             warning(['Unable to find paired control video for,' parent]);
             fitData(i) = Aggregate_Multiple_Temporal_Analyses_bootstrap(dataPath{i});
@@ -87,9 +123,9 @@ for i=1:length(dataPath)
             outFname = [id '_' stimwave '_' stim_intensity '_' stim_time '_all_amps'];
 
             all_amps = fitData(i).all_amps;
-            figure(1); hist(all_amps,20); title(outFname,'Interpreter','none');
-            saveas(gcf,[outFname '.png']);
-            save([outFname '.mat'],'all_amps');
+%             figure(1); hist(all_amps,20); title(outFname,'Interpreter','none');
+%             saveas(gcf,[outFname '.png']);
+            save(fullfile(rootDir, 'Aggregated',[outFname '.mat']),'all_amps');
         else
             warning(['Not processing control video:' parent]);
         end   
