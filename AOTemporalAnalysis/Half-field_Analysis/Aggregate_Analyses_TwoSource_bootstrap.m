@@ -85,11 +85,11 @@ for j=1:length(profileCDataNames)
 
     end
     precontrol = ref_variance_control{j}(ref_control_times{j}<=66)./ref_control_count{j}(ref_control_times{j}<=66);
-    figure(8); plot(ref_control_times{j}/16.6, sqrt(ref_variance_control{j}./ref_control_count{j})-sqrt(mean(precontrol)) ); hold on; drawnow;      
+%     figure(8); plot(ref_control_times{j}/16.6, sqrt(ref_variance_control{j}./ref_control_count{j})-sqrt(mean(precontrol)) ); hold on; drawnow;      
 end
 
 
-hold off;axis([0 16 0 4])
+% hold off;axis([0 16 0 4])
 
 for j=1:length(profileSDataNames)
 
@@ -126,7 +126,7 @@ for j=1:length(profileSDataNames)
     end
     
     prestim = ref_variance_stim{j}(ref_stim_times{j}<=66)./ref_stim_count{j}(ref_stim_times{j}<=66);
-    figure(9); plot(ref_stim_times{j}/16.6, sqrt( ref_variance_stim{j}./ref_stim_count{j})-sqrt(mean(prestim)) ); hold on; drawnow;
+%     figure(9); plot(ref_stim_times{j}/16.6, sqrt( ref_variance_stim{j}./ref_stim_count{j})-sqrt(mean(prestim)) ); hold on; drawnow;
 
 end
 hold off;axis([0 16 0 4])
@@ -152,112 +152,216 @@ timeBase = ((1:allmax)/hz)';
 stimlen = str2double( strrep(stim_time(1:3),'p','.') );
 
 %% Bootstrap using the above signals
-parfor b=1:1500
+if exist('parfor','builtin')
+    parfor b=1:1000
+        
+        rng('shuffle'); % Reshuffle the RNG after each loop to make sure we're getting a good mix.
 
-    rng('shuffle'); % Reshuffle the RNG after each loop to make sure we're getting a good mix.
-    
-    num_signals_stim = cell(allmax, 1);
-    num_signals_control = cell(allmax, 1);
-    
-    % Get an array of which signals have data for each time point    
-    for j=1:length(profileSDataNames)
-        for i=1:length(ref_stim_times{j})
-            num_signals_stim{ ref_stim_times{j}(i) } = [num_signals_stim{ ref_stim_times{j}(i) }; j ];
+        num_signals_stim = cell(allmax, 1);
+        num_signals_control = cell(allmax, 1);
+
+        % Get an array of which signals have data for each time point    
+        for j=1:length(profileSDataNames)
+            for i=1:length(ref_stim_times{j})
+                num_signals_stim{ ref_stim_times{j}(i) } = [num_signals_stim{ ref_stim_times{j}(i) }; j ];
+            end
+        end
+
+        for j=1:length(profileCDataNames) 
+            for i=1:length(ref_control_times{j})
+                num_signals_control { ref_control_times{j}(i) } = [num_signals_control{ ref_control_times{j}(i) } j];
+            end
+        end
+
+        stim_signal_inds = cell(1,length(num_signals_stim));
+        control_signal_inds = cell(1,length(num_signals_control));
+
+        % Randomly pick the datapoints we'll average from the signals we have
+        % at each time point
+        for i=1:length(num_signals_stim)
+            if ~isempty(num_signals_stim{i})
+                signal_picks = randi( length(num_signals_stim{i}), length(num_signals_stim{i}),1);
+                stim_signal_inds{i} = num_signals_stim{i}( signal_picks );
+            end
+        end
+
+        for i=1:length(num_signals_control)
+            if ~isempty(num_signals_control{i})
+                signal_picks = randi( length(num_signals_control{i}), length(num_signals_control{i}),1);
+                control_signal_inds{i} = num_signals_control{i}( signal_picks );
+            end
+        end       
+
+
+        pooled_variance_stim = zeros(allmax, 1);
+        pooled_variance_stim_count = zeros(allmax, 1);
+        pooled_variance_control = zeros(allmax, 1);
+        pooled_variance_control_count = zeros(allmax, 1);
+
+        %% Create the pooled variance for each of these
+        for i=1:length(pooled_variance_stim)
+            for j=1:length(stim_signal_inds{i})
+                which_ind = stim_signal_inds{i}(j);
+                which_time = ref_stim_times{ which_ind };
+                which_signal = ref_variance_stim{ which_ind };
+                which_count = ref_stim_count{ which_ind };
+
+                % Create the upper and lower halves of our pooled variance
+                pooled_variance_stim( i ) = pooled_variance_stim( i ) + which_signal( which_time==i );
+                pooled_variance_stim_count( i ) = pooled_variance_stim_count( i ) + which_count( which_time==i );
+            end
+        end
+
+        for i=1:length(pooled_variance_control)
+            for j=1:length(control_signal_inds{i})
+                which_ind = control_signal_inds{i}(j);
+                which_time = ref_control_times{ which_ind };
+                which_signal = ref_variance_control{ which_ind };
+                which_count = ref_control_count{ which_ind };
+
+                % Create the upper and lower halves of our pooled variance
+                pooled_variance_control( i ) = pooled_variance_control( i ) + which_signal( which_time==i );
+                pooled_variance_control_count( i ) = pooled_variance_control_count( i ) + which_count( which_time==i );
+            end
+        end
+
+        for i=1:length(pooled_variance_stim)    
+            pooled_variance_stim(i) = pooled_variance_stim(i)/pooled_variance_stim_count(i);
+        end
+        for i=1:length(pooled_variance_control)    
+            pooled_variance_control(i) = pooled_variance_control(i)/pooled_variance_control_count(i);
+        end
+        %figure(10); 
+
+        %plot( timeBase,sqrt(pooled_variance_stim),'r'); hold on;
+        %plot( timeBase,sqrt(pooled_variance_control),'b');
+
+        pooled_std_stim = sqrt(pooled_variance_stim)-sqrt(pooled_variance_control);
+
+        %legend('Stimulus cones','Control cones','Subtraction');
+        %plot( timeBase(~isnan(pooled_std_stim)), pooled_std_stim(~isnan(pooled_std_stim)),'k'); hold on;
+
+        [fitCharacteristics, residuals] = modelFit(timeBase, pooled_std_stim);    
+
+        if (residuals < 10) && (fitCharacteristics.amplitude < 3)
+           all_amps(b) = fitCharacteristics.amplitude;
+           all_res(b) = residuals; 
+        else
+           residuals
+           fitCharacteristics.amplitude
+           all_amps(b) = -1;
+           all_res(b) = -1;
         end
     end
-    
-    for j=1:length(profileCDataNames) 
-        for i=1:length(ref_control_times{j})
-            num_signals_control { ref_control_times{j}(i) } = [num_signals_control{ ref_control_times{j}(i) } j];
+else
+    for b=1:1000
+        
+        rng('shuffle'); % Reshuffle the RNG after each loop to make sure we're getting a good mix.
+
+        num_signals_stim = cell(allmax, 1);
+        num_signals_control = cell(allmax, 1);
+
+        % Get an array of which signals have data for each time point    
+        for j=1:length(profileSDataNames)
+            for i=1:length(ref_stim_times{j})
+                num_signals_stim{ ref_stim_times{j}(i) } = [num_signals_stim{ ref_stim_times{j}(i) }; j ];
+            end
         end
-    end
-    
-    stim_signal_inds = cell(1,length(num_signals_stim));
-    control_signal_inds = cell(1,length(num_signals_control));
-    
-    % Randomly pick the datapoints we'll average from the signals we have
-    % at each time point
-    for i=1:length(num_signals_stim)
-        if ~isempty(num_signals_stim{i})
-            signal_picks = randi( length(num_signals_stim{i}), length(num_signals_stim{i}),1);
-            stim_signal_inds{i} = num_signals_stim{i}( signal_picks );
+
+        for j=1:length(profileCDataNames) 
+            for i=1:length(ref_control_times{j})
+                num_signals_control { ref_control_times{j}(i) } = [num_signals_control{ ref_control_times{j}(i) } j];
+            end
         end
-    end
-    
-    for i=1:length(num_signals_control)
-        if ~isempty(num_signals_control{i})
-            signal_picks = randi( length(num_signals_control{i}), length(num_signals_control{i}),1);
-            control_signal_inds{i} = num_signals_control{i}( signal_picks );
+
+        stim_signal_inds = cell(1,length(num_signals_stim));
+        control_signal_inds = cell(1,length(num_signals_control));
+
+        % Randomly pick the datapoints we'll average from the signals we have
+        % at each time point
+        for i=1:length(num_signals_stim)
+            if ~isempty(num_signals_stim{i})
+                signal_picks = randi( length(num_signals_stim{i}), length(num_signals_stim{i}),1);
+                stim_signal_inds{i} = num_signals_stim{i}( signal_picks );
+            end
         end
-    end       
 
-    
-    pooled_variance_stim = zeros(allmax, 1);
-    pooled_variance_stim_count = zeros(allmax, 1);
-    pooled_variance_control = zeros(allmax, 1);
-    pooled_variance_control_count = zeros(allmax, 1);
+        for i=1:length(num_signals_control)
+            if ~isempty(num_signals_control{i})
+                signal_picks = randi( length(num_signals_control{i}), length(num_signals_control{i}),1);
+                control_signal_inds{i} = num_signals_control{i}( signal_picks );
+            end
+        end       
 
-    %% Create the pooled variance for each of these
-    for i=1:length(pooled_variance_stim)
-        for j=1:length(stim_signal_inds{i})
-            which_ind = stim_signal_inds{i}(j);
-            which_time = ref_stim_times{ which_ind };
-            which_signal = ref_variance_stim{ which_ind };
-            which_count = ref_stim_count{ which_ind };
-            
-            % Create the upper and lower halves of our pooled variance
-            pooled_variance_stim( i ) = pooled_variance_stim( i ) + which_signal( which_time==i );
-            pooled_variance_stim_count( i ) = pooled_variance_stim_count( i ) + which_count( which_time==i );
+
+        pooled_variance_stim = zeros(allmax, 1);
+        pooled_variance_stim_count = zeros(allmax, 1);
+        pooled_variance_control = zeros(allmax, 1);
+        pooled_variance_control_count = zeros(allmax, 1);
+
+        %% Create the pooled variance for each of these
+        for i=1:length(pooled_variance_stim)
+            for j=1:length(stim_signal_inds{i})
+                which_ind = stim_signal_inds{i}(j);
+                which_time = ref_stim_times{ which_ind };
+                which_signal = ref_variance_stim{ which_ind };
+                which_count = ref_stim_count{ which_ind };
+
+                % Create the upper and lower halves of our pooled variance
+                pooled_variance_stim( i ) = pooled_variance_stim( i ) + which_signal( which_time==i );
+                pooled_variance_stim_count( i ) = pooled_variance_stim_count( i ) + which_count( which_time==i );
+            end
         end
-    end
 
-    for i=1:length(pooled_variance_control)
-        for j=1:length(control_signal_inds{i})
-            which_ind = control_signal_inds{i}(j);
-            which_time = ref_control_times{ which_ind };
-            which_signal = ref_variance_control{ which_ind };
-            which_count = ref_control_count{ which_ind };
-            
-            % Create the upper and lower halves of our pooled variance
-            pooled_variance_control( i ) = pooled_variance_control( i ) + which_signal( which_time==i );
-            pooled_variance_control_count( i ) = pooled_variance_control_count( i ) + which_count( which_time==i );
+        for i=1:length(pooled_variance_control)
+            for j=1:length(control_signal_inds{i})
+                which_ind = control_signal_inds{i}(j);
+                which_time = ref_control_times{ which_ind };
+                which_signal = ref_variance_control{ which_ind };
+                which_count = ref_control_count{ which_ind };
+
+                % Create the upper and lower halves of our pooled variance
+                pooled_variance_control( i ) = pooled_variance_control( i ) + which_signal( which_time==i );
+                pooled_variance_control_count( i ) = pooled_variance_control_count( i ) + which_count( which_time==i );
+            end
         end
-    end
 
-    for i=1:length(pooled_variance_stim)    
-        pooled_variance_stim(i) = pooled_variance_stim(i)/pooled_variance_stim_count(i);
-    end
-    for i=1:length(pooled_variance_control)    
-        pooled_variance_control(i) = pooled_variance_control(i)/pooled_variance_control_count(i);
-    end
-    %figure(10); 
+        for i=1:length(pooled_variance_stim)    
+            pooled_variance_stim(i) = pooled_variance_stim(i)/pooled_variance_stim_count(i);
+        end
+        for i=1:length(pooled_variance_control)    
+            pooled_variance_control(i) = pooled_variance_control(i)/pooled_variance_control_count(i);
+        end
+        %figure(10); 
 
-    %plot( timeBase,sqrt(pooled_variance_stim),'r'); hold on;
-    %plot( timeBase,sqrt(pooled_variance_control),'b');
+        %plot( timeBase,sqrt(pooled_variance_stim),'r'); hold on;
+        %plot( timeBase,sqrt(pooled_variance_control),'b');
 
-    pooled_std_stim = sqrt(pooled_variance_stim)-sqrt(pooled_variance_control);
+        pooled_std_stim = sqrt(pooled_variance_stim)-sqrt(pooled_variance_control);
 
-    %legend('Stimulus cones','Control cones','Subtraction');
-    %plot( timeBase(~isnan(pooled_std_stim)), pooled_std_stim(~isnan(pooled_std_stim)),'k'); hold on;
+        %legend('Stimulus cones','Control cones','Subtraction');
+        %plot( timeBase(~isnan(pooled_std_stim)), pooled_std_stim(~isnan(pooled_std_stim)),'k'); hold on;
 
-    [fitCharacteristics, residuals] = modelFit(timeBase, pooled_std_stim);    
+        [fitCharacteristics, residuals] = modelFit(timeBase, pooled_std_stim);    
 
-    if (residuals < 10) && (fitCharacteristics.amplitude < 3)
-       all_amps(b) = fitCharacteristics.amplitude;
-       all_res(b) = residuals; 
-    else
-       residuals
-       fitCharacteristics.amplitude
-       all_amps(b) = -1;
-       all_res(b) = -1;
+        if (residuals < 10) && (fitCharacteristics.amplitude < 3)
+           all_amps(b) = fitCharacteristics.amplitude;
+           all_res(b) = residuals; 
+        else
+           residuals
+           fitCharacteristics.amplitude
+           all_amps(b) = -1;
+           all_res(b) = -1;
+        end
     end
 end
+    
 sum(all_amps>=0)
 all_amps = all_amps(all_amps>=0);
 all_res = all_res(all_res>=0);
 
-all_amps = all_amps(1:1000);
-all_res = all_res(1:1000);
+% all_amps = all_amps(1:1000);
+% all_res = all_res(1:1000);
 
 characteristics.avg_num_control_cones = (num_control_cones)/(length(profileCDataNames));
 characteristics.avg_num_stim_cones = num_stim_cones/length(profileSDataNames);

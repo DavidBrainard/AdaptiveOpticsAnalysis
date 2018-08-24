@@ -37,7 +37,7 @@ profile_method = 'box';
 
 % For release, this version only contains the normalizations used in the
 % paper. However, the code is structured such that you can add more if desired.
-norm_type = 'global_norm'; 
+norm_type = 'regional_norm_prestim_stdiz'; 
 
 % mov_path=pwd;
 if ~exist('mov_path','var') || ~exist('this_image_fname','var')

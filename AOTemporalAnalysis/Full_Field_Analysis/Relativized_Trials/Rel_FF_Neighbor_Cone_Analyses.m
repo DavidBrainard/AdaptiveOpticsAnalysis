@@ -36,7 +36,7 @@ clear;
 % load('lowest_responders.mat');
 
 CUTOFF = 26;
-NUM_NEIGHBORS = 3;
+NUM_NEIGHBORS = 5;
 NUMTRIALS=20 * (NUM_NEIGHBORS + 1);
 CRITICAL_REGION = 66:100;
 
@@ -332,15 +332,15 @@ for i=1:numcontrolcoords
     end
     
     if i==CELL_OF_INTEREST 
-%         figure(2); clf;
-%         subplot(3,1,1); plot(bsxfun(@minus,nonorm_ref, nonorm_ref(:,2))'); axis([2 166 -75 75]);
-%         subplot(3,1,2); plot(all_times_ref'); axis([2 166 -10 10]);       
-%         subplot(3,1,3); plot(control_cell_median(i,:)); hold on;
-%                         plot(sqrt(control_cell_var(i,:))); hold off; axis([2 166 -2 4]);
-%         title(['Cell #:' num2str(i)]);   
-%         THEcontref = all_times_ref;
-%         drawnow;
-%         saveas(gcf, ['Cell_' num2str(i) '_control.svg']);
+        figure(2); clf;
+        subplot(3,1,1); plot(bsxfun(@minus,nonorm_ref, nonorm_ref(:,2))'); axis([2 166 -75 75]);
+        subplot(3,1,2); plot(all_times_ref'); axis([2 166 -10 10]);       
+        subplot(3,1,3); plot(control_cell_median(i,:)); hold on;
+                        plot(sqrt(control_cell_var(i,:))); hold off; axis([2 166 -2 4]);
+        title(['Cell #:' num2str(i)]);   
+        THEcontref = all_times_ref;
+        drawnow;
+        saveas(gcf, ['Cell_' num2str(i) '_control.svg']);
 %         pause;
     end
 end
@@ -387,30 +387,64 @@ critical_nonnan_ref = stim_cell_median(:,CRITICAL_REGION);
 timeBase = ((1:max_index-1)/16.6)';
 
 %% Analyze the signals
+AmpResp = nan(size(std_dev_sub,1),1);
+MedianResp = nan(size(std_dev_sub,1),1);
+TTPResp = nan(size(std_dev_sub,1),1);
+PrestimVal = nan(size(std_dev_sub,1),1);
+ControlPrestimVal = nan(size(std_dev_sub,1),1);
 
-fitAmp = nan(size(std_dev_sub,1),1);
-fitMedian = nan(size(std_dev_sub,1),1);
-
-
+allinds = 1:length(std_dev_sub);
 for i=1:size(std_dev_sub,1)
 waitbar(i/size(std_dev_sub,1),THEwaitbar,'Analyzing subtracted signals...');
 
-    std_dev_sig = std_dev_sub(i,:);
-    median_sig = median_sub(i,:);
+    if ~all( isnan(std_dev_sub(i,2:end)) ) && (stim_trial_count(i) >= NUMTRIALS) && (control_trial_count(i) >= NUMTRIALS)
+        std_dev_sig = std_dev_sub(i,2:end);
+        
+        nanners = ~isnan(std_dev_sig);
+        
+        firstind=find(cumsum(nanners)>0);
+        [~, lastind] = max(cumsum(nanners)-sum(nanners));
+        interpinds = firstind(1):lastind;
+        goodinds = allinds(nanners);
+        
+        std_dev_sig = interp1(goodinds, std_dev_sig(nanners), interpinds, 'linear');        
 
-    if ~all( isnan(std_dev_sig) ) && (stim_trial_count(i) >= NUMTRIALS) && (control_trial_count(i) >= NUMTRIALS)
+        filt_stddev_sig = wavelet_denoise( std_dev_sig );
 
-        % AUC        
-        fitAmp(i) = sum(std_dev_sig(CRITICAL_REGION));
-        fitMedian(i) = sum(median_sig(CRITICAL_REGION));
+        median_sig = median_sub(i,2:end);
+        
+        nanners = ~isnan(median_sig);
+        
+        firstind=find(cumsum(nanners)>0);
+        [~, lastind] = max(cumsum(nanners)-sum(nanners));
+        interpinds = firstind(1):lastind;
+        goodinds = allinds(nanners);
+        
+        median_sig = interp1(goodinds, median_sig(nanners), interpinds, 'linear');
+        
+        filt_median_sig = wavelet_denoise( median_sig );
 
+        critical_filt = filt_stddev_sig( CRITICAL_REGION );
+        
+%         [height,loc]= findpeaks(filt_stddev_sig(CRITICAL_REGION))
+        
+        [~, TTPResp(i)] = max( abs(critical_filt) );    
+        AmpResp(i) = median(filt_stddev_sig(CRITICAL_REGION));%critical_filt(TTPResp(i))-mean(filt_stddev_sig(1:CRITICAL_REGION(1)));
+        MedianResp(i) = mean(abs(filt_median_sig(CRITICAL_REGION)));%abs( max(abs(filt_median_sig(CRITICAL_REGION)))-mean(filt_median_sig(1:CRITICAL_REGION(1))) );
+        PrestimVal(i) = mean( stim_prestim_means(i,:),2, 'omitnan');
+        ControlPrestimVal(i) = mean( cont_prestim_means(i,:),2, 'omitnan');
+%         histogram(filt_stddev_sig(CRITICAL_REGION),20)
+%         if AmpResp(i) == 0
+%            plot( filt_stddev_sig ); hold on; plot(std_dev_sig); hold off; drawnow; pause;
+%         end
     end
 end
 close(THEwaitbar);
 %%
-save([ stim_intensity '.mat'],'fitAmp','fitMedian','std_dev_coeff','valid','std_dev_explained','median_explained',...
-     'median_coeff','std_dev_score','median_score','allcoords','ref_image','control_cell_median',...
-     'control_cell_var','stim_cell_median','stim_cell_var');
+save([ stim_intensity '.mat'],'AmpResp','MedianResp','TTPResp', 'std_dev_coeff',...
+     'valid','std_dev_explained','median_explained','median_coeff',...
+     'std_dev_score','median_score','allcoords','ref_image','control_cell_median',...
+     'control_cell_var','stim_cell_median','stim_cell_var','stim_prestim_means');
 
  
 
@@ -420,7 +454,7 @@ posnegratio=nan(size(control_coords,1),1);
 
 figure(101); clf; hold on;
 for i=1:size(control_coords,1)
-    if ~isnan(fitAmp(i))
+    if ~isnan(AmpResp(i))
         % Find out what percentage of time the signal spends negative
         % or positive after stimulus delivery (66th frame)
 %         numposneg = sign(mean_sub(i,:));
@@ -428,7 +462,7 @@ for i=1:size(control_coords,1)
 % 
 %         posnegratio(i) = 100*pos/length(numposneg);
 
-        plot( fitAmp(i), fitMedian(i),'k.');        
+        plot( AmpResp(i), MedianResp(i),'k.');        
     end
 end
 ylabel('Median response amplitude');
@@ -438,7 +472,7 @@ hold off;
 saveas(gcf,['posneg_vs_amp_' num2str(stim_intensity) '.png']);
 %% Plot histograms of the amplitudes
 figure(7);
-histogram( fitAmp(~isnan(fitAmp)) ,'Binwidth',0.1);
+histogram( AmpResp(~isnan(AmpResp)) ,'Binwidth',0.1);
 title('Stim-Control per cone subtraction amplitudes');
 xlabel('Amplitude difference from control');
 ylabel('Number of cones');
