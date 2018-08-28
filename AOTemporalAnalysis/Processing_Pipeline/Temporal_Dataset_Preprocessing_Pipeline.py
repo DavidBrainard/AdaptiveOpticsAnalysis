@@ -13,27 +13,27 @@
 try:
     import matlab.engine # This needs to be imported first for some stupid reason.
 except:
-    import Tkinter as tk
-    import Tkconstants, tkFileDialog, tkMessageBox
+    from tkinter import constants, filedialog, messagebox
+    import tkinter as tk
     import os, sys, ctypes
     import subprocess
     import socket
     
     options = {}
     options['title'] = 'Please select your [MATLABROOT]\extern\engines\python folder to link to MATLAB.'
-    matlab_folder_path = tkFileDialog.askdirectory(**options)
+    matlab_folder_path = filedialog.askdirectory(**options)
 
-    ctypes.windll.shell32.ShellExecuteW(None, u"runas",  unicode("C:\\Python27\\python.exe"), u"setup.py install", unicode(matlab_folder_path), 1)   
+    ctypes.windll.shell32.ShellExecuteW(None, u"runas",  "C:\\Python36\\python.exe", u"setup.py install", matlab_folder_path, 1)
 
     try:
         import matlab.engine
     except:
-        tkMessageBox.showerror("Linking (should be) successful!", "If the console did not display any errors, then linking successful! Please restart this script.")
+        messagebox.showerror("Linking (should be) successful!", "If the console did not display any errors, then linking successful! Please restart this script.")
         sys.exit(0)
 
 import os, pickle
-import Tkinter as tk
-import Tkconstants, tkFileDialog, tkMessageBox
+import tkinter as tk
+from tkinter import constants, filedialog, messagebox
 import numpy as np
 
 root = tk.Tk()
@@ -41,7 +41,7 @@ root = tk.Tk()
 try:
     mat_engi = matlab.engine.start_matlab()
 except:
-    tkMessageBox.showerror("Unable to start MATLAB! Ensure you have a valid copy of MATLAB installed AND it has been linked with python.")
+    messagebox.showerror("Unable to start MATLAB! Ensure you have a valid copy of MATLAB installed AND it has been linked with python.")
     quit(1)
 
 
@@ -50,7 +50,7 @@ options['title'] = 'Select the DESINUSOID FILE:'
 options['parent'] = root
 options['filetypes'] = [("MAT File", ".mat")]
 
-desinsoid_file = tkFileDialog.askopenfilename(**options)
+desinsoid_file = filedialog.askopenfilename(**options)
 
 static_distortion = mat_engi.Static_Distortion_Repair(desinsoid_file)
 
@@ -61,14 +61,14 @@ options['title'] = 'Select the folder containing the DMP files:'
 options['parent'] = root
 options['initialdir'] = just_the_dir
 
-dmp_folder_path = tkFileDialog.askdirectory(**options)
+dmp_folder_path = filedialog.askdirectory(**options)
 
 options = {}
 options['title'] = 'Select the folder containing the IMAGE or MOVIE files:'
 options['parent'] = root
 options['initialdir'] = dmp_folder_path
 
-image_folder_path = tkFileDialog.askdirectory(**options)
+image_folder_path = filedialog.askdirectory(**options)
 
 stimend = 99
 stimbegin = 67
@@ -221,7 +221,7 @@ for thisfile in os.listdir(dmp_folder_path):
 
         except(ValueError, RuntimeError) as err:
             print(err)
-            tkMessageBox.showwarning("DMP failed to process.",
+            messagebox.showwarning("DMP failed to process.",
                                      "Failed to process DMP (" + thisfile + ")! This file may be corrupted. Re-process the DMP, or contact your local RFC.")
 
 # mat_engi.input_test(fixed_images, nargout=0)
