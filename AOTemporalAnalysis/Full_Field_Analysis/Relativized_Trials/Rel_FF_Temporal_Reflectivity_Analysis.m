@@ -29,6 +29,10 @@ function []=Rel_FF_Temporal_Reflectivity_Analysis(mov_path, this_image_fname, st
 % 
 %
 
+% if ~exist('contains','builtin')
+%     contains = @(t,p)~isempty(strfind(t,p));
+% end
+
 % *** Constants ***
 %
 % The shape used to isolate the reflectance at each time point. Box is
@@ -43,7 +47,7 @@ norm_type = 'regional_norm_prestim_stdiz';
 if ~exist('mov_path','var') || ~exist('this_image_fname','var')
     close all force;
     [this_image_fname, mov_path]  = uigetfile(fullfile(pwd,'*.tif'));
-    stimulus_frames=[67 99];
+    stimulus_frames=[72 108];
     
     rply = input('Stimulus (s) or Control (c)? [s]: ','s');
     if isempty(rply) || strcmpi(rply,'s')

@@ -37,7 +37,7 @@ clear;
 
 CUTOFF = 26;
 NUMTRIALS=20;
-CRITICAL_REGION = 67:115;
+CRITICAL_REGION = 72:108;
 
 CELL_OF_INTEREST = [];
 
@@ -64,6 +64,7 @@ profileCDataNames = read_folder_contents(controlRootDir,'mat');
 [remain stimwave] = getparent(remain); % wavelength
 % [remain sessiondate] = getparent(remain); % date
 [~, id] = getparent(remain); % id
+outFname = [id '_' stimwave '_' stim_intensity '_' stim_time  '_' stim_loc '_' num2str(length(profileSDataNames)) '_single_cone_signals'];
 
 
 %% Code for determining variance across all signals at given timepoint
@@ -218,27 +219,27 @@ for i=1:numstimcoords
         end
     end
     
-    if any(i==CELL_OF_INTEREST)
+    if any(i==CELL_OF_INTEREST) && stim_trial_count(i)>CUTOFF
         figure(1); clf;
         subplot(4,1,1); plot( bsxfun(@minus,nonorm_ref, nonorm_ref(:,2))');axis([2 166 -150 150]); xlabel('Time index'); ylabel('Raw Response');
         subplot(4,1,2); plot(all_times_ref');  axis([2 166 -20 20]); xlabel('Time index'); ylabel('Standardized Response');
         subplot(4,1,3); plot(stim_cell_median(i,:)); hold on;
                         plot(sqrt(stim_cell_var(i,:))); hold off; axis([2 166 -2 10]); xlabel('Time index'); ylabel('Response');
-        subplot(4,1,4); plot(stim_prestim_means(i,:),'*'); xlabel('Trial #'); ylabel('Prestimulus mean (A.U.)');
+        subplot(4,1,4); plot(stim_prestim_means(i,:),'*'); xlabel('Trial #'); ylabel('Prestimulus mean (A.U.)'); axis([0 50 0 255]);
         title(['Cell #:' num2str(i)]);
         drawnow;
-        saveas(gcf, ['Cell_' num2str(i) '_stimulus.png']);
+%         saveas(gcf, ['Cell_' num2str(i) '_stimulus.png']);
         
         THEstimref = all_times_ref;
         
         figure(5); imagesc(ref_image); colormap gray; axis image;hold on; 
         plot(ref_coords(i,1),ref_coords(i,2),'r*'); hold off;
-        saveas(gcf, ['Cell_' num2str(i) '_location.png']);
+%         saveas(gcf, ['Cell_' num2str(i) '_location.png']);
         drawnow;
         
         
 %         stim_prestim_means
-%         pause;
+        pause;
     end
 
 end
@@ -389,7 +390,7 @@ waitbar(i/size(std_dev_sub,1),THEwaitbar,'Analyzing subtracted signals...');
 %         [height,loc]= findpeaks(filt_stddev_sig(CRITICAL_REGION))
         
         [~, TTPResp(i)] = max( abs(critical_filt) );    
-        AmpResp(i) = median(filt_stddev_sig(CRITICAL_REGION));%critical_filt(TTPResp(i))-mean(filt_stddev_sig(1:CRITICAL_REGION(1)));
+        AmpResp(i) = critical_filt(TTPResp(i))-mean(filt_stddev_sig(1:CRITICAL_REGION(1)));
         MedianResp(i) = mean(abs(filt_median_sig(CRITICAL_REGION)));%abs( max(abs(filt_median_sig(CRITICAL_REGION)))-mean(filt_median_sig(1:CRITICAL_REGION(1))) );
         PrestimVal(i) = mean( stim_prestim_means(i,:),2, 'omitnan');
         ControlPrestimVal(i) = mean( cont_prestim_means(i,:),2, 'omitnan');
@@ -401,7 +402,7 @@ waitbar(i/size(std_dev_sub,1),THEwaitbar,'Analyzing subtracted signals...');
 end
 close(THEwaitbar);
 %%
-save([ stim_intensity '.mat'],'AmpResp','MedianResp','TTPResp', 'std_dev_coeff',...
+save([ outFname '.mat'],'AmpResp','MedianResp','TTPResp', 'std_dev_coeff',...
      'valid','std_dev_explained','median_explained','median_coeff',...
      'std_dev_score','median_score','allcoords','ref_image','control_cell_median',...
      'control_cell_var','stim_cell_median','stim_cell_var','stim_prestim_means');
@@ -432,7 +433,7 @@ end
 % xlabel('Reflectance response amplitude');
 % title('Median reflectance vs reflectance response amplitude')
 hold off;
-saveas(gcf,['posneg_vs_amp_' num2str(stim_intensity) '.png']);
+% saveas(gcf,['posneg_vs_amp_' num2str(stim_intensity) '.png']);
 %% Plot histograms of the amplitudes
 figure(7);
 histogram( AmpResp(~isnan(AmpResp)) ,'Binwidth',0.1);
