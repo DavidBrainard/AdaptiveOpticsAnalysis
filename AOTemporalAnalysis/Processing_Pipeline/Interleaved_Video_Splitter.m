@@ -55,6 +55,9 @@ for k=1:length(fname)
         frame_nums{i} = ['Frame ' num2str(i) ' of: ' num2str(size(vid,2))];
         i=i+1;
     end
+    
+    % TO FORCE EQUIVALENCE
+    second_piece = second_piece(:,:,1+abs(size(second_piece,3)-size(first_piece,3)):end);
         
     
     %% Output the split videos
