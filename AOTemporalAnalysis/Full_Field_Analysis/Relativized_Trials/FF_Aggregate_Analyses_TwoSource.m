@@ -91,7 +91,7 @@ for j=1:length(profileCDataNames)
 end
 
 %%
-hold off;axis([0 16 0 4])
+hold off;axis([0 16 0 6])
 
 for j=1:length(profileSDataNames)
 
@@ -131,7 +131,7 @@ for j=1:length(profileSDataNames)
     figure(9); plot(ref_stim_times{j}/16.6, sqrt( ref_variance_stim{j}./ref_stim_count{j})-sqrt(mean(prestim)) ); hold on; drawnow;
 
 end
-hold off;axis([0 16 0 4])
+hold off;axis([0 16 0 6])
 
 if (length(stim_cell_times) + length(control_cell_times)) < min_cones
     min_cones = (length(stim_cell_times) + length(control_cell_times));
@@ -196,7 +196,8 @@ saveas(gcf, fullfile(pwd, [outFname '_allcontrol.png']), 'png' );
 figure(9);  title('All stimulus signals'); xlabel('Frame #'); ylabel('Standard deviations'); %axis([0 249 -20 75]);
 saveas(gcf, fullfile(pwd, [outFname '_allstim.png']), 'png' );
 
-hz=16.66666666;
+hz=17.75;
+stim_start = 72;
 timeBase = ((1:allmax)/hz)';
 
 dlmwrite(fullfile(pwd, [outFname '.csv']), [timeBase sqrt(pooled_variance_stim) sqrt(pooled_variance_control)], ',' );
@@ -215,12 +216,12 @@ legend('Stimulus cones','Control cones','Subtraction');
 % Stim train
 stimlen = str2double( strrep(stim_time(1:3),'p','.') );
 
-trainlocs = 66/hz:1/hz:(66/hz+stimlen);
+trainlocs = stim_start/hz:1/hz:(stim_start/hz+stimlen);
 plot(trainlocs, max(pooled_std_stim)*ones(size(trainlocs)),'r*'); hold off;
 
 % plot(stim_locs, max([ref_variance_stim; ref_variance_control])*ones(size(stim_locs)),'r*'); hold off;
 ylabel('Pooled Standard deviation'); xlabel('Time (s)'); title( [stim_intensity ' ' stim_time 'pooled standard deviation of ' num2str(length(profileSDataNames)) ' signals.'] );
-axis([0 16 -1 3])
+axis([0 16 -1 5])
 hold off;
 saveas(gcf, fullfile(pwd, [outFname '.png']), 'png' );
 % saveas(gcf, fullfile(pwd, [outFname '.svg']), 'svg' );
@@ -230,25 +231,4 @@ saveas(gcf, fullfile(pwd, [outFname '.png']), 'png' );
 % dlmwrite(fullfile(pwd, [date '_all_plots.csv']), [ [str2double(id(4:end)), str2double(stim_intensity(1:3)), stimlen] ;[ timeBase sqrt(pooled_variance_stim) sqrt(pooled_variance_control) ] ]',...
 %          '-append', 'delimiter', ',', 'roffset',1);
 
-%%
-NUM_COMPONENTS =3;
-CRITICAL_REGION = 66:100;
-allcontrolstd = mean(sqrt(all_variance_control),1,'omitnan');
-norm_nonan_ref = sqrt(all_variance_stim) -allcontrolstd;
-norm_nonan_ref = norm_nonan_ref(:,2:end);
-critical_nonnan_ref = sqrt(all_variance_stim(:,CRITICAL_REGION));
 
-
-% [std_dev_coeff, std_dev_score, std_dev_latent, tquare, std_dev_explained, std_dev_mu]=pca(critical_nonnan_ref);
-% 
-% 
-% std_dev_explained = std_dev_explained(1:NUM_COMPONENTS)';
-
-% load('reference_projection.mat');
-% 
-% critical_pooled_std_stim = pooled_std_stim(CRITICAL_REGION)';
-% 
-% projected_ref = (critical_pooled_std_stim-mean(critical_pooled_std_stim,2,'omitnan'))*std_dev_coeff(:,1:NUM_COMPONENTS);
-% Population_Stddev_response = sum(abs(projected_ref).*std_dev_explained,2)./sum(std_dev_explained);
-% 
-% response_characteristics.Population_Stddev_response = Population_Stddev_response
