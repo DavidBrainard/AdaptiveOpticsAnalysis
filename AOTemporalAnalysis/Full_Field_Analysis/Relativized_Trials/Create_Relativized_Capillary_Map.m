@@ -7,7 +7,9 @@ close all;
 % This script creates a super-video that is used to get an excellently
 % accurate capillary map.
 
-
+if ~exist('contains','builtin')
+    contains = @(t,p)~isempty(strfind(t,p));
+end
 mov_path = pwd;
 
 
