@@ -316,15 +316,14 @@ if contains( norm_type, 'prestim_stdiz')
         
         norm_cell_reflectance{i} = norm_cell_reflectance{i}/( prestim_std(i) ); % /sqrt(length(norm_control_cell_reflectance{i})) );
     end
-elseif contains( norm_type, 'startstim')
-    % Then normalize to the average intensity of each cone AFTER stimulus.
-    poststim_std=nan(1,length( norm_cell_reflectance ));
-    poststim_mean=nan(1,length( norm_cell_reflectance ));
+elseif contains( norm_type, 'ramtype')
+    % Then normalize to the average intensity of each cone's highest 5
+    % values.
     
     for i=1:length( norm_cell_reflectance )
 
         if ~isempty(norm_cell_reflectance{i})
-            prestim_mean(i) = norm_cell_reflectance{i}( stim_times(1) );
+            prestim_mean(i) = sort(norm_cell_reflectance{i});
 
             norm_cell_reflectance{i} = norm_cell_reflectance{i}./prestim_mean(i);
         end

@@ -48,9 +48,9 @@ valid = all(~isnan(single_cone_response),2);
 
 %% Individual Spatal maps
 
-generate_spatial_map(single_cone_response, allcoords, valid, single_cone_mat_files, saveplots);
+generate_spatial_map(single_cone_response, allcoords, valid, single_cone_mat_files,'_stimulus', saveplots);
 
-generate_spatial_map(single_cone_control_response, allcoords, valid, single_cone_mat_files, saveplots);
+generate_spatial_map(single_cone_control_response, allcoords, valid, single_cone_mat_files,'_control', saveplots);
 
 %% Amplitude vs Median response
 figure; hold on;
@@ -116,6 +116,12 @@ for i=1:length(single_cone_mat_files)
     thelessthan{i} = find(lessthanvalid(:,i)==1);
     xlabel('Log Control Response (mean control subtracted)')
     ylabel('Log Stimulus Response (mean control subtracted)');
+    
+    if saveplots
+        saveas(gcf, [single_cone_mat_files{i}(1:end-4) '_VS_plot.png']);
+    end
+    
+    generate_spatial_map(single_cone_response(:,i), allcoords, lessthanvalid(:,i), single_cone_mat_files(i), '_VS', saveplots);
 end
 
-generate_spatial_map(single_cone_response, allcoords, lessthanvalid, single_cone_mat_files, saveplots);
+

@@ -1,4 +1,4 @@
-function [] = generate_spatial_map(single_cone_response, coords, valid_cells, names, saveplots, the_thresh)
+function [] = generate_spatial_map(single_cone_response, coords, valid_cells, names, suffix, saveplots, the_thresh)
 %generate_spatial_map(single_cone_response, coords, valid_cells, names)
 %
 % 2018-08-29 Robert F Cooper
@@ -13,7 +13,7 @@ end
 for j=1:size(single_cone_response,2)
     
     upper_thresh = 1.2;%quantile(single_cone_response(:,j),0.95); 
-    lower_thresh = 0; %quantile(single_cone_response(:,j),0.05);
+    lower_thresh = 0;%quantile(single_cone_response(:,j),0.05);
 
     thismap = parula( ((upper_thresh-lower_thresh)*100)+2); 
 
@@ -26,7 +26,7 @@ for j=1:size(single_cone_response,2)
 
     for i=1:size(coords,1)
 
-        if valid_cells(i,j)
+        if valid_cells(i)
             percentmax(i) = single_cone_response(i,j);
 
             if percentmax(i) > upper_thresh
@@ -54,7 +54,7 @@ for j=1:size(single_cone_response,2)
     title(strrep(names{j}(1:end-4),'_','\_'))
     hold off; drawnow;
     if saveplots
-        saveas(gcf, [strrep(names{j}(1:end-4),'_','\_') 'spatial_map.png']);
+        saveas(gcf, [names{j}(1:end-4) suffix '_spatial_map.png']);
     end
 end
 
