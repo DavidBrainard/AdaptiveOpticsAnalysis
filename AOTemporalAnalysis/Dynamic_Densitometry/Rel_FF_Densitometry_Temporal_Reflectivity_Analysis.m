@@ -37,11 +37,8 @@ profile_method = 'box';
 
 % For release, this version only contains the normalizations used in the
 % paper. However, the code is structured such that you can add more if desired.
-norm_type = 'no_norm_startstim'; 
+norm_type = 'no_norm_ramtype'; 
 
-if exist('contains','builtin')==0
-    contains = @(s1,s2)~isempty(strfind(s1,s2));
-end
 
 % mov_path=pwd;
 if ~exist('mov_path','var') || ~exist('this_image_fname','var')
@@ -263,12 +260,6 @@ end
 % end
 % saveas(gcf, fullfile(mov_path, 'Frame_Mean_Plots' , [ref_image_fname(1:end - length('_AVG.tif') ) '_' profile_method '_cutoff_' norm_type '_' vid_type '_mean_plot.svg' ] ) );
 % 
-% figure(90); plot(ref_std,'k'); title('Cell Reflectance Std Dev');
-% if ~exist( fullfile(mov_path, 'Frame_Stddev_Plots'), 'dir' )
-%     mkdir(fullfile(mov_path, 'Frame_Stddev_Plots'))
-% end
-% saveas(gcf, fullfile(mov_path, 'Frame_Stddev_Plots' , [ref_image_fname(1:end - length('_STD_DEV.tif') ) '_' profile_method '_cutoff_' norm_type '_' vid_type '_mean_plot.png' ] ) );
-
 
 %% Normalization to the mean
 norm_cell_reflectance = cell( size(cell_reflectance) );
@@ -322,10 +313,13 @@ elseif contains( norm_type, 'ramtype')
     
     for i=1:length( norm_cell_reflectance )
 
-        if ~isempty(norm_cell_reflectance{i})
-            prestim_mean(i) = sort(norm_cell_reflectance{i});
+        if ~isempty(norm_cell_reflectance{i}) && length(norm_cell_reflectance{i})>15
+            sortedmean = sort(norm_cell_reflectance{i}, 'descend');
 
-            norm_cell_reflectance{i} = norm_cell_reflectance{i}./prestim_mean(i);
+            norm_cell_reflectance{i} = norm_cell_reflectance{i}./mean(sortedmean(1:5));
+        else
+            norm_cell_reflectance{i} = [];
+            cell_times{i}=[];
         end
         
     end
@@ -335,55 +329,12 @@ else
 end
 
 %% Standard deviation of all cells before first stimulus
-
-thatmax = max( cellfun(@max, cell_times( ~cellfun(@isempty,cell_times)) ) );   
-
-[ ref_stddev,ref_times ] = reflectance_std_dev( cell_times( ~cellfun(@isempty,cell_times) ), ...
-                                                norm_cell_reflectance( ~cellfun(@isempty,norm_cell_reflectance) ), thatmax );
-
-clipped_ref_times = [];
-
-if ~isempty(ref_times)
-    i=1;
-    while i<= length( ref_times )
-
-        % Remove timepoints from cells that are NaN
-        if isnan(ref_times(i))
-            ref_times(i) = [];
-            ref_stddev(i) = [];        
-        else
-            clipped_ref_times = [clipped_ref_times; ref_times(i)];
-            i = i+1;
-        end
-
-    end    
-end
-
-hz=16.6;
-
-figure(10); 
-if ~isempty(ref_stddev)
-    plot( clipped_ref_times/hz,ref_stddev,'k'); hold on;
-end
-if strcmp(vid_type,'stimulus')
-    plot(stim_times/hz, max(ref_stddev)*ones(size(stim_times)),'r*'); 
-end
-hold off;
-ylabel('Standard deviation'); xlabel('Time (s)'); title( strrep( [this_image_fname(1:end - length('_AVG.tif') ) '_' profile_method '_stddev_ref_plot' ], '_',' ' ) );
-axis([0 15 -1 4])
-
-% ref_image_fname = strrep(ref_image_fname,'confocal','split_det');
-if ~exist( fullfile(mov_path, 'Std_Dev_Plots'), 'dir' )
-    mkdir(fullfile(mov_path, 'Std_Dev_Plots'))
-end
-saveas(gcf, fullfile(mov_path, 'Std_Dev_Plots' , [this_image_fname(1:end - length('_AVG.tif') ) '_' profile_method '_' norm_type '_' vid_type '_stddev.png' ] ) );
-
 if ~exist( fullfile(mov_path, 'Profile_Data'), 'dir' )
     mkdir(fullfile(mov_path, 'Profile_Data'))
 end
 % Dump all the analyzed data to disk
 save(fullfile(mov_path, 'Profile_Data' ,[this_image_fname(1:end - length('_AVG.tif') ) '_' profile_method '_' norm_type '_' vid_type '_profiledata.mat']), ...
-     'this_image_fname', 'cell_times', 'norm_cell_reflectance','ref_coords','ref_image','ref_mean','ref_stddev','vid_type','cell_prestim_mean','cell_reflectance' );
+     'this_image_fname', 'cell_times', 'norm_cell_reflectance','ref_coords','ref_image','ref_mean','vid_type','cell_prestim_mean','cell_reflectance' );
 
   
 %% Remove the empty cells
@@ -391,15 +342,15 @@ norm_cell_reflectance = norm_cell_reflectance( ~cellfun(@isempty,norm_cell_refle
 cell_times            = cell_times( ~cellfun(@isempty,cell_times) );
 
 
-figure(11);
+figure(11); hold on;
 % conevideo = VideoWriter('allcones.avi');
 % open(conevideo)
-if ~isempty(ref_stddev)
-    for i=1:length(norm_cell_reflectance)
-        plot(cell_times{i}, norm_cell_reflectance{i},'.' );
+
+for i=1:length(norm_cell_reflectance)
+    plot(cell_times{i}, norm_cell_reflectance{i},'.' );
 %         writeVideo(conevideo, getframe(gcf));
-    end
 end
+
 % close(conevideo);
 hold off;
 
