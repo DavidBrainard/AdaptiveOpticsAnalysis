@@ -3,13 +3,15 @@
 % This script analyzes the output from Rel_FF_Single_Cone_Analyses.
 %
 
+
+%% Load our data, and calculate some basic stats.
 clear;
 close all;
 
 saveplots = false;
+logmode = true;
 
 
-%% Load our data, and calculate some basic stats.
 profile_dir = uigetdir(pwd);
 
 single_cone_mat_files = read_folder_contents(profile_dir,'mat');
@@ -39,8 +41,13 @@ for i=1:length(single_cone_mat_files)
     controlAmp(:,i) = ControlAmpResp;
     controlMedian(:,i) = ControlMedianResp;    
     
-    single_cone_response(:,i) = log10(AmpResp+abs(MedianResp)+1);
-    single_cone_control_response(:,i) = log10(ControlAmpResp+abs(ControlMedianResp)+1);
+    single_cone_response(:,i) = AmpResp+abs(MedianResp);
+    single_cone_control_response(:,i) = ControlAmpResp+abs(ControlMedianResp);
+    
+    if logmode 
+        single_cone_response(:,i) = log10(single_cone_response(:,i)+1);
+        single_cone_control_response(:,i) = log10(single_cone_control_response(:,i)+1);
+    end
 end
 
 valid = all(~isnan(single_cone_response),2);
@@ -93,7 +100,7 @@ if saveplots
 end
 
 %% Vs plots
-donelist=[];
+
 for i=1:length(single_cone_mat_files)
     figure; hold on;
     plot(single_cone_control_response(:,i),single_cone_response(:,i),'.');
@@ -102,11 +109,10 @@ for i=1:length(single_cone_mat_files)
 end
 
 %% Display Cells under the 1:1 line
-close all
 
 lessthanvalid= (single_cone_response<single_cone_control_response) & valid;
 
-donelist=[];
+
 for i=1:length(single_cone_mat_files)
     figure; hold on;    
     plot(single_cone_control_response(valid,i),single_cone_response(valid,i),'.');
@@ -114,8 +120,13 @@ for i=1:length(single_cone_mat_files)
     plot([-10 10],[-10 10],'k');
     axis square; axis([-0.5 1.5 -0.5 1.5]); 
     thelessthan{i} = find(lessthanvalid(:,i)==1);
-    xlabel('Log Control Response (mean control subtracted)')
-    ylabel('Log Stimulus Response (mean control subtracted)');
+    if logmode
+        xlabel('Log Control Response (mean control subtracted)')
+        ylabel('Log Stimulus Response (mean control subtracted)');
+    else
+        xlabel('Control Response (mean control subtracted)')
+        ylabel('Stimulus Response (mean control subtracted)');
+    end
     
     if saveplots
         saveas(gcf, [single_cone_mat_files{i}(1:end-4) '_VS_plot.png']);
@@ -124,4 +135,22 @@ for i=1:length(single_cone_mat_files)
     generate_spatial_map(single_cone_response(:,i), allcoords, lessthanvalid(:,i), single_cone_mat_files(i), '_VS', saveplots);
 end
 
+%% Angular coordinate histograms of VS plots.
 
+for i=1:length(single_cone_mat_files)
+    
+
+    figure; hold on;
+    histogram(single_cone_response(valid,i),40);
+    title(strrep(single_cone_mat_files{i}(1:end-4),'_','\_'))
+    if logmode
+        xlabel('Log Stimulus response');
+    else
+        xlabel('Stimulus response');
+    end
+    ylabel('Number of cones');
+    
+    if saveplots
+        saveas(gcf, [single_cone_mat_files{i}(1:end-4) '_resp_histogram.png']);
+    end
+end
