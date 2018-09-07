@@ -1,4 +1,4 @@
-function []=Rel_FF_Temporal_Reflectivity_Analysis(mov_path, this_image_fname, stimulus_frames, vid_type)
+function []=Rel_FF_Densitometry_Temporal_Reflectivity_Analysis(mov_path, this_image_fname, stimulus_frames, vid_type)
 % []=Rel_FF_Temporal_Reflectivity_Analysis(mov_path, ref_image_fname)
 % Robert F Cooper 06-20-2017
 %
@@ -29,10 +29,6 @@ function []=Rel_FF_Temporal_Reflectivity_Analysis(mov_path, this_image_fname, st
 % 
 %
 
-% if ~exist('contains','builtin')
-%     contains = @(t,p)~isempty(strfind(t,p));
-% end
-
 % *** Constants ***
 %
 % The shape used to isolate the reflectance at each time point. Box is
@@ -41,13 +37,14 @@ profile_method = 'box';
 
 % For release, this version only contains the normalizations used in the
 % paper. However, the code is structured such that you can add more if desired.
-norm_type = 'regional_norm_prestim_stdiz'; 
+norm_type = 'no_norm_ramtype'; 
+
 
 % mov_path=pwd;
 if ~exist('mov_path','var') || ~exist('this_image_fname','var')
     close all force;
     [this_image_fname, mov_path]  = uigetfile(fullfile(pwd,'*.tif'));
-    stimulus_frames=[72 108];
+    stimulus_frames=[7 99];
     
     rply = input('Stimulus (s) or Control (c)? [s]: ','s');
     if isempty(rply) || strcmpi(rply,'s')
@@ -62,8 +59,8 @@ stack_fnames = read_folder_contents( mov_path,'avi' );
 
 for i=1:length(stack_fnames)
     if ~isempty( strfind( stack_fnames{i}, this_image_fname(1:end - length('_AVG.tif') ) ) )
-        temporal_stack_fname = stack_fnames{i};
-%         temporal_stack_fname = strrep(stack_fnames{i},'confocal','split_det'); % Analyze AVG or split for Jess's grant!
+        confocal_stack_fname = stack_fnames{i};
+        temporal_stack_fname = strrep(stack_fnames{i},'confocal','visible'); % Analyze the visible channel!
         
         acceptable_frames_fname = [stack_fnames{i}(1:end-4) '_acceptable_frames.csv'];
         break;
@@ -103,10 +100,12 @@ ref_coords = dlmread( fullfile(mov_path, ref_coords_fname));
 % ref_coords = [ref_coords(:,1)-2 ref_coords(:,2)];
 ref_coords = [ref_coords(:,1) ref_coords(:,2)];
 
+confocal_stack_reader = VideoReader( fullfile(mov_path,confocal_stack_fname) );
 temporal_stack_reader = VideoReader( fullfile(mov_path,temporal_stack_fname) );
 
 i=1;
 while(hasFrame(temporal_stack_reader))
+    confocal_stack(:,:,i) = double(readFrame(confocal_stack_reader));
     temporal_stack(:,:,i) = double(readFrame(temporal_stack_reader));
     i = i+1;
 end
@@ -148,7 +147,7 @@ for i=1:size(ref_coords,1)
 
     waitbar(i/size(ref_coords,1),wbh, ['Segmenting coordinate ' num2str(i)]);
         
-    roiradius = 1;
+    roiradius = 2;
 
     if (ref_coords(i,1) - roiradius) > 1 && (ref_coords(i,1) + roiradius) < size(mask_image,2) &&...
        (ref_coords(i,2) - roiradius) > 1 && (ref_coords(i,2) + roiradius) < size(mask_image,1)
@@ -261,12 +260,6 @@ end
 % end
 % saveas(gcf, fullfile(mov_path, 'Frame_Mean_Plots' , [ref_image_fname(1:end - length('_AVG.tif') ) '_' profile_method '_cutoff_' norm_type '_' vid_type '_mean_plot.svg' ] ) );
 % 
-% figure(90); plot(ref_std,'k'); title('Cell Reflectance Std Dev');
-% if ~exist( fullfile(mov_path, 'Frame_Stddev_Plots'), 'dir' )
-%     mkdir(fullfile(mov_path, 'Frame_Stddev_Plots'))
-% end
-% saveas(gcf, fullfile(mov_path, 'Frame_Stddev_Plots' , [ref_image_fname(1:end - length('_STD_DEV.tif') ) '_' profile_method '_cutoff_' norm_type '_' vid_type '_mean_plot.png' ] ) );
-
 
 %% Normalization to the mean
 norm_cell_reflectance = cell( size(cell_reflectance) );
@@ -278,9 +271,11 @@ for i=1:length( cell_reflectance )
         norm_cell_reflectance{i} = cell_reflectance{i} ./ ref_mean;
     elseif contains(  norm_type, 'regional_norm' )
         norm_cell_reflectance{i} = cell_reflectance{i} ./ ref_mean;
+    elseif contains(  norm_type, 'prestim_norm' )
+        norm_cell_reflectance{i} = cell_reflectance{i} ./ ref_mean(stim_times(1));
     elseif contains(  norm_type, 'no_norm' )
         norm_cell_reflectance{i} = cell_reflectance{i};
-        warn('No normalization selected!')
+%         warning('No normalization selected!')
     end
 
     % Store the mean value before the stimulus was delivered.
@@ -312,20 +307,21 @@ if contains( norm_type, 'prestim_stdiz')
         
         norm_cell_reflectance{i} = norm_cell_reflectance{i}/( prestim_std(i) ); % /sqrt(length(norm_control_cell_reflectance{i})) );
     end
-elseif contains( norm_type, 'poststim_stdiz')
-    % Then normalize to the average intensity of each cone AFTER stimulus.
-    poststim_std=nan(1,length( norm_cell_reflectance ));
-    poststim_mean=nan(1,length( norm_cell_reflectance ));
+elseif contains( norm_type, 'ramtype')
+    % Then normalize to the average intensity of each cone's highest 5
+    % values.
     
     for i=1:length( norm_cell_reflectance )
 
-        poststim_mean(i) = mean( norm_cell_reflectance{i}( cell_times{i}>stim_times(2) & ~isnan( norm_cell_reflectance{i} ) ) );
+        if ~isempty(norm_cell_reflectance{i}) && length(norm_cell_reflectance{i})>15
+            sortedmean = sort(norm_cell_reflectance{i}, 'descend');
+
+            norm_cell_reflectance{i} = norm_cell_reflectance{i}./mean(sortedmean(1:5));
+        else
+            norm_cell_reflectance{i} = [];
+            cell_times{i}=[];
+        end
         
-        norm_cell_reflectance{i} = norm_cell_reflectance{i}-poststim_mean(i);
-        
-        poststim_std(i) = std( norm_cell_reflectance{i}( cell_times{i}>stim_times(2) & ~isnan( norm_cell_reflectance{i} ) ) );
-        
-        norm_cell_reflectance{i} = norm_cell_reflectance{i}/( poststim_std(i) ); % /sqrt(length(norm_control_cell_reflectance{i})) );
     end
 else
     % NOP - leave stub in case of change.
@@ -333,55 +329,12 @@ else
 end
 
 %% Standard deviation of all cells before first stimulus
-
-thatmax = max( cellfun(@max, cell_times( ~cellfun(@isempty,cell_times)) ) );   
-
-[ ref_stddev,ref_times ] = reflectance_std_dev( cell_times( ~cellfun(@isempty,cell_times) ), ...
-                                                norm_cell_reflectance( ~cellfun(@isempty,norm_cell_reflectance) ), thatmax );
-
-clipped_ref_times = [];
-
-if ~isempty(ref_times)
-    i=1;
-    while i<= length( ref_times )
-
-        % Remove timepoints from cells that are NaN
-        if isnan(ref_times(i))
-            ref_times(i) = [];
-            ref_stddev(i) = [];        
-        else
-            clipped_ref_times = [clipped_ref_times; ref_times(i)];
-            i = i+1;
-        end
-
-    end    
-end
-
-hz=16.6;
-
-figure(10); 
-if ~isempty(ref_stddev)
-    plot( clipped_ref_times/hz,ref_stddev,'k'); hold on;
-end
-if strcmp(vid_type,'stimulus')
-    plot(stim_times/hz, max(ref_stddev)*ones(size(stim_times)),'r*'); 
-end
-hold off;
-ylabel('Standard deviation'); xlabel('Time (s)'); title( strrep( [this_image_fname(1:end - length('_AVG.tif') ) '_' profile_method '_stddev_ref_plot' ], '_',' ' ) );
-axis([0 15 -1 4])
-
-% ref_image_fname = strrep(ref_image_fname,'confocal','split_det');
-if ~exist( fullfile(mov_path, 'Std_Dev_Plots'), 'dir' )
-    mkdir(fullfile(mov_path, 'Std_Dev_Plots'))
-end
-saveas(gcf, fullfile(mov_path, 'Std_Dev_Plots' , [this_image_fname(1:end - length('_AVG.tif') ) '_' profile_method '_' norm_type '_' vid_type '_stddev.png' ] ) );
-
 if ~exist( fullfile(mov_path, 'Profile_Data'), 'dir' )
     mkdir(fullfile(mov_path, 'Profile_Data'))
 end
 % Dump all the analyzed data to disk
 save(fullfile(mov_path, 'Profile_Data' ,[this_image_fname(1:end - length('_AVG.tif') ) '_' profile_method '_' norm_type '_' vid_type '_profiledata.mat']), ...
-     'this_image_fname', 'cell_times', 'norm_cell_reflectance','ref_coords','ref_image','ref_mean','ref_stddev','vid_type','cell_prestim_mean','cell_reflectance' );
+     'this_image_fname', 'cell_times', 'norm_cell_reflectance','ref_coords','ref_image','ref_mean','vid_type','cell_prestim_mean','cell_reflectance' );
 
   
 %% Remove the empty cells
@@ -389,12 +342,16 @@ norm_cell_reflectance = norm_cell_reflectance( ~cellfun(@isempty,norm_cell_refle
 cell_times            = cell_times( ~cellfun(@isempty,cell_times) );
 
 
-figure(11);
-if ~isempty(ref_stddev)
-    for i=1:length(norm_cell_reflectance)
-        plot(cell_times{i}, norm_cell_reflectance{i},'k' ); hold on;
-    end
+figure(11); hold on;
+% conevideo = VideoWriter('allcones.avi');
+% open(conevideo)
+
+for i=1:length(norm_cell_reflectance)
+    plot(cell_times{i}, norm_cell_reflectance{i},'.' );
+%         writeVideo(conevideo, getframe(gcf));
 end
+
+% close(conevideo);
 hold off;
 
 

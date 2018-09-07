@@ -93,8 +93,7 @@ allfits = [ (Stddev_450nW1 + abs(Median_450nW1) ) ...
             (Stddev_450nW2  + abs(Median_450nW2) ) ...
             (Stddev_450nW3  + abs(Median_450nW3) ) ];  
 
-allfits = log10(allfits+1);        
-        
+
 % stdfits = log10(allfits+1);
 % stdfits = stdfits-mean(stdfits(valid,:));
 % stdfits = stdfits./std(stdfits(valid,:));
