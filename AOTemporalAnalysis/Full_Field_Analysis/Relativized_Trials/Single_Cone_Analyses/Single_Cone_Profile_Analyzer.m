@@ -118,12 +118,14 @@ for i=1:length(single_cone_mat_files)
     plot(single_cone_control_response(valid,i),single_cone_response(valid,i),'.');
     plot(single_cone_control_response(lessthanvalid(:,i),i),single_cone_response(lessthanvalid(:,i),i),'r.');
     plot([-10 10],[-10 10],'k');
-    axis square; axis([-0.5 1.5 -0.5 1.5]); 
+         
     thelessthan{i} = find(lessthanvalid(:,i)==1);
     if logmode
+        axis square;axis([-0.5 1.5 -0.5 1.5]); 
         xlabel('Log Control Response (mean control subtracted)')
         ylabel('Log Stimulus Response (mean control subtracted)');
     else
+        axis equal;axis([-1 5 -1 31]);
         xlabel('Control Response (mean control subtracted)')
         ylabel('Stimulus Response (mean control subtracted)');
     end
