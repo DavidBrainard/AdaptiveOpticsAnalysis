@@ -7,7 +7,7 @@
 % file. With the inclusion of the shutter, there is no need to track
 % visible frames.
 
-
+CLAHE_FIRST_HALF = true;
 
 %% Filename determination and handling
 [fname, pathname] = uigetfile('*.avi', 'Select the temporal videos you wish to split', 'MultiSelect','on');
@@ -64,19 +64,17 @@ for k=1:length(fname)
     % Create our confocal output filename 
     fname_out_first_piece = [fname{k}(1:end-4) '_1_' num2str(split) '.avi'];
     fname_out_second_piece = [fname{k}(1:end-4) '_' num2str(split+1) '_' num2str(vid_length) '.avi'];
-
     
     vidobj_1 = VideoWriter( fullfile(pathname, fname_out_first_piece), 'Grayscale AVI');
-    vidobj_1.FrameRate=16.6666;
+    vidobj_1.FrameRate=17.85;
 
     open(vidobj_1);
     % **** Add a dummy frame so that the bug in Alf's software is ignored.
     first_piece = cat(3, zeros(vidobj.Height,vidobj.Width), first_piece);
     writeVideo(vidobj_1,uint8(first_piece));
     close(vidobj_1);
-    
     vidobj_2 = VideoWriter( fullfile(pathname, fname_out_second_piece), 'Grayscale AVI');
-    vidobj_2.FrameRate=16.6666;
+    vidobj_2.FrameRate=17.85;
     
     open(vidobj_2);
     % **** Add a dummy frame so that the bug in Alf's software is ignored.
@@ -84,5 +82,24 @@ for k=1:length(fname)
     writeVideo(vidobj_2,uint8(second_piece));
     close(vidobj_2);
 
+    %%
+    if CLAHE_FIRST_HALF
+        fname_out_first_piece_clahe = [fname{k}(1:end-4) '_1_' num2str(split) '_CLAHE.avi'];
+        
+        third_piece = zeros(vidobj.Height,vidobj.Width, split,'uint8');
+        vidobj_3 = VideoWriter( fullfile(pathname, fname_out_first_piece_clahe), 'Grayscale AVI');
+        vidobj_3.FrameRate=17.85;
+
+        parfor i=1:size(first_piece,3)-1
+           third_piece(:,:,i) = adapthisteq(uint8(first_piece(:,:,i+1)),'NumTiles',[92 103],'ClipLimit', .8);
+%            imagesc(third_piece(:,:,i)); colormap gray; drawnow;
+        end
+        
+        open(vidobj_3);
+        % **** Add a dummy frame so that the bug in Alf's software is ignored.
+        third_piece = cat(3, zeros(vidobj.Height,vidobj.Width), third_piece);
+        writeVideo(vidobj_3,uint8(third_piece));
+        close(vidobj_3);
+    end
 end
 close(thebar);
