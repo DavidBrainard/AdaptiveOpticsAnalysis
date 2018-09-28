@@ -12,8 +12,8 @@ end
 
 for j=1:size(single_cone_response,2)
     
-    upper_thresh = 1.2;%quantile(single_cone_response(:,j),0.95); 
-    lower_thresh = 0;%quantile(single_cone_response(:,j),0.05);
+    upper_thresh = quantile(single_cone_response(:,j),0.95); 
+    lower_thresh = quantile(single_cone_response(:,j),0.05);
 
     thismap = parula( ((upper_thresh-lower_thresh)*100)+2); 
 

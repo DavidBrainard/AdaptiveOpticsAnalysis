@@ -39,7 +39,7 @@ CUTOFF = 26;
 NUMTRIALS=20;
 CRITICAL_REGION = 72:108; %66:99;
 
-CELL_OF_INTEREST = [];
+CELL_OF_INTEREST = [1:2991];
 
 if isempty(CELL_OF_INTEREST)
     close all force;
@@ -233,14 +233,14 @@ for i=1:numstimcoords
         end
     end
     
-    if any(i==CELL_OF_INTEREST) && stim_trial_count(i)>CUTOFF
+    if any(i==CELL_OF_INTEREST) && stim_trial_count(i)>CUTOFF && (densitometry_fit_amplitude(i) < 0.1) && valid_densitometry(i)
         figure(1); clf;
         subplot(4,1,1); plot( bsxfun(@minus,nonorm_ref, nonorm_ref(:,2))');axis([CRITICAL_REGION(1) CRITICAL_REGION(end) -150 150]); xlabel('Time index'); ylabel('Raw Response');
         subplot(4,1,2); plot(all_times_ref');  axis([CRITICAL_REGION(1) CRITICAL_REGION(end) -10 10]); xlabel('Time index'); ylabel('Standardized Response');
         subplot(4,1,3); plot(stim_cell_median(i,:)); hold on;
                         plot(sqrt(stim_cell_var(i,:))); hold off; axis([CRITICAL_REGION(1) CRITICAL_REGION(end) -2 10]); xlabel('Time index'); ylabel('Response');
-        subplot(4,1,4); plot(stim_prestim_means(i,:),'*'); xlabel('Trial #'); ylabel('Prestimulus mean (A.U.)'); axis([0 50 0 255]);
-        title(['Cell #:' num2str(i)]);
+%         subplot(4,1,4); plot(stim_prestim_means(i,:),'*'); xlabel('Trial #'); ylabel('Prestimulus mean (A.U.)'); axis([0 50 0 255]);
+        title(['Cell #:' num2str(i) ' Dens Amp: ' num2str(densitometry_fit_amplitude(i))]);
         drawnow;
 %         saveas(gcf, ['Cell_' num2str(i) '_stimulus.png']);
         
@@ -251,12 +251,21 @@ for i=1:numstimcoords
 %         saveas(gcf, ['Cell_' num2str(i) '_location.png']);
         drawnow;
         critreg=all_times_ref(:,CRITICAL_REGION);
-        quantile(critreg(:),.95)
-        quantile(critreg(:),.5)
-        quantile(critreg(:),.05)
+
+%         if (densitometry_fit_amplitude(i) < 0.1) && valid_densitometry(i)
+           
+           subplot(4,1,4);
+           plot(CRITICAL_TIME/hz, criticalfit(i,:));hold on;
+           plot(densitometry_vect_times{i},densitometry_vect_ref{i},'.')           
+           axis([0 CRITICAL_TIME(end)/hz 0 1.5]); hold off;
+           axis([0 3 0 1.5]);
+           xlabel('Time (s)');
+           ylabel('Reflectance')
+           drawnow; %pause;
+%         end
+        saveas(gcf, ['Cell_' num2str(i) '_stimulus_densitometry.png']);
         
-%         stim_prestim_means
-        pause;
+%         pause;
     end
 
 end
@@ -403,6 +412,21 @@ waitbar(i/size(std_dev_sub,1),THEwaitbar,'Analyzing subtracted signals...');
         MedianResp(i) = max(abs(filt_median_sig(CRITICAL_REGION))-mean(filt_median_sig(1:CRITICAL_REGION(1))) );        
         PrestimVal(i) = mean( stim_prestim_means(i,:),2, 'omitnan');
         
+        if valid_densitometry(i) && (densitometry_fit_amplitude(i) < 0.075)
+           figure(1);
+           subplot(2,1,1);
+           plot( filt_stddev_sig ); hold on; plot(std_dev_sig);
+           plot(sqrt(control_cell_var(i,2:end))-1);
+           plot(sqrt(stim_cell_var(i,2:end))-1);
+           plot(mean(sqrt(control_cell_var),'omitnan'));
+           hold off; 
+           subplot(2,1,2);
+           plot(CRITICAL_TIME/hz, criticalfit(i,:));hold on;
+           plot(densitometry_vect_times{i},densitometry_vect_ref{i},'.')           
+           axis([0 CRITICAL_TIME(end)/hz 0 1.5]); hold off;
+           drawnow; pause;
+        end
+        
         % Control only
         std_dev_sig = control_std_dev_sub(i,2:end);
         nanners = ~isnan(std_dev_sig);
@@ -428,11 +452,7 @@ waitbar(i/size(std_dev_sub,1),THEwaitbar,'Analyzing subtracted signals...');
         ControlMedianResp(i) = max(abs(filt_median_sig(CRITICAL_REGION))-mean(filt_median_sig(1:CRITICAL_REGION(1))) );        
         ControlPrestimVal(i) = mean( cont_prestim_means(i,:),2, 'omitnan');
 %         histogram(filt_stddev_sig(CRITICAL_REGION),20)
-%         if AmpResp(i) == 0
-%            plot( filt_stddev_sig ); hold on; plot(std_dev_sig);
-%            plot(sqrt(control_cell_var(i,2:end))-1);
-%            hold off; drawnow; pause;
-%         end
+
     end
 end
 close(THEwaitbar);

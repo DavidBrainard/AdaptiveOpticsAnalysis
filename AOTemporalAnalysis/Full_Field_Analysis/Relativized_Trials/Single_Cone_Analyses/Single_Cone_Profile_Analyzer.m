@@ -9,7 +9,7 @@ clear;
 close all;
 
 saveplots = false;
-logmode = true;
+logmode = false;
 
 
 profile_dir = uigetdir(pwd);
@@ -110,8 +110,9 @@ end
 
 %% Display Cells under the 1:1 line
 
-lessthanvalid= (single_cone_response<single_cone_control_response) & valid;
-
+% lessthanvalid= (single_cone_response<single_cone_control_response) & valid;
+lessthanvalid = (single_cone_response<1) & (densitometry_fit_amplitude<0.1) & valid & valid_densitometry;
+valid = valid & valid_densitometry;
 
 for i=1:length(single_cone_mat_files)
     figure; hold on;    
@@ -125,7 +126,7 @@ for i=1:length(single_cone_mat_files)
         xlabel('Log Control Response (mean control subtracted)')
         ylabel('Log Stimulus Response (mean control subtracted)');
     else
-        axis equal;axis([-1 5 -1 31]);
+        axis equal;axis([-1 5 -1 20]);
         xlabel('Control Response (mean control subtracted)')
         ylabel('Stimulus Response (mean control subtracted)');
     end
@@ -155,4 +156,32 @@ for i=1:length(single_cone_mat_files)
     if saveplots
         saveas(gcf, [single_cone_mat_files{i}(1:end-4) '_resp_histogram.png']);
     end
+end
+
+%% Display results vs densitometry
+
+lessthanvalid = (densitometry_fit_amplitude<0.05) & valid & valid_densitometry;
+
+for i=1:length(single_cone_mat_files)
+    figure; hold on;    
+    plot(densitometry_fit_amplitude(valid,i),single_cone_response(valid,i),'.');
+    plot(densitometry_fit_amplitude(lessthanvalid(:,i),i),single_cone_response(lessthanvalid(:,i),i),'r.');
+    plot([-10 10],[-10 10],'k');
+         
+    thelessthan{i} = find(lessthanvalid(:,i)==1);
+    if logmode
+        axis square;axis([-0.5 1.5 -0.5 1.5]); 
+        xlabel('Log Control Response (mean control subtracted)')
+        ylabel('Log Stimulus Response (mean control subtracted)');
+    else
+        axis equal;axis([-1 5 -1 20]);
+        xlabel('Control Response (mean control subtracted)')
+        ylabel('Stimulus Response (mean control subtracted)');
+    end
+    
+    if saveplots
+        saveas(gcf, [single_cone_mat_files{i}(1:end-4) '_VS_plot.png']);
+    end
+    
+    generate_spatial_map(single_cone_response(:,i), allcoords, lessthanvalid(:,i), single_cone_mat_files(i), '_VS', saveplots);
 end
