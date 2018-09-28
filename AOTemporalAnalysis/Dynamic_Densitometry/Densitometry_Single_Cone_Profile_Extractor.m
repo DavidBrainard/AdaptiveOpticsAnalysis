@@ -3,11 +3,12 @@
 %
 
 clear;
+close all;
 
 
-NUMTRIALS=6;
-CRITICAL_TIME = 0:70;
-START_IND=7;
+NUMTRIALS=5;
+CRITICAL_TIME = 0:69;
+START_IND=4;
 
 CELL_OF_INTEREST = [];
 
@@ -22,16 +23,18 @@ end
 profileSDataNames = read_folder_contents(stimRootDir,'mat');
 
 % For structure:
-% /stuff/id/date/wavelength/time/intensity/location/data/Profile_Data
+%/stuff/id/date/wavelength/time/intensity/location/data/Profile_Data
 
-% [remain kid] = getparent(stimRootDir); % data
-% [remain stim_loc] = getparent(remain); % location 
-% [remain stim_intensity] = getparent(remain); % intensity 
-% [remain stim_time] = getparent(remain); % time
-% [remain stimwave] = getparent(remain); % wavelength
-% % [remain sessiondate] = getparent(remain); % date
-% [~, id] = getparent(remain); % id
-% outFname = [id '_' stimwave '_' stim_intensity '_' stim_time  '_' stim_loc '_' num2str(length(profileSDataNames)) '_single_cone_signals'];
+[remain kid] = getparent(stimRootDir); % data
+[remain stim_loc] = getparent(remain); % location 
+[remain stim_intensity] = getparent(remain); % intensity 
+[remain stim_time] = getparent(remain); % time
+[remain stimwave] = getparent(remain); % wavelength
+[remain sessiondate] = getparent(remain); % date
+[~, id] = getparent(remain); % id
+
+outPath = fullfile(remain,sessiondate);
+outFname = [id '_' stimwave '_' stim_intensity '_' stim_time  '_' stim_loc '_' num2str(length(profileSDataNames)) '_single_cone_signals'];
 
 
 
@@ -91,7 +94,10 @@ percentparula = parula(101);
 
 numstimcoords = size(stim_coords,1);
 
-fitAmp = nan(numstimcoords,1);
+criticalfit = nan(numstimcoords,length(CRITICAL_TIME));
+densitometry_fit_amplitude = nan(numstimcoords,1);
+densitometry_trial_count = zeros(numstimcoords,1);
+valid_densitometry = false(numstimcoords,1);
 
 hz = 17.75;
 i=1;
@@ -104,6 +110,8 @@ opts.Display = 'Off';
 opts.Lower = [0 0 0];
 opts.Upper = [1 Inf 1];
 opts.StartPoint = [0.4 0.4 0.7];
+
+
         
 for i=1:numstimcoords
     waitbar(i/size(stim_coords,1),THEwaitbar,'Processing signals...');
@@ -121,9 +129,10 @@ for i=1:numstimcoords
             all_times(j, stim_time_indexes{j}{i}) = stim_time_indexes{j}{i}/hz;
         end              
     end
-    stim_trial_count(i) = numtrials;
+    densitometry_trial_count(i) = numtrials;
+    valid_densitometry(i) = densitometry_trial_count(i)>=NUMTRIALS;
     
-    if stim_trial_count(i)>=NUMTRIALS
+    if valid_densitometry(i)
         all_times = all_times(:,START_IND:end);
         all_times_ref = all_times_ref(:,START_IND:end);
 
@@ -133,16 +142,17 @@ for i=1:numstimcoords
         vect_times = vect_times-min(vect_times);
         [fitresult, gof] = fit( vect_times, vect_ref, ft, opts );
 
+        densitometry_vect_times{i} = vect_times;
+        densitometry_vect_ref{i} = vect_ref;
+        criticalfit(i,:) = fitresult(CRITICAL_TIME/hz);
+        densitometry_fit_amplitude(i) = max(criticalfit(i,:))-min(criticalfit(i,:));
         
-        criticalfit = fitresult(CRITICAL_TIME/hz);
-        fitAmp(i) = max(criticalfit)-min(criticalfit);
-        
-        if any(i==CELL_OF_INTEREST) %|| (fitAmp(i) <0.12 && fitAmp(i) >0.08)
+        if any(i==CELL_OF_INTEREST) %|| (densitometry_fit_amplitude(i) <0.12 && densitometry_fit_amplitude(i) >0.08)
             figure(1); clf; hold on;        
             plot(vect_times,vect_ref,'.');
-            plot(CRITICAL_TIME/hz, criticalfit);
+            plot(CRITICAL_TIME/hz, criticalfit(i,:));
             xlabel('Time index'); ylabel('Standardized Response');
-            title(['Cell #:' num2str(i) ', Amplitude: ' num2str(fitAmp(i))]);
+            title(['Cell #:' num2str(i) ', Amplitude: ' num2str(densitometry_fit_amplitude(i))]);
             axis([0 CRITICAL_TIME(end)/hz 0 1.5]);
             hold off;
             drawnow;
@@ -153,9 +163,13 @@ for i=1:numstimcoords
 
 end
 close(THEwaitbar);
-valid = (stim_trial_count >= NUMTRIALS);
+%%
+save(fullfile(outPath,[outFname '.mat']),'densitometry_fit_amplitude','valid_densitometry',...
+                                        'densitometry_trial_count','criticalfit','NUMTRIALS',...
+                                        'CRITICAL_TIME','START_IND','hz',...
+                                        'densitometry_vect_times','densitometry_vect_ref')
 
 %% Analyze the fitted amplitudes
 
-histogram(fitAmp,40);
+histogram(densitometry_fit_amplitude,40);
 xlabel('Fitted amplitude'); ylabel('Number of cones');

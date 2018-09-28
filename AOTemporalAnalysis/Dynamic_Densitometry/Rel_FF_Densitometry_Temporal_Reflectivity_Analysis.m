@@ -37,7 +37,7 @@ profile_method = 'box';
 
 % For release, this version only contains the normalizations used in the
 % paper. However, the code is structured such that you can add more if desired.
-norm_type = 'no_norm_ramtype'; 
+norm_type = 'no_norm_robtype'; 
 
 
 % mov_path=pwd;
@@ -316,13 +316,30 @@ elseif contains( norm_type, 'ramtype')
         if ~isempty(norm_cell_reflectance{i}) && length(norm_cell_reflectance{i})>15
             sortedmean = sort(norm_cell_reflectance{i}, 'descend');
 
-            norm_cell_reflectance{i} = norm_cell_reflectance{i}./mean(sortedmean(1:5));
+            
+            norm_cell_reflectance{i} = norm_cell_reflectance{i}./mean(sortedmean(1:6));
         else
             norm_cell_reflectance{i} = [];
             cell_times{i}=[];
         end
         
     end
+elseif contains( norm_type, 'robtype')
+    % Then normalize to the average intensity of each cone's highest 5
+    % values.
+    
+    for i=1:length( norm_cell_reflectance )
+
+        if ~isempty(norm_cell_reflectance{i}) && length(norm_cell_reflectance{i})>15
+            top95 = quantile(norm_cell_reflectance{i},.95);
+            
+            norm_cell_reflectance{i} = norm_cell_reflectance{i}./top95;
+        else
+            norm_cell_reflectance{i} = [];
+            cell_times{i}=[];
+        end
+        
+    end    
 else
     % NOP - leave stub in case of change.
 

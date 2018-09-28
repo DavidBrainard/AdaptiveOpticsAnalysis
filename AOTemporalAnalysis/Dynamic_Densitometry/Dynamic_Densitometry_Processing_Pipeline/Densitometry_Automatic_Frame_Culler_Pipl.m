@@ -345,8 +345,8 @@ for k=1:length(video_fname)
     end
     % imagesc(sum_map); axis image;
 
-    max_frm_mask = sum_map >= ( max(sum_map(:))*0.8 );
-    [C, h, w, max_largest_rect] =FindLargestRectangles(max_frm_mask,[1 1 0], [300 150]);
+    max_frm_mask = sum_map >= ( max(sum_map(:))*0.9 );
+    [C, h, w, max_largest_rect] = FindLargestRectangles(max_frm_mask,[1 1 0], [300 150]);
     cropregion = regionprops(max_largest_rect,'BoundingBox');
     cropregion = floor(cropregion.BoundingBox);
     
@@ -384,7 +384,7 @@ for k=1:length(video_fname)
 
     sum_map_crop = sum_map(cropregion(2):cropregion(4),cropregion(1):cropregion(3));
 
-    figure(1); imagesc( sum_map_crop ); axis image; title('Ideal cropped sum map');
+%     figure(1); imagesc( sum_map_crop ); axis image; title('Ideal cropped sum map');
 
 
     %% Register these frames together, removing residual rotation.
@@ -419,17 +419,68 @@ for k=1:length(video_fname)
         visible_reg_only_vid{n} = vis_vid{n}( maxcropregion(2):maxcropregion(4), maxcropregion(1):maxcropregion(3) );
     end
 
+    %% Determine the best reference image.
+    for n=1:length(vis_im_only_vid)
+        prc_filled(n) = sum( sum( imclose((vis_im_only_vid{n}>10), ones(11)) ) )./ (size(vis_im_only_vid{n},1)*size(vis_im_only_vid{n},2));
+    end
+
+    max_fill = max(prc_filled);
+    for n=1:length(vis_im_only_vid) % Find the first frame that has the highest fill %.
+        if prc_filled(n) == max_fill
+            ref_ind = n;
+            break;
+        end
+    end
 
     %% Determine the offset between each pair of images
-    tforms = cell(1,length(confocal_vid));
+    tforms = zeros(3,3,length(confocal_vid));
     
+    % First register all of the visible frames to a reference image.
     for n = 1:length(confocal_vid)
         visimsize = size(visible_reg_only_vid{n});
-        confimsize = size(reg_only_vid{n});
-                
-        [xcorr_map , ~] = normxcorr2_general(visible_reg_only_vid{n}, reg_only_vid{n}, prod(mean([visimsize; confimsize])/2) );
+        confimsize = visimsize;       
+ 
+        [xcorr_map , ~] = normxcorr2_general(imgaussfilt(visible_reg_only_vid{n}, 1),...
+                                             imgaussfilt(visible_reg_only_vid{ref_ind}, 1),...
+                                             prod(mean([visimsize; confimsize])/2) );
 
+        [~, ncc_ind] = max(xcorr_map(:));
+        [roff, coff]= ind2sub(size(xcorr_map), ncc_ind );
+        roff = roff-confimsize(1);
+        coff = coff-confimsize(2);
+
+        tforms(:,:,n) = [1 0 0; 0 1 0; coff roff 1];
+
+    end
+    
+    med_tca_tform = median(tforms,3);
+    
+    for n = 1:length(confocal_vid)
+        the_tform = tforms(:,:,n);
+        the_tform(3,1:2) = the_tform(3,1:2)-med_tca_tform(3,1:2);
         
+        visible_reg_only_vid{n} = imwarp(visible_reg_only_vid{n}, imref2d(size(visible_reg_only_vid{n})),...
+                                         affine2d(the_tform), 'OutputView', imref2d(size(visible_reg_only_vid{n})) );
+        vis_im_only_vid{n} = imwarp(vis_im_only_vid{n}, imref2d(size(vis_im_only_vid{n})),...
+                                         affine2d(the_tform), 'OutputView', imref2d(size(vis_im_only_vid{n})) );
+%         figure(1); imagesc(vis_im_only_vid{n}); colormap gray; drawnow; pause(1/10);
+    end
+        
+    tforms = zeros(3,3,length(confocal_vid));
+    
+%     figure(2); clf;
+    for n = 1:length(confocal_vid)
+        visimsize = size(visible_reg_only_vid{n});
+        confimsize = size(reg_only_vid{n});       
+ 
+        if std(double(visible_reg_only_vid{n})) == 0
+            visible_reg_only_vid{n} = uint8(imnoise(visible_reg_only_vid{n},'gaussian'));
+        end
+        
+        [xcorr_map , ~] = normxcorr2_general(imgaussfilt(visible_reg_only_vid{n}, 1),...
+                                             imgaussfilt(reg_only_vid{n}, 1),...
+                                             prod(mean([visimsize; confimsize])/2) );
+
 %         figure(1); imagesc(xcorr_map); axis image;
         
         [~, ncc_ind] = max(xcorr_map(:));
@@ -437,28 +488,25 @@ for k=1:length(video_fname)
         roff = roff-confimsize(1);
         coff = coff-confimsize(2);
 
-        tforms{n} = affine2d([1 0 0; 0 1 0; coff roff 1]);
+        tforms(:,:,n) = [1 0 0; 0 1 0; coff roff 1];
         
-        vis_im_only_vid{n} = imwarp(vis_im_only_vid{n}, imref2d(size(vis_im_only_vid{n})), tforms{n}, 'OutputView', imref2d(size(im_only_vid{n})) );
-        
-%         figure(2); imshowpair(reg_only_vid{n},tmp);drawnow;
+%         figure(2); hold on; plot(coff,roff,'.'); hold off;
+%         figure(3); imshowpair(reg_only_vid{n},visible_reg_only_vid{n}); title(num2str(n));
+%         drawnow;
 %         pause;
+    end
+    
+    tca_tform = median(tforms,3);
+    
+    for n=1:length(confocal_vid)
+        vis_im_only_vid{n} = imwarp(vis_im_only_vid{n}, imref2d(size(vis_im_only_vid{n})),...
+                                    affine2d(tca_tform), 'OutputView', imref2d(size(vis_im_only_vid{n})) );
+%         figure(1); imshowpair(reg_only_vid{n},vis_im_only_vid{n}); colormap gray; drawnow; pause(1/10);
     end
     
     
     %% Register the images together
 
-    for n=1:length(im_only_vid)
-        prc_filled(n) = sum( sum( imclose((im_only_vid{n}>0), ones(11)) ) )./ (size(im_only_vid{n},1)*size(im_only_vid{n},2));
-    end
-
-    max_fill = max(prc_filled);
-    for n=1:length(im_only_vid) % Find the first frame that has the highest fill %.
-        if prc_filled(n) == max_fill
-            ref_ind =n;
-            break;
-        end
-    end
 
     [optimizer, metric]  = imregconfig('monomodal');
     % optimizer.GradientMagnitudeTolerance = 1e-4;
