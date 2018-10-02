@@ -105,45 +105,45 @@ dlmwrite(fullfile(reference_path, [reference_fname(1:end-4) '_coords.csv']), ref
 for n = 1:num_a_im
     
     these_coords = warped_coords{n}(~removelist,:);
-    this_image = align_image{n};
-%     [fx,fy]=gradient(double(this_image));
-%     lapacie = del2(double(this_image));
-    for c=1:size(these_coords,1)
-        
-        thiscoord = round(these_coords(c,:));
-        offc = -10;
-        offr = -10;
-        if all(thiscoord>1) && (thiscoord(1) < size(this_image,2)-1) && (thiscoord(2) < size(this_image,1)-1) 
-%               (offc~=0 || offr~=0)
-            
-        % 1st iteration
-        thisroi = this_image(thiscoord(2)-1:thiscoord(2)+1, thiscoord(1)-1:thiscoord(1)+1);
-
-        [val, ind]=max(thisroi(:));
-        [offr, offc]=ind2sub([3 3],ind);
-
-        offc=(offc-2);
-        offr=(offr-2);
-
-        thiscoord(1) = thiscoord(1)+offc;
-        thiscoord(2) = thiscoord(2)+offr;
-            
-            if all(thiscoord>1) && (thiscoord(1) < size(this_image,2)-1) && (thiscoord(2) < size(this_image,1)-1) 
-                % 2nd iteration
-                thisroi = this_image(thiscoord(2)-1:thiscoord(2)+1, thiscoord(1)-1:thiscoord(1)+1);
-
-                [val, ind]=max(thisroi(:));
-                [offr, offc]=ind2sub([3 3],ind);
-
-                offc=(offc-2);
-                offr=(offr-2);
-
-                thiscoord(1) = thiscoord(1)+offc;
-                thiscoord(2) = thiscoord(2)+offr;
-            end
-        end
-        these_coords(c,:) = thiscoord;
-    end
+%     this_image = align_image{n};
+% %     [fx,fy]=gradient(double(this_image));
+% %     lapacie = del2(double(this_image));
+%     for c=1:size(these_coords,1)
+%         
+%         thiscoord = round(these_coords(c,:));
+%         offc = -10;
+%         offr = -10;
+%         if all(thiscoord>1) && (thiscoord(1) < size(this_image,2)-1) && (thiscoord(2) < size(this_image,1)-1) 
+% %               (offc~=0 || offr~=0)
+%             
+%         % 1st iteration
+%         thisroi = this_image(thiscoord(2)-1:thiscoord(2)+1, thiscoord(1)-1:thiscoord(1)+1);
+% 
+%         [val, ind]=max(thisroi(:));
+%         [offr, offc]=ind2sub([3 3],ind);
+% 
+%         offc=(offc-2);
+%         offr=(offr-2);
+% 
+%         thiscoord(1) = thiscoord(1)+offc;
+%         thiscoord(2) = thiscoord(2)+offr;
+%             
+%             if all(thiscoord>1) && (thiscoord(1) < size(this_image,2)-1) && (thiscoord(2) < size(this_image,1)-1) 
+%                 % 2nd iteration
+%                 thisroi = this_image(thiscoord(2)-1:thiscoord(2)+1, thiscoord(1)-1:thiscoord(1)+1);
+% 
+%                 [val, ind]=max(thisroi(:));
+%                 [offr, offc]=ind2sub([3 3],ind);
+% 
+%                 offc=(offc-2);
+%                 offr=(offr-2);
+% 
+%                 thiscoord(1) = thiscoord(1)+offc;
+%                 thiscoord(2) = thiscoord(2)+offr;
+%             end
+%         end
+%         these_coords(c,:) = thiscoord;
+%     end
     
     
     dlmwrite([align_fullfile{n}(1:end-4) '_coords.csv'], these_coords, 'delimiter',',')

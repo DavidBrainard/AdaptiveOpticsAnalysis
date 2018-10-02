@@ -6,7 +6,7 @@ clear;
 close all;
 
 
-NUMTRIALS=5;
+NUMTRIALS=4;
 CRITICAL_TIME = 0:69;
 START_IND=4;
 
@@ -96,6 +96,7 @@ numstimcoords = size(stim_coords,1);
 
 criticalfit = nan(numstimcoords,length(CRITICAL_TIME));
 densitometry_fit_amplitude = nan(numstimcoords,1);
+densitometry_b_amplitude  = nan(numstimcoords,1);
 densitometry_trial_count = zeros(numstimcoords,1);
 valid_densitometry = false(numstimcoords,1);
 
@@ -146,9 +147,10 @@ for i=1:numstimcoords
         densitometry_vect_times{i} = vect_times;
         densitometry_vect_ref{i} = vect_ref;
         criticalfit(i,:) = fitresult(CRITICAL_TIME/hz);
-        densitometry_fit_amplitude(i) = max(criticalfit(i,:))-min(criticalfit(i,2:end));
+        densitometry_fit_amplitude(i) = (max(criticalfit(i,:))-min(criticalfit(i,2:end)));
+        densitometry_b_amplitude(i) = fitresult.b;
         
-        if any(i==CELL_OF_INTEREST) && (densitometry_fit_amplitude(i) <0.2 && densitometry_fit_amplitude(i) >0.1)
+        if any(i==CELL_OF_INTEREST) && (densitometry_fit_amplitude(i) <0.15 && densitometry_fit_amplitude(i) >0)
             figure(1); clf; hold on;        
             plot(vect_times,vect_ref,'.');
             plot(CRITICAL_TIME/hz, criticalfit(i,:));
@@ -172,5 +174,14 @@ save(fullfile(outPath,[outFname '.mat']),'densitometry_fit_amplitude','valid_den
 
 %% Analyze the fitted amplitudes
 
-histogram(densitometry_fit_amplitude,40);
+histogram(densitometry_fit_amplitude,30,'BinEdges',0:0.02:0.6);
 xlabel('Fitted amplitude'); ylabel('Number of cones');
+drawnow;
+saveas(gcf,'amp_hisotogram_dens.fig')
+
+histogram2(densitometry_fit_amplitude,densitometry_b_amplitude,30);
+xlabel('Fitted Amplitude'); ylabel('Fit b value');%, 'XBinEdges',0:0.02:0.6, 'YBinEdges',0:1:30);
+drawnow;
+saveas(gcf,'b_vs_amp_hisotogram_dens.fig')
+
+counts = histcounts(densitometry_fit_amplitude,0:0.02:1);
