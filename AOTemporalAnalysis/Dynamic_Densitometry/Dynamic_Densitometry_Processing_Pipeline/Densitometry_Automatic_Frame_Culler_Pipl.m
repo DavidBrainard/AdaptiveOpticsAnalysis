@@ -732,9 +732,9 @@ for k=1:length(video_fname)
     end
 
     % Write the average images.
-    imwrite(uint8(sum(confocal_vid_out,3)./sum_map), fullfile(pathname, [confocal_fname_out frmcount '_AVG.tif']) );
+    imwrite(uint8(sum(vis_vid_out,3)./sum_map), fullfile(pathname, [vis_fname_out frmcount '_AVG.tif']) );
 
-    written_file = [confocal_fname_out frmcount '_AVG.tif'];
+    written_file = [vis_fname_out frmcount '_AVG.tif'];
     written_path = pathname;
     
     if loadsplit        

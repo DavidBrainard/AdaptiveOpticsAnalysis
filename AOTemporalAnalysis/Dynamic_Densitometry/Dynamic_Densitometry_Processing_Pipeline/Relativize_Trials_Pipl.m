@@ -113,14 +113,21 @@ end
 % matchexp = '_n\d*_';
 % avgname = regexprep(avgname,matchexp,'_');
 
-imwrite(uint8(sum(double(reg_ims),3)./sum_map), fullfile(pathname,[confocal_fname{i}(1:end-8) '_ALL_TRIALS.tif']));
+imwrite(uint8(sum(double(reg_ims),3)./sum_map), fullfile(pathname,[confocal_fname{ref_im}(1:end-8) '_ALL_TRIALS.tif']));
+
+if contains(confocal_fname,'confocal')
+    mode = 'confocal';
+elseif contains(confocal_fname,'visible')
+    mode = 'visible';
+elseif contains(confocal_fname,'split_det')
+    mode = 'split_det';
+end
 
 
 %% Transform all of the videos associated with each avg image
 for i=1:length(confocal_fname)
     mov_name_in = fullfile(pathname,[confocal_fname{i}(1:end-8) '.avi']);
     mov_name_out = fullfile(pathname,[confocal_fname{i}(1:end-8) '_piped.avi']);
-
 
     confocal_vidin = VideoReader( mov_name_in );
     confocal_vidout = VideoWriter( mov_name_out, 'Grayscale AVI' );
@@ -138,37 +145,12 @@ for i=1:length(confocal_fname)
     end
     close(confocal_vidout);
     
-    avg_name_in = [confocal_fname{i}(1:end-8) '.avi'];    
-    avg_name_in = fullfile(pathname, strrep(avg_name_in, 'confocal', 'avg'));
-    
-    if exist(avg_name_in,'file')
-        avg_name_out = [confocal_fname{i}(1:end-8) '_piped.avi'];
-        avg_name_out = fullfile(pathname, strrep(avg_name_out, 'confocal', 'avg'));
-        
-        avg_vidin = VideoReader( avg_name_in );
-        avg_vidout = VideoWriter( avg_name_out, 'Grayscale AVI' );
-        avg_vidout.FrameRate = 16.6;
-        open(avg_vidout);    
-        while hasFrame(avg_vidin)
-            frm_in = readFrame(avg_vidin);
-
-            if ~isempty(tforms{ref_im,i})
-                writeVideo( avg_vidout, imwarp(frm_in, imref2d(size(frm_in)), tforms{ref_im,i},...
-                                                    'OutputView', imref2d(size(trial_im{ref_im}))) );
-            else
-                writeVideo( avg_vidout, frm_in );
-            end
-        end
-        close(avg_vidout);
-        
-    end
-    
     split_name_in = [confocal_fname{i}(1:end-8) '.avi'];    
-    split_name_in = fullfile(pathname, strrep(split_name_in, 'confocal', 'split_det'));
+    split_name_in = fullfile(pathname, strrep(split_name_in, mode, 'split_det'));
     
-    if exist(split_name_in,'file')
+    if strcmp(mode, 'split_det') && exist(split_name_in,'file')
         split_name_out = [confocal_fname{i}(1:end-8) '_piped.avi'];
-        split_name_out = fullfile(pathname, strrep(split_name_out, 'confocal', 'split_det'));
+        split_name_out = fullfile(pathname, strrep(split_name_out, mode, 'split_det'));
         
         split_vidin = VideoReader( split_name_in );
         split_vidout = VideoWriter( split_name_out, 'Grayscale AVI' );
@@ -189,11 +171,36 @@ for i=1:length(confocal_fname)
     end
     
     vis_name_in = [confocal_fname{i}(1:end-8) '.avi'];    
-    vis_name_in = fullfile(pathname, strrep(vis_name_in, 'confocal', 'visible'));
+    vis_name_in = fullfile(pathname, strrep(vis_name_in, mode, 'visible'));
     
-    if exist(vis_name_in,'file')
+    if strcmp(mode, 'visible') && exist(vis_name_in,'file')
         vis_name_out = [confocal_fname{i}(1:end-8) '_piped.avi'];
-        vis_name_out = fullfile(pathname, strrep(vis_name_out, 'confocal', 'visible'));
+        vis_name_out = fullfile(pathname, strrep(vis_name_out, mode, 'visible'));
+        
+        vis_vidin = VideoReader( vis_name_in );
+        vis_vidout = VideoWriter( vis_name_out, 'Grayscale AVI' );
+        vis_vidout.FrameRate = 16.6;
+        open(vis_vidout);    
+        while hasFrame(vis_vidin)
+            frm_in = readFrame(vis_vidin);
+
+            if ~isempty(tforms{ref_im,i})
+                writeVideo( vis_vidout, imwarp(frm_in, imref2d(size(frm_in)), tforms{ref_im,i},...
+                                                    'OutputView', imref2d(size(trial_im{ref_im}))) );
+            else
+                writeVideo( vis_vidout, frm_in );
+            end
+        end
+        close(vis_vidout);
+        
+    end
+    
+    conf_name_in = [confocal_fname{i}(1:end-8) '.avi'];    
+    conf_name_in = fullfile(pathname, strrep(conf_name_in, mode, 'confocal'));
+    
+    if strcmp(mode, 'confocal') && exist(vis_name_in,'file')
+        vis_name_out = [confocal_fname{i}(1:end-8) '_piped.avi'];
+        vis_name_out = fullfile(pathname, strrep(vis_name_out, mode, 'confocal'));
         
         vis_vidin = VideoReader( vis_name_in );
         vis_vidout = VideoWriter( vis_name_out, 'Grayscale AVI' );

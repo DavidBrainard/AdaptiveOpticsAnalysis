@@ -108,8 +108,8 @@ ft = fittype( 'c-a*exp(-x/b)', 'independent', 'x', 'dependent', 'y' );
 opts = fitoptions( 'Method', 'NonlinearLeastSquares' );
 opts.Display = 'Off';
 opts.Lower = [0 0 0];
-opts.Upper = [1 Inf 1];
-opts.StartPoint = [0.4 0.4 0.7];
+opts.Upper = [2 Inf 2];
+
 
 
         
@@ -140,14 +140,15 @@ for i=1:numstimcoords
         vect_ref = all_times_ref(~isnan(all_times));
         vect_times = all_times(~isnan(all_times));
         vect_times = vect_times-min(vect_times);
+        opts.StartPoint = [0 1 mean(vect_ref)];
         [fitresult, gof] = fit( vect_times, vect_ref, ft, opts );
 
         densitometry_vect_times{i} = vect_times;
         densitometry_vect_ref{i} = vect_ref;
         criticalfit(i,:) = fitresult(CRITICAL_TIME/hz);
-        densitometry_fit_amplitude(i) = max(criticalfit(i,:))-min(criticalfit(i,:));
+        densitometry_fit_amplitude(i) = max(criticalfit(i,:))-min(criticalfit(i,2:end));
         
-        if any(i==CELL_OF_INTEREST) %|| (densitometry_fit_amplitude(i) <0.12 && densitometry_fit_amplitude(i) >0.08)
+        if any(i==CELL_OF_INTEREST) && (densitometry_fit_amplitude(i) <0.2 && densitometry_fit_amplitude(i) >0.1)
             figure(1); clf; hold on;        
             plot(vect_times,vect_ref,'.');
             plot(CRITICAL_TIME/hz, criticalfit(i,:));
@@ -156,7 +157,7 @@ for i=1:numstimcoords
             axis([0 CRITICAL_TIME(end)/hz 0 1.5]);
             hold off;
             drawnow;
-
+            fitresult
             pause;
         end
     end

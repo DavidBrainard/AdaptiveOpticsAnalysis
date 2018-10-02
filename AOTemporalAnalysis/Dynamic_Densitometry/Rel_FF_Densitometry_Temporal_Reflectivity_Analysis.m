@@ -37,7 +37,7 @@ profile_method = 'box';
 
 % For release, this version only contains the normalizations used in the
 % paper. However, the code is structured such that you can add more if desired.
-norm_type = 'no_norm_robtype'; 
+norm_type = 'no_norm_ramtype'; 
 
 
 % mov_path=pwd;
@@ -59,8 +59,8 @@ stack_fnames = read_folder_contents( mov_path,'avi' );
 
 for i=1:length(stack_fnames)
     if ~isempty( strfind( stack_fnames{i}, this_image_fname(1:end - length('_AVG.tif') ) ) )
-        confocal_stack_fname = stack_fnames{i};
-        temporal_stack_fname = strrep(stack_fnames{i},'confocal','visible'); % Analyze the visible channel!
+        temporal_stack_fname = stack_fnames{i};
+%         temporal_stack_fname = strrep(stack_fnames{i},'confocal','visible'); % Analyze the visible channel!
         
         acceptable_frames_fname = [stack_fnames{i}(1:end-4) '_acceptable_frames.csv'];
         break;
@@ -100,12 +100,12 @@ ref_coords = dlmread( fullfile(mov_path, ref_coords_fname));
 % ref_coords = [ref_coords(:,1)-2 ref_coords(:,2)];
 ref_coords = [ref_coords(:,1) ref_coords(:,2)];
 
-confocal_stack_reader = VideoReader( fullfile(mov_path,confocal_stack_fname) );
+% confocal_stack_reader = VideoReader( fullfile(mov_path,temporal_stack_fname) );
 temporal_stack_reader = VideoReader( fullfile(mov_path,temporal_stack_fname) );
 
 i=1;
 while(hasFrame(temporal_stack_reader))
-    confocal_stack(:,:,i) = double(readFrame(confocal_stack_reader));
+%     confocal_stack(:,:,i) = double(readFrame(confocal_stack_reader));
     temporal_stack(:,:,i) = double(readFrame(temporal_stack_reader));
     i = i+1;
 end
