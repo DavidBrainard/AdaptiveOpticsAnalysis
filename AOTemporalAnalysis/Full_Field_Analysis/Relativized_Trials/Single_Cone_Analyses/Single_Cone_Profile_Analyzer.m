@@ -51,6 +51,7 @@ for i=1:length(single_cone_mat_files)
 end
 
 valid = all(~isnan(single_cone_response),2);
+% valid = valid & all(Prestim>70,2);
 
 
 %% Individual Spatal maps
@@ -160,7 +161,7 @@ end
 
 %% Display results vs densitometry
 
-lessthanvalid = (densitometry_fit_amplitude<0.05) & valid & valid_densitometry;
+lessthanvalid = (densitometry_fit_amplitude<=0) & valid & valid_densitometry;
 
 for i=1:length(single_cone_mat_files)
     figure; hold on;    

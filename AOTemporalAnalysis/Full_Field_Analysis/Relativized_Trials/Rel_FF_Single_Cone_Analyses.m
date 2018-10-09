@@ -39,7 +39,7 @@ CUTOFF = 26;
 NUMTRIALS=20;
 CRITICAL_REGION = 72:108;
 
-CELL_OF_INTEREST = [1:1000];
+CELL_OF_INTEREST = [1:2000];
 
 if isempty(CELL_OF_INTEREST)
     close all force;
@@ -196,7 +196,7 @@ for i=1:numstimcoords
             stim_prestim_means(i,j) = stim_cell_prestim_mean{j}(i);
             numtrials = numtrials+1;
             if ~isempty(CELL_OF_INTEREST)
-                nonorm_ref(j, stim_time_indexes{j}{i} ) = stim_cell_reflectance_nonorm{j}{i}(~isnan(stim_cell_reflectance_nonorm{j}{i}));
+                nonorm_ref(j, stim_time_indexes{j}{i} ) = stim_cell_reflectance_nonorm{j}{i}(~isnan(stim_cell_reflectance_nonorm{j}{i}))-stim_prestim_means(i,j);
                 
 %                 figure(10); plot(stim_cell_reflectance{j}{i}); title(num2str(stim_prestim_means(i,j)));
             end
@@ -218,12 +218,12 @@ for i=1:numstimcoords
         end
     end
     
-    if any(i==CELL_OF_INTEREST) && stim_trial_count(i)>CUTOFF
+    if any(i==CELL_OF_INTEREST) %&& stim_trial_count(i)>CUTOFF
         figure(1); clf;
-        subplot(4,1,1); plot( bsxfun(@minus,nonorm_ref, nonorm_ref(:,2))');axis([CRITICAL_REGION(1) CRITICAL_REGION(end) -150 150]); xlabel('Time index'); ylabel('Raw Response');
-        subplot(4,1,2); plot(all_times_ref');  axis([CRITICAL_REGION(1) CRITICAL_REGION(end) -10 10]); xlabel('Time index'); ylabel('Standardized Response');
+        subplot(4,1,1); plot( nonorm_ref' );axis([1 max_index -150 150]); xlabel('Time index'); ylabel('Raw Response');
+        subplot(4,1,2); plot(all_times_ref');  axis([1 max_index -10 10]); xlabel('Time index'); ylabel('Standardized Response');
         subplot(4,1,3); plot(stim_cell_median(i,:)); hold on;
-                        plot(sqrt(stim_cell_var(i,:))); hold off; axis([CRITICAL_REGION(1) CRITICAL_REGION(end) -2 10]); xlabel('Time index'); ylabel('Response');
+                        plot(sqrt(stim_cell_var(i,:))); hold off; axis([1 max_index -2 10]); xlabel('Time index'); ylabel('Response');
         subplot(4,1,4); plot(stim_prestim_means(i,:),'*'); xlabel('Trial #'); ylabel('Prestimulus mean (A.U.)'); axis([0 50 0 255]);
         title(['Cell #:' num2str(i)]);
         drawnow;
@@ -233,7 +233,7 @@ for i=1:numstimcoords
         
 %         figure(5); imagesc(ref_image); colormap gray; axis image;hold on; 
 %         plot(ref_coords(i,1),ref_coords(i,2),'r*'); hold off;
-%         saveas(gcf, ['Cell_' num2str(i) '_location.png']);
+%         saveas(gcf, ['795_Cell_' num2str(i) '_location.png']);
         drawnow;
         critreg=all_times_ref(:,CRITICAL_REGION);
         quantile(critreg(:),.95)
@@ -293,7 +293,7 @@ for i=1:numcontrolcoords
         end
     end
     
-    if any(i==CELL_OF_INTEREST) && control_trial_count(i)>CUTOFF
+    if any(i==CELL_OF_INTEREST) %&& control_trial_count(i)>CUTOFF
         figure(2); clf;
         subplot(3,1,1); plot(bsxfun(@minus,nonorm_ref, nonorm_ref(:,2))');axis([CRITICAL_REGION(1) CRITICAL_REGION(end) -150 150]);  xlabel('Time index'); ylabel('Raw Response');
         subplot(3,1,2); plot(all_times_ref'); axis([CRITICAL_REGION(1) CRITICAL_REGION(end) -10 10]); xlabel('Time index'); ylabel('Standardized Response');

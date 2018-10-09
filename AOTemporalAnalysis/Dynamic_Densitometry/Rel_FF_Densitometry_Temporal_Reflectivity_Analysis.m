@@ -331,9 +331,11 @@ elseif contains( norm_type, 'robtype')
     for i=1:length( norm_cell_reflectance )
 
         if ~isempty(norm_cell_reflectance{i}) && length(norm_cell_reflectance{i})>15
-            top95 = quantile(norm_cell_reflectance{i},.95);
-            
+            top95 = quantile(norm_cell_reflectance{i}(round(length(norm_cell_reflectance{i})/2):end),.95);
+                        
             norm_cell_reflectance{i} = norm_cell_reflectance{i}./top95;
+%             cell_times{i}(norm_cell_reflectance{i}>1.05) = [];
+%             norm_cell_reflectance{i}(norm_cell_reflectance{i}>1.05) = [];
         else
             norm_cell_reflectance{i} = [];
             cell_times{i}=[];

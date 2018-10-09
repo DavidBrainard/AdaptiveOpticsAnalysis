@@ -10,7 +10,7 @@ NUMTRIALS=4;
 CRITICAL_TIME = 0:69;
 START_IND=4;
 
-CELL_OF_INTEREST = [];
+CELL_OF_INTEREST = [1:2000];
 
 if isempty(CELL_OF_INTEREST)
     close all force;
@@ -112,7 +112,7 @@ opts.Lower = [0 0 0];
 opts.Upper = [2 Inf 2];
 
 
-
+START_TIME = START_IND/hz;
         
 for i=1:numstimcoords
     waitbar(i/size(stim_coords,1),THEwaitbar,'Processing signals...');
@@ -134,25 +134,37 @@ for i=1:numstimcoords
     valid_densitometry(i) = densitometry_trial_count(i)>=NUMTRIALS;
     
     if valid_densitometry(i)
-        all_times = all_times(:,START_IND:end);
-        all_times_ref = all_times_ref(:,START_IND:end);
+%         vect_ref = mean(all_times_ref,'omitnan')';        
+%         vect_times = mean(all_times,'omitnan')';
+%         vect_times(isnan(vect_ref))=[];
+%         vect_ref(isnan(vect_ref))=[];
+%         vect_times = vect_times-START_TIME;
 
-        % Fit the model from Ram's paper to the data.
         vect_ref = all_times_ref(~isnan(all_times));
         vect_times = all_times(~isnan(all_times));
-        vect_times = vect_times-min(vect_times);
-        opts.StartPoint = [0 1 mean(vect_ref)];
+        vect_times = vect_times-START_TIME;
+
+        opts.StartPoint = [.1 1 mean(vect_ref)];
         [fitresult, gof] = fit( vect_times, vect_ref, ft, opts );
 
         densitometry_vect_times{i} = vect_times;
         densitometry_vect_ref{i} = vect_ref;
         criticalfit(i,:) = fitresult(CRITICAL_TIME/hz);
-        densitometry_fit_amplitude(i) = (max(criticalfit(i,:))-min(criticalfit(i,2:end)));
+        densitometry_fit_amplitude(i) = (max(criticalfit(i,end))-min(criticalfit(i,1)));
         densitometry_b_amplitude(i) = fitresult.b;
-        
-        if any(i==CELL_OF_INTEREST) && (densitometry_fit_amplitude(i) <0.15 && densitometry_fit_amplitude(i) >0)
-            figure(1); clf; hold on;        
-            plot(vect_times,vect_ref,'.');
+
+        if any(i==CELL_OF_INTEREST) %&& (densitometry_fit_amplitude(i) <=0.2 && densitometry_fit_amplitude(i) >=.1)
+            figure(1); clf; hold on;
+            
+            datapresent={};
+            for j=1:length(profileSDataNames)                
+                if any(~isnan(all_times_ref(j,:)))
+                    plot(all_times(j,:)-START_TIME, all_times_ref(j,:)./normval,'.');
+                    datapresent = [datapresent; {num2str(j)}];
+                end
+            end
+            legend(datapresent);
+%             plot(vect_times,vect_ref,'r*')
             plot(CRITICAL_TIME/hz, criticalfit(i,:));
             xlabel('Time index'); ylabel('Standardized Response');
             title(['Cell #:' num2str(i) ', Amplitude: ' num2str(densitometry_fit_amplitude(i))]);
@@ -174,14 +186,89 @@ save(fullfile(outPath,[outFname '.mat']),'densitometry_fit_amplitude','valid_den
 
 %% Analyze the fitted amplitudes
 
-histogram(densitometry_fit_amplitude,30,'BinEdges',0:0.02:0.6);
+histogram(densitometry_fit_amplitude,30,'BinEdges',-0.1:0.02:0.6);
 xlabel('Fitted amplitude'); ylabel('Number of cones');
 drawnow;
 saveas(gcf,'amp_hisotogram_dens.fig')
 
+figure;
 histogram2(densitometry_fit_amplitude,densitometry_b_amplitude,30);
 xlabel('Fitted Amplitude'); ylabel('Fit b value');%, 'XBinEdges',0:0.02:0.6, 'YBinEdges',0:1:30);
 drawnow;
 saveas(gcf,'b_vs_amp_hisotogram_dens.fig')
 
-counts = histcounts(densitometry_fit_amplitude,0:0.02:1);
+counts = histcounts(densitometry_fit_amplitude,-0.1:0.02:1);
+
+
+% For when you want to fit all of the data, not just each trial
+% vect_ref = all_times_ref(~isnan(all_times));
+% vect_times = all_times(~isnan(all_times));
+% vect_times = vect_times-START_TIME;
+% 
+% opts.StartPoint = [.1 1 mean(vect_ref)];
+% [fitresult, gof] = fit( vect_times, vect_ref, ft, opts );
+% 
+% densitometry_vect_times{i} = vect_times;
+% densitometry_vect_ref{i} = vect_ref;
+% criticalfit(i,:) = fitresult(CRITICAL_TIME/hz);
+% densitometry_fit_amplitude(i) = (max(criticalfit(i,end))-min(criticalfit(i,2)));
+% densitometry_b_amplitude(i) = fitresult.b;
+% 
+% if any(i==CELL_OF_INTEREST) && (densitometry_fit_amplitude(i) <=0.2 && densitometry_fit_amplitude(i) >=.1)
+%     figure(1); clf; hold on;
+% 
+%     datapresent={};
+%     for j=1:length(profileSDataNames)                
+%         if any(~isnan(all_times_ref(j,:)))
+%             plot(all_times(j,:)-START_TIME, all_times_ref(j,:),'.');
+%             datapresent = [datapresent; {num2str(j)}];
+%         end
+%     end
+%     legend(datapresent);            
+%     plot(CRITICAL_TIME/hz, criticalfit(i,:));
+%     xlabel('Time index'); ylabel('Standardized Response');
+%     title(['Cell #:' num2str(i) ', Amplitude: ' num2str(densitometry_fit_amplitude(i))]);
+%     axis([0 CRITICAL_TIME(end)/hz 0 1.5]);
+%     hold off;
+%     drawnow;
+%     fitresult
+%     pause;
+% end
+
+% For looking at the fits to individual traces
+%         all_times = all_times(:,START_IND:end)-START_TIME;
+%         all_times_ref = all_times_ref(:,START_IND:end);
+% 
+%         % Fit the model from Ram's paper to the data.
+% %         vect_ref = all_times_ref(~isnan(all_times));
+% %         vect_times = all_times(~isnan(all_times));
+% %         vect_times = vect_times-START_TIME;
+%         figure(1); clf; hold on;
+%         for j=1:length(profileSDataNames)
+%             if any(~isnan(all_times_ref(j,:)))
+%                 vect_ref = all_times_ref(j,:);
+%                 vect_ref = vect_ref(~isnan(vect_ref))';
+%                 vect_times = all_times(j,:);
+%                 vect_times = vect_times(~isnan(vect_times))';
+% 
+%                 opts.StartPoint = [.1 1 mean(vect_ref)];
+%                 [fitresult, gof] = fit( vect_times, vect_ref, ft, opts );
+% 
+%                 criticalfit(i,:) = fitresult(CRITICAL_TIME/hz);
+%                 densitometry_fit_amplitude(i) = (max(criticalfit(i,end))-min(criticalfit(i,2)));
+%                 densitometry_b_amplitude(i) = fitresult.b;
+% 
+%                 plot(vect_times, vect_ref,'.');
+% 
+%                 legend(num2str(j));            
+%                 plot(CRITICAL_TIME/hz, criticalfit(i,:));
+%                 xlabel('Time index'); ylabel('Standardized Response');
+%                 title(['Cell #:' num2str(i) ', Amplitude: ' num2str(densitometry_fit_amplitude(i))]);
+%                 axis([0 CRITICAL_TIME(end)/hz 0 1.5]);
+% %                 hold off;
+%                 drawnow;
+%                 fitresult
+%                 
+%             end
+%         end
+%         pause;

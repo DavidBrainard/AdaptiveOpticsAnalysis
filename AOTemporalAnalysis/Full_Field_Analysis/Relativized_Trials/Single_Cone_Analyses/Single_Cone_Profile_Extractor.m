@@ -412,20 +412,20 @@ waitbar(i/size(std_dev_sub,1),THEwaitbar,'Analyzing subtracted signals...');
         MedianResp(i) = max(abs(filt_median_sig(CRITICAL_REGION))-mean(filt_median_sig(1:CRITICAL_REGION(1))) );        
         PrestimVal(i) = mean( stim_prestim_means(i,:),2, 'omitnan');
         
-        if valid_densitometry(i) && (densitometry_fit_amplitude(i) < 0.075)
-           figure(1);
-           subplot(2,1,1);
-           plot( filt_stddev_sig ); hold on; plot(std_dev_sig);
-           plot(sqrt(control_cell_var(i,2:end))-1);
-           plot(sqrt(stim_cell_var(i,2:end))-1);
-           plot(mean(sqrt(control_cell_var),'omitnan'));
-           hold off; 
-           subplot(2,1,2);
-           plot(CRITICAL_TIME/hz, criticalfit(i,:));hold on;
-           plot(densitometry_vect_times{i},densitometry_vect_ref{i},'.')           
-           axis([0 CRITICAL_TIME(end)/hz 0 1.5]); hold off;
-           drawnow; pause;
-        end
+%         if valid_densitometry(i) && (densitometry_fit_amplitude(i) < 0.075)
+%            figure(1);
+%            subplot(2,1,1);
+%            plot( filt_stddev_sig ); hold on; plot(std_dev_sig);
+%            plot(sqrt(control_cell_var(i,2:end))-1);
+%            plot(sqrt(stim_cell_var(i,2:end))-1);
+%            plot(mean(sqrt(control_cell_var),'omitnan'));
+%            hold off; 
+%            subplot(2,1,2);
+%            plot(CRITICAL_TIME/hz, criticalfit(i,:));hold on;
+%            plot(densitometry_vect_times{i},densitometry_vect_ref{i},'.')           
+%            axis([0 CRITICAL_TIME(end)/hz 0 1.5]); hold off;
+%            drawnow; pause;
+%         end
         
         % Control only
         std_dev_sig = control_std_dev_sub(i,2:end);
