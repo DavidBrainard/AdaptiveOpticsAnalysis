@@ -84,17 +84,17 @@ for thisfile in os.listdir(dmp_folder_path):
         try:
             pickle_path = os.path.join(dmp_folder_path, thisfile)
 
-            # Fix the fact that it was done originally in Windows...
+            # Fix the fact that it was done originally in Windows, and python 2...
             pickle_file = open(pickle_path, 'rb')
-            text = pickle_file.read().replace('\r\n', '\n')
+            text = pickle_file.read().replace(b'\r\n', b'\n')
             pickle_file.close()
 
             pickle_file = open(pickle_path, 'wb')
             pickle_file.write(text)
             pickle_file.close()
 
-            pickle_file = open(pickle_path, 'r')
-            pick = pickle.load(pickle_file)
+            pickle_file = open(pickle_path, 'rb')
+            pick = pickle.load(pickle_file, encoding='latin1')
 
             ff_translation_info_rowshift = pick['full_frame_ncc']['row_shifts']
             ff_translation_info_colshift = pick['full_frame_ncc']['column_shifts']
