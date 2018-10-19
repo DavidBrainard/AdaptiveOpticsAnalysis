@@ -36,8 +36,8 @@ clear;
 % load('lowest_responders.mat');
 
 CUTOFF = 26;
-NUMTRIALS=20;
-CRITICAL_REGION = 72:108; %66:99;
+NUMTRIALS= 20;
+CRITICAL_REGION = 72:108; % 72:90;
 
 CELL_OF_INTEREST = [];
 
@@ -169,7 +169,7 @@ numstimcoords = size(stim_coords,1);
 
 stim_cell_var = nan(numstimcoords, max_index);
 stim_cell_median = nan(numstimcoords, max_index);
-stim_cell_pca_std = nan(numstimcoords, 1);
+stim_resp_range = nan(numstimcoords, 1);
 stim_trial_count = zeros(numstimcoords,1);
 stim_posnegratio = nan(numstimcoords,max_index);
 stim_prestim_means = nan(numstimcoords,length(profileSDataNames));
@@ -189,7 +189,7 @@ for i=1:numstimcoords
     for j=1:length(profileSDataNames)
         
         if ~isempty(stim_cell_reflectance{j}{i}) && ...
-           sum(stim_time_indexes{j}{i} >= 67 & stim_time_indexes{j}{i} <=99) >= CUTOFF && ...
+           sum(stim_time_indexes{j}{i} >= CRITICAL_REGION(1) & stim_time_indexes{j}{i} <= CRITICAL_REGION(end)) >= CUTOFF && ...
            stim_cell_prestim_mean{j}(i) <= 240
 
             stim_prestim_means(i,j) = stim_cell_prestim_mean{j}(i);
@@ -202,7 +202,7 @@ for i=1:numstimcoords
             all_times_ref(j, stim_time_indexes{j}{i} ) = stim_cell_reflectance{j}{i};
         end
         
-%         critical_region_ref =all_times_ref(j,CRITICAL_REGION);
+        
 %         total_indexes = sum(~isnan(critical_region_ref));
 %         
 %         main_signal_dir = sum(sign( critical_region_ref(~isnan(critical_region_ref)) ));
@@ -220,7 +220,9 @@ for i=1:numstimcoords
     
     stim_trial_count(i) = numtrials;
     
-    quants = quantile(all_times_ref, [0.1 0.90]);
+    critical_region_ref =all_times_ref(:, CRITICAL_REGION);
+    quantrng = quantile(critical_region_ref(:), [0.05 .95]);
+    stim_resp_range(i) = quantrng(2)-quantrng(1);
     
     for j=1:max_index
         nonan_ref = all_times_ref(~isnan(all_times_ref(:,j)), j);
@@ -293,7 +295,7 @@ for i=1:numcontrolcoords
     for j=1:length(profileCDataNames)
                         
         if ~isempty(control_cell_reflectance{j}{i}) && ...
-           sum(control_time_indexes{j}{i} >= 67 & control_time_indexes{j}{i} <=99) >=  CUTOFF && ...
+           sum(control_time_indexes{j}{i} >= CRITICAL_REGION(1) & control_time_indexes{j}{i} <= CRITICAL_REGION(end)) >=  CUTOFF && ...
            control_cell_prestim_mean{j}(i) <= 240
        
             cont_prestim_means = [cont_prestim_means; control_cell_prestim_mean{j}(i)];
@@ -460,7 +462,7 @@ close(THEwaitbar);
 save([ outFname '.mat'],'AmpResp','MedianResp','TTPResp',...
      'ControlAmpResp','ControlMedianResp','ControlPrestimVal',...
      'valid','allcoords','ref_image','control_cell_median',...
-     'control_cell_var','stim_cell_median','stim_cell_var','stim_prestim_means');
+     'control_cell_var','stim_cell_median','stim_cell_var','stim_prestim_means','stim_resp_range');
 
  
 
@@ -495,12 +497,13 @@ histogram( AmpResp(~isnan(AmpResp)) ,'Binwidth',0.1);
 title('Stim-Control per cone subtraction amplitudes');
 xlabel('Amplitude difference from control');
 ylabel('Number of cones');
+%%
+goodtrials = ~isnan(AmpResp);
 
-%% TEMP to prove control equivalence!
-% stim_resp = sum(sqrt(stim_cell_var(:,critical_region)),2) + abs(sum(stim_cell_median(:,critical_region),2));
-% control_resp = sum(sqrt(control_cell_var(:,critical_region)),2) + abs(sum(control_cell_median(:,critical_region),2));
-% 
-% figure(8); plot(stim_resp,control_resp,'k.'); hold on;
-% plot([25 90],[25 90],'k'); hold off; axis square;
-% ylabel('450nW control response');
-% xlabel('0nW control response');
+figure(8); clf; hold on;
+imagesc(ref_image); colormap gray; axis image;
+for i=1:length(goodtrials)
+    if goodtrials(i) && AmpResp(i)<=0
+        plot(allcoords(i,1), allcoords(i,2),'*');
+    end
+end

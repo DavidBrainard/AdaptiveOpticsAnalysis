@@ -36,8 +36,8 @@ clear;
 % load('lowest_responders.mat');
 
 CUTOFF = 26;
-NUMTRIALS=20;
-CRITICAL_REGION = 72:108;
+NUMTRIALS = 20;
+CRITICAL_REGION = 72:108; % 72:90;
 
 CELL_OF_INTEREST = [1:2000];
 
@@ -189,7 +189,7 @@ for i=1:numstimcoords
     for j=1:length(profileSDataNames)
         
         if ~isempty(stim_cell_reflectance{j}{i}) && ...
-           sum(stim_time_indexes{j}{i} >= 67 & stim_time_indexes{j}{i} <=99) >= CUTOFF && ...
+           sum(stim_time_indexes{j}{i} >= CRITICAL_REGION(1) & stim_time_indexes{j}{i} <= CRITICAL_REGION(end)) >= CUTOFF && ...
            stim_cell_prestim_mean{j}(i) <= 240
 
             
@@ -218,7 +218,7 @@ for i=1:numstimcoords
         end
     end
     
-    if any(i==CELL_OF_INTEREST) %&& stim_trial_count(i)>CUTOFF
+    if any(i==CELL_OF_INTEREST) && stim_trial_count(i)>CUTOFF 
         figure(1); clf;
         subplot(4,1,1); plot( nonorm_ref' );axis([1 max_index -150 150]); xlabel('Time index'); ylabel('Raw Response');
         subplot(4,1,2); plot(all_times_ref');  axis([1 max_index -10 10]); xlabel('Time index'); ylabel('Standardized Response');
@@ -233,12 +233,8 @@ for i=1:numstimcoords
         
 %         figure(5); imagesc(ref_image); colormap gray; axis image;hold on; 
 %         plot(ref_coords(i,1),ref_coords(i,2),'r*'); hold off;
-%         saveas(gcf, ['795_Cell_' num2str(i) '_location.png']);
+%         saveas(gcf, ['785_Cell_' num2str(i) '_location.png']);
         drawnow;
-        critreg=all_times_ref(:,CRITICAL_REGION);
-        quantile(critreg(:),.95)
-        quantile(critreg(:),.5)
-        quantile(critreg(:),.05)
         
 %         stim_prestim_means
         pause;
@@ -269,7 +265,7 @@ for i=1:numcontrolcoords
     for j=1:length(profileCDataNames)
                         
         if ~isempty(control_cell_reflectance{j}{i}) && ...
-           sum(control_time_indexes{j}{i} >= 67 & control_time_indexes{j}{i} <=99) >=  CUTOFF && ...
+           sum(control_time_indexes{j}{i} >= CRITICAL_REGION(1) & control_time_indexes{j}{i} <= CRITICAL_REGION(end)) >=  CUTOFF && ...
            control_cell_prestim_mean{j}(i) <= 240
        
             cont_prestim_means = [cont_prestim_means; control_cell_prestim_mean{j}(i)];
