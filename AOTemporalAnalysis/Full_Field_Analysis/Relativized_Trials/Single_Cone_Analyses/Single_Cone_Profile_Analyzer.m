@@ -21,6 +21,7 @@ load(fullfile(profile_dir,single_cone_mat_files{1}),'allcoords');
 stimAmp = nan(size(allcoords,1), length(single_cone_mat_files));
 stimMedian = nan(size(allcoords,1), length(single_cone_mat_files));
 stimTTP = nan(size(allcoords,1), length(single_cone_mat_files));
+stimRespRange = nan(size(allcoords,1), length(single_cone_mat_files));
 Prestim = nan(size(allcoords,1), length(single_cone_mat_files));
 
 controlAmp = nan(size(allcoords,1), length(single_cone_mat_files));
@@ -28,6 +29,7 @@ controlMedian = nan(size(allcoords,1), length(single_cone_mat_files));
 
 single_cone_response = nan(size(allcoords,1), length(single_cone_mat_files));
 single_cone_control_response = nan(size(allcoords,1), length(single_cone_mat_files));
+trial_validity = false(size(allcoords,1), length(single_cone_mat_files));
 
 for i=1:length(single_cone_mat_files)
     single_cone_mat_files{i}
@@ -36,13 +38,15 @@ for i=1:length(single_cone_mat_files)
     stimAmp(:,i) = AmpResp;
     stimMedian(:,i) = MedianResp;
     stimTTP(:,i) = TTPResp;
-    Prestim(:,i) = mean(stim_prestim_means,2,'omitnan');
+    stimRespRange(:,i) = stim_resp_range;
+    Prestim(:,i) = median(stim_prestim_means,2,'omitnan');
     
     controlAmp(:,i) = ControlAmpResp;
     controlMedian(:,i) = ControlMedianResp;    
     
     single_cone_response(:,i) = AmpResp+abs(MedianResp);
     single_cone_control_response(:,i) = ControlAmpResp+abs(ControlMedianResp);
+    trial_validity(:,i) = valid;
     
     if logmode 
         single_cone_response(:,i) = log10(single_cone_response(:,i)+1);
@@ -50,9 +54,8 @@ for i=1:length(single_cone_mat_files)
     end
 end
 
-valid = all(~isnan(single_cone_response),2);
-% valid = valid & all(Prestim>70,2);
-
+valid = all(~isnan(single_cone_response),2) & all(trial_validity,2);
+return;
 
 %% Individual Spatal maps
 
@@ -112,13 +115,17 @@ end
 %% Display Cells under the 1:1 line
 
 % lessthanvalid= (single_cone_response<single_cone_control_response) & valid;
-lessthanvalid = (single_cone_response<1) & (densitometry_fit_amplitude<0.1) & valid & valid_densitometry;
-valid = valid & valid_densitometry;
+lessthanvalid = false(size(valid));
+lessthanvalid(382) = true;
+
+
+% lessthanvalid = (single_cone_response<1) & (densitometry_fit_amplitude<0.1) & valid & valid_densitometry;
+% valid = valid & valid_densitometry;
 
 for i=1:length(single_cone_mat_files)
     figure; hold on;    
     plot(single_cone_control_response(valid,i),single_cone_response(valid,i),'.');
-    plot(single_cone_control_response(lessthanvalid(:,i),i),single_cone_response(lessthanvalid(:,i),i),'r.');
+    plot(single_cone_control_response(lessthanvalid(:,i)&valid,i),single_cone_response(lessthanvalid(:,i)&valid,i),'r.');
     plot([-10 10],[-10 10],'k');
          
     thelessthan{i} = find(lessthanvalid(:,i)==1);
@@ -185,4 +192,13 @@ for i=1:length(single_cone_mat_files)
     end
     
     generate_spatial_map(single_cone_response(:,i), allcoords, lessthanvalid(:,i), single_cone_mat_files(i), '_VS', saveplots);
+end
+
+
+%% Prestimulus behavior vs normalized response range
+figure; hold on;
+for i=1:length(single_cone_mat_files)
+    
+    plot( Prestim(valid,i), stimRespRange(valid, i),'.');
+        
 end
