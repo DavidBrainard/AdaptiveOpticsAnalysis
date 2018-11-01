@@ -33,8 +33,6 @@
 clear;
 
 
-% load('lowest_responders.mat');
-
 CUTOFF = 26;
 NUMTRIALS= 20;
 CRITICAL_REGION = 72:108; % 72:90;
@@ -91,9 +89,9 @@ for j=1:length(profileSDataNames)
     profileSDataNames{j}
     load(fullfile(stimRootDir,profileSDataNames{j}));
     
-    if ~isempty(CELL_OF_INTEREST)
-        stim_cell_reflectance_nonorm{j} = cell_reflectance;
-    end
+    
+    stim_cell_reflectance_nonorm{j} = cell_reflectance;
+    
     stim_cell_reflectance{j} = norm_cell_reflectance;
     stim_time_indexes{j} = cell_times;
     stim_cell_prestim_mean{j} = cell_prestim_mean;
@@ -186,6 +184,9 @@ for i=1:numstimcoords
     if ~isempty(CELL_OF_INTEREST)
         nonorm_ref = nan(length(profileSDataNames), max_index);
     end
+    allsignals=[];
+    allnormsignals=[];
+    allstims=[];
     for j=1:length(profileSDataNames)
         
         if ~isempty(stim_cell_reflectance{j}{i}) && ...
@@ -194,31 +195,37 @@ for i=1:numstimcoords
 
             stim_prestim_means(i,j) = stim_cell_prestim_mean{j}(i);
             numtrials = numtrials+1;
-            if ~isempty(CELL_OF_INTEREST)
-                nonorm_ref(j, stim_time_indexes{j}{i} ) = stim_cell_reflectance_nonorm{j}{i}(~isnan(stim_cell_reflectance_nonorm{j}{i}));
+            
+            nonorm_ref(j, stim_time_indexes{j}{i} ) = stim_cell_reflectance_nonorm{j}{i}(~isnan(stim_cell_reflectance_nonorm{j}{i}));
                 
 %                 figure(10); plot(stim_cell_reflectance{j}{i}); title(num2str(stim_prestim_means(i,j)));
-            end
+            
             all_times_ref(j, stim_time_indexes{j}{i} ) = stim_cell_reflectance{j}{i};
+            allsignals = [allsignals [stim_time_indexes{j}{i}+(166*(j-1));
+                                      stim_cell_reflectance_nonorm{j}{i}(~isnan(stim_cell_reflectance_nonorm{j}{i}))]];
+            allnormsignals = [allnormsignals [stim_time_indexes{j}{i}+(166*(j-1));
+                                      stim_cell_reflectance{j}{i}]];
+            allstims = [allstims [(72:108)+(166*(j-1));
+                                      ones(1,37)*10]];
         end
         
+
+    end
+    stim_trial_count(i) = numtrials;
+    
+    if ~isempty(allsignals) && stim_trial_count(i)>CUTOFF
+        figure(1); clf; subplot(3,1,1); plot(allsignals(1,:),allsignals(2,:)); hold on;
+        plot(allstims(1,:), allstims(2,:).*0,'*'); 
+        plot(0:1660:9200, zeros(1,6),'g*'); axis([0 9500 0 255]);
         
-%         total_indexes = sum(~isnan(critical_region_ref));
-%         
-%         main_signal_dir = sum(sign( critical_region_ref(~isnan(critical_region_ref)) ));
-%         flipcutoff = (total_indexes/2);
-%         
-%         if -main_signal_dir > flipcutoff
-%             all_times_ref(j,:) = -all_times_ref(j,:);
-%             disp(['Flipping signal because it spends '...
-%                   num2str( -100*main_signal_dir/total_indexes) ... 
-%                   '% its time negative.']);
-%         end        
+        subplot(3,1,2); plot(allnormsignals(1,:),allnormsignals(2,:)); hold on;
+        plot(allstims(1,:), allstims(2,:),'*'); 
+        plot(0:1660:9200, ones(1,6)*10,'g*'); axis([0 9500 -10 15]);
+        subplot(3,1,3);  plot(all_times_ref'); hold on;
+        plot(allstims(1,:), allstims(2,:),'*'); 
+        plot(0:1660:9200, ones(1,6)*10,'g*'); axis([0 166 -10 15]);
     end
     
-    
-    
-    stim_trial_count(i) = numtrials;
     
     critical_region_ref =all_times_ref(:, CRITICAL_REGION);
     quantrng = quantile(critical_region_ref(:), [0.05 .95]);
@@ -227,7 +234,7 @@ for i=1:numstimcoords
     for j=1:max_index
         nonan_ref = all_times_ref(~isnan(all_times_ref(:,j)), j);
         refcount = sum(~isnan(all_times_ref(:,j)));
-        refmedian = median(nonan_ref);
+        refmedian = median(nonan_ref); 
         if ~isnan(refmedian)
             stim_cell_median(i,j) = double(median(nonan_ref));
             
@@ -235,37 +242,37 @@ for i=1:numstimcoords
         end
     end
     
-    if any(i==CELL_OF_INTEREST) && stim_trial_count(i)>CUTOFF && (densitometry_fit_amplitude(i) < 0.1) && valid_densitometry(i)
+    if any(i==CELL_OF_INTEREST) && stim_trial_count(i)>CUTOFF %&& (densitometry_fit_amplitude(i) < 0.1) && valid_densitometry(i)
         figure(1); clf;
-        subplot(4,1,1); plot( bsxfun(@minus,nonorm_ref, nonorm_ref(:,2))');axis([CRITICAL_REGION(1) CRITICAL_REGION(end) -150 150]); xlabel('Time index'); ylabel('Raw Response');
-        subplot(4,1,2); plot(all_times_ref');  axis([CRITICAL_REGION(1) CRITICAL_REGION(end) -10 10]); xlabel('Time index'); ylabel('Standardized Response');
+        subplot(4,1,1); plot( bsxfun(@minus,nonorm_ref, nonorm_ref(:,2))');%axis([CRITICAL_REGION(1) CRITICAL_REGION(end) -150 150]); xlabel('Time index'); ylabel('Raw Response');
+        subplot(4,1,2); plot(all_times_ref');  %axis([CRITICAL_REGION(1) CRITICAL_REGION(end) -10 10]); xlabel('Time index'); ylabel('Standardized Response');
         subplot(4,1,3); plot(stim_cell_median(i,:)); hold on;
-                        plot(sqrt(stim_cell_var(i,:))); hold off; axis([CRITICAL_REGION(1) CRITICAL_REGION(end) -2 10]); xlabel('Time index'); ylabel('Response');
+                        plot(sqrt(stim_cell_var(i,:))); hold off; %axis([CRITICAL_REGION(1) CRITICAL_REGION(end) -2 10]); xlabel('Time index'); ylabel('Response');
 %         subplot(4,1,4); plot(stim_prestim_means(i,:),'*'); xlabel('Trial #'); ylabel('Prestimulus mean (A.U.)'); axis([0 50 0 255]);
-        title(['Cell #:' num2str(i) ' Dens Amp: ' num2str(densitometry_fit_amplitude(i))]);
+%         title(['Cell #:' num2str(i) ' Dens Amp: ' num2str(densitometry_fit_amplitude(i))]);
         drawnow;
 %         saveas(gcf, ['Cell_' num2str(i) '_stimulus.png']);
         
-        THEstimref = all_times_ref;
+%         THEstimref = all_times_ref;
         
 %         figure(5); imagesc(ref_image); colormap gray; axis image;hold on; 
 %         plot(ref_coords(i,1),ref_coords(i,2),'r*'); hold off;
 %         saveas(gcf, ['Cell_' num2str(i) '_location.png']);
-        drawnow;
-        critreg=all_times_ref(:,CRITICAL_REGION);
+%         drawnow;
+%         critreg=all_times_ref(:,CRITICAL_REGION);
 
 %         if (densitometry_fit_amplitude(i) < 0.1) && valid_densitometry(i)
            
-           subplot(4,1,4);
-           plot(CRITICAL_TIME/hz, criticalfit(i,:));hold on;
-           plot(densitometry_vect_times{i},densitometry_vect_ref{i},'.')           
-           axis([0 CRITICAL_TIME(end)/hz 0 1.5]); hold off;
-           axis([0 3 0 1.5]);
-           xlabel('Time (s)');
-           ylabel('Reflectance')
-           drawnow; %pause;
+%            subplot(4,1,4);
+%            plot(CRITICAL_TIME/hz, criticalfit(i,:));hold on;
+%            plot(densitometry_vect_times{i},densitometry_vect_ref{i},'.')           
+%            axis([0 CRITICAL_TIME(end)/hz 0 1.5]); hold off;
+%            axis([0 3 0 1.5]);
+%            xlabel('Time (s)');
+%            ylabel('Reflectance')
+%            drawnow; %pause;
 %         end
-        saveas(gcf, ['Cell_' num2str(i) '_stimulus_densitometry.png']);
+%         saveas(gcf, ['Cell_' num2str(i) '_stimulus_densitometry.png']);
         
 %         pause;
     end

@@ -114,10 +114,11 @@ end
 
 %% Display Cells under the 1:1 line
 
-% lessthanvalid= (single_cone_response<single_cone_control_response) & valid;
-lessthanvalid = false(size(valid));
-lessthanvalid(382) = true;
+diffvalid = single_cone_response-single_cone_control_response;
 
+lessthanvalid = diffvalid<abs(min(diffvalid))*0.8 & valid;
+
+% lessthanvalid= (single_cone_response<single_cone_control_response) & valid;
 
 % lessthanvalid = (single_cone_response<1) & (densitometry_fit_amplitude<0.1) & valid & valid_densitometry;
 % valid = valid & valid_densitometry;

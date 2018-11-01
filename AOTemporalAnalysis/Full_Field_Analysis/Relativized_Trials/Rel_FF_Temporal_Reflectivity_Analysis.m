@@ -41,7 +41,7 @@ profile_method = 'box';
 
 % For release, this version only contains the normalizations used in the
 % paper. However, the code is structured such that you can add more if desired.
-norm_type = 'regional_norm_prestim_stdiz'; 
+norm_type = 'regional_norm_linear_prestim_stdiz'; 
 
 % mov_path=pwd;
 if ~exist('mov_path','var') || ~exist('this_image_fname','var')
@@ -138,6 +138,9 @@ mask_image = mask_image.*capillary_mask;
 temporal_stack = temporal_stack.*capillary_masks;
 
 %% Isolate individual profiles
+[V, C]=voronoin(ref_coords);
+[X, Y ] = meshgrid(1:size(ref_image,2), 1:size(ref_image,1));
+
 ref_coords = round(ref_coords);
 
 cellseg = cell(size(ref_coords,1),1);
@@ -150,21 +153,40 @@ for i=1:size(ref_coords,1)
         
     roiradius = 1;
 
-    if (ref_coords(i,1) - roiradius) > 1 && (ref_coords(i,1) + roiradius) < size(mask_image,2) &&...
-       (ref_coords(i,2) - roiradius) > 1 && (ref_coords(i,2) + roiradius) < size(mask_image,1)
+    if strcmp(profile_method, 'box')
+    
+        if (ref_coords(i,1) - roiradius) > 1 && (ref_coords(i,1) + roiradius) < size(mask_image,2) &&...
+           (ref_coords(i,2) - roiradius) > 1 && (ref_coords(i,2) + roiradius) < size(mask_image,1)
 
-        [R, C ] = meshgrid((ref_coords(i,2) - roiradius) : (ref_coords(i,2) + roiradius), ...
-                           (ref_coords(i,1) - roiradius) : (ref_coords(i,1) + roiradius));
+            [R, C ] = meshgrid((ref_coords(i,2) - roiradius) : (ref_coords(i,2) + roiradius), ...
+                               (ref_coords(i,1) - roiradius) : (ref_coords(i,1) + roiradius));
 
-        cellseg_inds{i} = sub2ind( size(mask_image), R, C );
+            cellseg_inds{i} = sub2ind( size(mask_image), R, C );
 
-        cellseg_inds{i} = cellseg_inds{i}(:);
+            cellseg_inds{i} = cellseg_inds{i}(:);
 
-        mask_image(cellseg_inds{i})= -1;
+            mask_image(cellseg_inds{i})= -1;
 
+        end
+    elseif strcmp(profile_method, 'voronoi')
+        vertices = V(C{i},:);
+        
+        if (all(C{i}~=1)  && all(vertices(:,1)<size(ref_image,2)) && all(vertices(:,2)<size(ref_image,1)) ... % [xmin xmax ymin ymax] 
+                         && all(vertices(:,1)>=1) && all(vertices(:,2)>=1)) 
+
+            in = inpolygon(X(:), Y(:), vertices(:,1), vertices(:,2));
+       
+            cellseg_inds{i} = sub2ind( size(mask_image), Y(in), X(in) );
+
+            cellseg_inds{i} = cellseg_inds{i}(:);
+
+            mask_image(cellseg_inds{i})= -1;
+            imagesc(mask_image); colormap gray;
+        end
     end
-
 end
+
+clear X Y R C
 
 %% Crop the analysis area to a certain size
 % cropsize = 7.5;
@@ -297,7 +319,29 @@ end
 
 
 %% Standardization
-if contains( norm_type, 'prestim_stdiz')
+if contains( norm_type, 'linear_prestim_stdiz')
+    % Then normalize to the average intensity of each cone BEFORE stimulus.
+    prestim_std=nan(1,length( norm_cell_reflectance ));
+    prestim_mean=nan(1,length( norm_cell_reflectance ));
+    
+    for i=1:length( norm_cell_reflectance )
+
+        prestim_sig = norm_cell_reflectance{i}( cell_times{i}<stim_times(1) & ~isnan( norm_cell_reflectance{i} ) );
+        prestim_time = cell_times{i}(cell_times{i}<stim_times(1))/17.85;
+        
+        linreg = [prestim_time; ones(size(prestim_time))]'\prestim_sig';
+        
+        prestim_sig = prestim_sig-(linreg(2)+prestim_time.*linreg(1));
+        
+        prestim_mean(i) = mean( norm_cell_reflectance{i}( cell_times{i}<stim_times(1) & ~isnan( norm_cell_reflectance{i} ) ) );
+        
+        norm_cell_reflectance{i} = norm_cell_reflectance{i}-prestim_mean(i);
+        
+        prestim_std(i) = std( prestim_sig );
+        
+        norm_cell_reflectance{i} = norm_cell_reflectance{i}/( prestim_std(i) ); % /sqrt(length(norm_control_cell_reflectance{i})) );
+    end
+elseif contains( norm_type, 'prestim_stdiz')
     % Then normalize to the average intensity of each cone BEFORE stimulus.
     prestim_std=nan(1,length( norm_cell_reflectance ));
     prestim_mean=nan(1,length( norm_cell_reflectance ));
@@ -312,6 +356,7 @@ if contains( norm_type, 'prestim_stdiz')
         
         norm_cell_reflectance{i} = norm_cell_reflectance{i}/( prestim_std(i) ); % /sqrt(length(norm_control_cell_reflectance{i})) );
     end
+
 elseif contains( norm_type, 'poststim_stdiz')
     % Then normalize to the average intensity of each cone AFTER stimulus.
     poststim_std=nan(1,length( norm_cell_reflectance ));
