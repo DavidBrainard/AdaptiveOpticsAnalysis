@@ -4,6 +4,7 @@
 % equivalent units.
 %
 % 10/29/15  dhb  Wrote (again, since I lost the first version) from OLLightLevelCheck
+% 11/02/18  dhb  Added isomerization rate and fraction bleached calculations.
 
 %% Clear and close
 clear; close all
@@ -58,11 +59,16 @@ switch (RETORCORN)
         rawRadianceMicrowattsPerCm2Sr = CornIrradianceAndDegrees2ToRadiance(rawCornIrradianceMicrowattsPerCm2In,stimulusAreaDegrees2);
         rawRetIrradianceMicrowattsPerCm2In = RadianceAndPupilAreaEyeLengthToRetIrradiance(rawRadianceMicrowattsPerCm2Sr,S,pupilAreaCm2,eyeLengthCm);
     case 3
-        rawPowerIntoEyeIn = GetWithDefault('Enter power entering eye in microwatts',6000);
+        rawPowerIntoEyeIn = GetWithDefault('Enter power entering eye in microwatts',1);
         rawCornIrradianceMicrowattsPerCm2In = rawPowerIntoEyeIn/pupilAreaCm2;
         rawRadianceMicrowattsPerCm2Sr = CornIrradianceAndDegrees2ToRadiance(rawCornIrradianceMicrowattsPerCm2In,stimulusAreaDegrees2);
         rawRetIrradianceMicrowattsPerCm2In = RadianceAndPupilAreaEyeLengthToRetIrradiance(rawRadianceMicrowattsPerCm2Sr,S,pupilAreaCm2,eyeLengthCm);  
 end
+
+% Pupil adjustment factor for Ansi MPE 
+mpePupilDiamMm = 3;
+mpePupilDiamMm  = GetWithDefault('Enter ANSI 2007 MPE caclulations assumed pupil diameter in mm',mpePupilDiamMm );
+pupilAdjustFactor = (pupilDiamMm/mpePupilDiamMm).^2;
  
 %% Given that we have retinal irradiance, corneal irradiance, the pupil area, and the stimulus area ...
 % it is easy to check the retinal irradiance.
@@ -113,13 +119,19 @@ spd_790bright(indices) = power780;
 
 %% Compute irradiance to equivalent radiance
 %
-% This conversion depends on pupil area and eye length
+% We can find the radiance of an external stimulus that
+% produces the spectral irradiance specified.  This is
+% useful for doing colorimetric calculations that are
+% set up assuming that we begin with radiance.  There
+% is no loss of generality here, although the calculations
+% do depend on assumptions about pupil area and eye length.
 
 % Do the conversion
 radianceMilliwattsPerCm2Sr = RetIrradianceAndPupilAreaEyeLengthToRadiance(retIrradianceMilliwattsPerCm2In,S,pupilAreaCm2,eyeLengthCm);
 radianceMicrowattsPerCm2Sr = radianceMilliwattsPerCm2Sr*(10^3);
 radianceWattsPerCm2Sr = radianceMilliwattsPerCm2Sr*(10^-3);
 radianceWattsPerM2Sr = radianceWattsPerCm2Sr*(10^4);
+radianceQuantaPerM2SrSec = EnergyToQuanta(S,radianceWattsPerM2Sr);
 
 % Check by converting back using a different routine
 retIrradianceWattsPerUm2 = RadianceToRetIrradiance(radianceWattsPerM2Sr,S,pupilAreaMm2,eyeLengthMm);
@@ -141,11 +153,6 @@ retIrradianceQuantaPerDeg2Sec = (degPerMm^2)*(10.^-2)*retIrradianceQuantaPerCm2S
 
 % Yet more units
 photopicLuminanceCdM2 = T_xyz(2,:)*radianceWattsPerM2Sr;
-
-%% Pupil adjustment factor for Ansi MPE 
-mpePupilDiamMm = 3;
-mpePupilDiamMm  = GetWithDefault('Enter ANSI 2007 MPE caclulations assumed pupil diameter in mm',mpePupilDiamMm );
-pupilAdjustFactor = (pupilDiamMm/mpePupilDiamMm).^2;
 
 %% Get trolands another way.  For scotopic trolands, this just uses scotopic vlambda (in PTB as T_rods)
 % and the magic factor of 1700 scotopic lumens per Watt from Wyszecki & Stiles (2cd edition),
@@ -178,7 +185,6 @@ cornealIrradianceWattsPerM2 = cornealIrradianceMicrowattsPerCm2*(10^-6)*(10^4);
 cornealIrradianceWattsPerCm2 = (10.^-4)*cornealIrradianceWattsPerM2;
 cornealIrradianceQuantaPerCm2Sec = EnergyToQuanta(S,cornealIrradianceWattsPerCm2);
 
-
 %% Report on stimulus
 fprintf('\n');
 fprintf('  * Analyzing light levels as input\n');
@@ -196,6 +202,86 @@ fprintf('  * Stimulus retinal irradiance %0.1f log10 quanta/[deg2-sec]\n',log10(
 fprintf('  * Stimulus corneal irradiance %0.1f log10 watts/cm2\n',log10(sum(cornealIrradianceWattsPerCm2)));
 fprintf('  * Stimulus corneal irradiance %0.1f log10 quanta/[cm2-sec]\n',log10(sum(cornealIrradianceQuantaPerCm2Sec)));
    
+%% Get receptor sensitivities and compute isomerization rates, fraction bleached
+%
+% We'll be fancy and use the SilentSubstitionToolbox, since we
+% see that as the future of this sort of calculation.
+fieldSizeDeg = 2;
+observerAgeYears = 32;
+receptorObj = SSTReceptorHuman('obsAgeInYrs', observerAgeYears, 'fieldSizeDeg', fieldSizeDeg, 'obsPupilDiameter', pupilDiamMm, 'doPenumbralConesTrueFalse', false, 'verbosity', 'none');
+nReceptors = length(receptorObj.labels);
+
+% LMS cones should be 1 to 3. Trust but verify
+% 
+% A key variable is inner segment diameter, about which there is reasonable
+% uncertainty outside the fovea.
+fprintf('\nComputing cone isomerizations and bleaching\n');
+for rr = 1:3
+    % Check cone types and set numbers.  This is set up to allow
+    % eccentricity specific cone IS diameters, but the specific
+    % numbers are pretty rough and ready.  May want to update SST
+    % to carry these numbers around.
+    switch (rr)
+        case 1
+            if (~strcmp(receptorObj.labels{rr},'LCone'))
+                error('L cone is not where we expect it');
+            end
+            if (fieldSizeDeg <= 4)
+                ISdiameterUm(rr) = PhotoreceptorDimensions('FovealLCone','ISdiam','Human','Rodieck');
+            else
+                ISdiameterUm(rr) = PhotoreceptorDimensions('LCone','ISdiam','Human','Webvision');
+            end
+        case 2
+            if (~strcmp(receptorObj.labels{rr},'MCone'))
+                error('M cone is not where we expect it');
+            end
+            if (fieldSizeDeg <= 4)
+                ISdiameterUm(rr) = PhotoreceptorDimensions('FovealMCone','ISdiam','Human','Rodieck');
+            else
+                ISdiameterUm(rr) = PhotoreceptorDimensions('MCone','ISdiam','Human','Webvision');
+            end
+        case 3
+            if (~strcmp(receptorObj.labels{rr},'SCone'))
+                error('S cone is not where we expect it');
+            end
+            if (fieldSizeDeg <= 4)
+                ISdiameterUm(rr) = PhotoreceptorDimensions('FovealSCone','ISdiam','Human','Rodieck');
+            else
+                ISdiameterUm(rr) = PhotoreceptorDimensions('SCone','ISdiam','Human','Webvision');
+            end
+    end
+    
+    % Get fundamentals in form that expects radiance in quantal units and
+    % is in terms of probability of isomerization per incidenct quantum.
+    T_quantalIsomerizations = SplineCmf(receptorObj.S,receptorObj.T.T_quantalIsomerizations(rr,:),S);
+    
+    % Need a cone collecting area. 
+    ISareaUm2 = pi*(ISdiameterUm(rr)/2)^2;
+    
+    % Get isom/sec and bleaching
+    isomerizationsSec(rr) = ISareaUm2*T_quantalIsomerizations*retIrradianceQuantaPerUm2Sec;
+    fractionBleachedFromIsom(rr) = ComputePhotopigmentBleaching(isomerizationsSec(rr),'cones','isomerizations','Boynton');
+    fprintf('    * %s, inner segment diam %0.2f um, isom/sec %0.2f, fraction bleached %0.2f\n',receptorObj.labels{rr},ISdiameterUm(rr),isomerizationsSec(rr),fractionBleachedFromIsom(rr));
+end
+
+%% As a check, ballpark isomerization rate from luminance
+%
+% Get IS diamter in minutes as 2-1 average of LM values above.
+% This agreement is order of magnitude correct.
+ISdiameterMinutes = 60*((2*ISdiameterUm(1)+ISdiameterUm(2))/3)/300;
+isomerizationsFromLuminance = IsomerizationsFromLuminanceGeisler(photopicLuminanceCdM2,1,pupilDiamMm, 'coneApertureDiameterMinutes', ISdiameterMinutes);
+fprintf('    * Isom/sec from luminance: %0.2f, 2-1 average of LM isom/sec: %0.2f\n',isomerizationsFromLuminance,(2*isomerizationsSec(1) + isomerizationsSec(2))/3);
+
+% Use SST call directly.
+%
+% This prints out values for isomerizations that match the above,
+% and also does the call into the routine that computes photopigment
+% bleaching.
+%
+% I probably would not have written the above if I had remembered that this
+% already existed.
+[fractionBleachedFromIsom, fractionBleachedFromIsomHemo] = GetConeFractionBleachedFromSpectrum(S, radianceWattsPerM2Sr, fieldSizeDeg, observerAgeYears, pupilDiamMm, ...
+    [], true);
 
 %% Get MPE from as a function of wavelength.  For each wavelength,
 % take minimum radiance over specified sizes and durations.
