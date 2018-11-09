@@ -1,4 +1,4 @@
-function [allLum] = AOLightLevelConversions_Func(stim_side, wavelengths, um_power_to_eye,verbose)
+function [allLum, allPhotTd] = AOLightLevelConversions_Func(stim_side, wavelengths, um_power_to_eye,verbose)
 %
 % Take monochromatic retinal irradiance and convert it to many other
 % equivalent units.
@@ -148,7 +148,9 @@ for w=1:length(wavelengths)
         fprintf('  * Stimulus corneal irradiance %0.1f log10 watts/cm2\n',log10(sum(cornealIrradianceWattsPerCm2)));
         fprintf('  * Stimulus corneal irradiance %0.1f log10 quanta/[cm2-sec]\n',log10(sum(cornealIrradianceQuantaPerCm2Sec)));
     end
-    allLum(w) = photopicLuminanceCdM2;    
+    allLum(w) = photopicLuminanceCdM2;
+    allPhotTd(w) = irradiancePhotTrolands;
+    
 end
 
 end
