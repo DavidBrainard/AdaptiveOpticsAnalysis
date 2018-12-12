@@ -5,14 +5,14 @@
 % experiments.
 
 clear;
-%close all force;
+% close all force;
 
-stim_lambda = 550; % in nm
-stim_irradiance = 2*0.00450; % in uW
+stim_lambda = 545; % in nm
+stim_irradiance = 0.450; % in uW
 
 num_acquisitions = 13;
 single_trial_train = [0 1  0;
-                      4 200 201];
+                      4 5  20];
 
 trial_train = zeros(2, size(single_trial_train,2).*num_acquisitions);
 for n=1:num_acquisitions
@@ -31,16 +31,13 @@ end
 
 
 [~,I] = AOLightLevelConversions_Func(1, stim_lambda, stim_irradiance, true); % Stimulus Intensity in Td
-%I = log10(I);
-%I_0 = log10(20000); %in Td %Stimulus intensity that bleaches at the rate of 1/N
+I_0 = 20000;%in Td %Stimulus intensity that bleaches at the rate of 1/N
             % 73.7 Td for rods, 20000 Td for cones
-I_0 = 20000;
 
 N = 120; % Scaling factor, where 400=rhodopsin, 120=L/M cones.
 p = 1; % Percentage of unbleached pigment that we start with. Assume dark adapted.
 
 dt = 0.001;
-
 dp_dt_deplete = @(p, I) (( (1-p)./N) - ( (I.*p)./ (N.*I_0) ));
 dp_dt_recover = @(p, I) ( (1-p)./N );
 
@@ -56,8 +53,7 @@ for t=1:length(time)
     end
     
     if trial_train(1, train_ind) == 1
-        %bleach_curve(t) = p + dp_dt_deplete(p,I)*dt;
-        bleach_curve(t) = p + (( (1-p)./N) - ( (I.*p)./ (N.*I_0) ))*dt;
+        bleach_curve(t) = p + dp_dt_deplete(p,I)*dt;
     else
         bleach_curve(t) = p + dp_dt_recover(p,I)*dt;        
     end
@@ -72,5 +68,5 @@ figure;
 plot(time, bleach_curve); hold on;
 plot([time(1) time(end)],[1-mean_percent_bleach 1-mean_percent_bleach], 'k');
 xlabel('Time (s)'); ylabel('Bleach percentage');
-title(['A mean bleach of ' num2str(round(mean_percent_bleach*100)) '% over time with a ' num2str(I) 'log Td stimulus.']);
+title(['A mean bleach of ' num2str(round(mean_percent_bleach*100)) '% over time with a ' num2str(log10(I)) 'log Td stimulus.']);
 axis([0 time(end) -0.05 1.05])
