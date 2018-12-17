@@ -7,8 +7,9 @@
 clear;
 % close all force;
 
+units = 'trolands';
 stim_lambda = 545; % in nm
-stim_irradiance = 0.450; % in uW
+stim_irradiance = 0.889; % in uW
 
 num_acquisitions = 13;
 single_trial_train = [0 1  0;
@@ -31,14 +32,24 @@ end
 
 
 [~,I] = AOLightLevelConversions_Func(1, stim_lambda, stim_irradiance, true); % Stimulus Intensity in Td
-I_0 = 20000;%in Td %Stimulus intensity that bleaches at the rate of 1/N
-            % 73.7 Td for rods, 20000 Td for cones
+% I = 43568890/.1773
+switch (units)
+    case 'trolands'
+        I_0 = 10^4.3; % in Td %Stimulus intensity that bleaches at the rate of 1/N
+                      % 73.7 Td for rods, 20000 Td for cones
+        N = 120; % Scaling factor, where 400=rhodopsin, 120=L/M cones.
+    case 'isomerizations'
+        I_0 = 10^6.4;
+        N = 120; % Scaling factor
+    otherwise
+        error('Unkown input units specified');
+end
 
-N = 120; % Scaling factor, where 400=rhodopsin, 120=L/M cones.
 p = 1; % Percentage of unbleached pigment that we start with. Assume dark adapted.
 
 dt = 0.001;
-dp_dt_deplete = @(p, I) (( (1-p)./N) - ( (I.*p)./ (N.*I_0) ));
+
+dp_dt_deplete = @(p, I) (( (1-p)./N ) - ( (I.*p)./ (N.*I_0) ));
 dp_dt_recover = @(p, I) ( (1-p)./N );
 
 
