@@ -33,9 +33,9 @@
 clear;
 
 
-CUTOFF = 26;
-NUMTRIALS= 20;
-CRITICAL_REGION = 72:108; % 72:90;
+CUTOFF = 15;
+NUMTRIALS= 30;
+CRITICAL_REGION = 72:90; % 72:90;
 
 CELL_OF_INTEREST = [];
 
@@ -174,19 +174,23 @@ stim_prestim_means = nan(numstimcoords,length(profileSDataNames));
 
 i=1;
 
-        
+fitops = fitoptions('Method','SmoothingSpline','SmoothingParam',0.999,'Normalize','on');
 for i=1:numstimcoords
     waitbar(i/size(stim_coords,1),THEwaitbar,'Processing stimulus signals...');
 
     
     numtrials = 0;
     all_times_ref = nan(length(profileSDataNames), max_index);
+    all_smooth_times_ref = nan(length(profileSDataNames), max_index);
     if ~isempty(CELL_OF_INTEREST)
         nonorm_ref = nan(length(profileSDataNames), max_index);
     end
     allsignals=[];
     allnormsignals=[];
     allstims=[];
+    
+
+
     for j=1:length(profileSDataNames)
         
         if ~isempty(stim_cell_reflectance{j}{i}) && ...
@@ -201,6 +205,10 @@ for i=1:numstimcoords
 %                 figure(10); plot(stim_cell_reflectance{j}{i}); title(num2str(stim_prestim_means(i,j)));
             
             all_times_ref(j, stim_time_indexes{j}{i} ) = stim_cell_reflectance{j}{i};
+            
+            f = fit(stim_time_indexes{j}{i}',stim_cell_reflectance{j}{i}','SmoothingSpline',fitops);
+            
+            all_smooth_times_ref(j, : ) = f(1:max_index);
             allsignals = [allsignals [stim_time_indexes{j}{i}+(166*(j-1));
                                       stim_cell_reflectance_nonorm{j}{i}(~isnan(stim_cell_reflectance_nonorm{j}{i}))]];
             allnormsignals = [allnormsignals [stim_time_indexes{j}{i}+(166*(j-1));
@@ -221,9 +229,10 @@ for i=1:numstimcoords
         subplot(3,1,2); plot(allnormsignals(1,:),allnormsignals(2,:)); hold on;
         plot(allstims(1,:), allstims(2,:),'*'); 
         plot(0:1660:9200, ones(1,6)*10,'g*'); axis([0 9500 -10 15]);
-        subplot(3,1,3);  plot(all_times_ref'); hold on;
+        subplot(3,1,3); % plot(all_times_ref'); hold on;
+        plot(abs(diff(all_smooth_times_ref'))); hold on;
         plot(allstims(1,:), allstims(2,:),'*'); 
-        plot(0:1660:9200, ones(1,6)*10,'g*'); axis([0 166 -10 15]);
+        plot(0:1660:9200, ones(1,6)*10,'g*'); axis([0 166 0 1.5]);
     end
     
     

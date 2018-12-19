@@ -7,7 +7,7 @@
 % file. With the inclusion of the shutter, there is no need to track
 % visible frames.
 
-CLAHE_FIRST_HALF = true;
+CLAHE_FIRST_HALF = false;
 
 %% Filename determination and handling
 [fname, pathname] = uigetfile('*.avi', 'Select the temporal videos you wish to split', 'MultiSelect','on');

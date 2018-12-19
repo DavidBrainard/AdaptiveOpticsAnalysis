@@ -92,12 +92,16 @@ end
 
 figure; hold on;
 for i=1:length(single_cone_mat_files)
-    histogram(single_cone_response(valid,i),20);
+    if logmode
+        histogram(single_cone_response(valid,i),'BinWidth',log10(1.2));
+    else
+        histogram(single_cone_response(valid,i),'BinWidth',0.2);
+    end
 end
 
 xlabel('Aggregate Response');
 ylabel('Number of Cones');
-axis square;
+
 % axis([0 4 -1 10])
 if saveplots
     saveas(gcf, 'allresps_histogramsplot.svg');
@@ -109,7 +113,7 @@ for i=1:length(single_cone_mat_files)
     figure; hold on;
     plot(single_cone_control_response(:,i),single_cone_response(:,i),'.');
     plot([-10 10],[-10 10],'k');
-    axis square; axis([-0.5 1.5 -0.5 1.5]); 
+    axis equal; axis([-0.5 2 -0.5 15]); 
 end
 
 %% Display Cells under the 1:1 line
