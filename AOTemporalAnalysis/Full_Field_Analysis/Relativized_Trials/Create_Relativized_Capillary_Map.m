@@ -101,8 +101,12 @@ sdImagestretched = 255*sdImageminsub./max(sdImageminsub(:));
 
 figure(1); imagesc( sdImagestretched ); colormap gray; axis image;
 
+edges = 0:2:255;
+binned = discretize(sdImagestretched(notmin),edges);
 
-threshold = mean(sdImagestretched(notmin))  + std(sdImagestretched(notmin));
+edges(mode(binned))
+
+threshold = median(sdImagestretched(notmin))  + 0.8.*std(sdImagestretched(notmin));
 
 capillary_mask = imclose(sdImagestretched>threshold, strel('disk',7));
 capillary_mask(1:edgemask,:)=true;
