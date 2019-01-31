@@ -74,14 +74,14 @@ for i=1:size(varImages,3)
     nonzmask = imerode((varImages(:,:,i)>0),ones(7)); % Try and get rid of any edge artifacts from each map.
     
     sum_map = sum_map+nonzmask;
-    gausfiltImages(:,:,i) = imgaussfilt(nonzmask.*varImages(:,:,i),15,'FilterSize',71);
+    gausfiltImages(:,:,i) = nonzmask.*imgaussfilt(varImages(:,:,i),15,'FilterSize',71);
     
 %     figure(1); imagesc(gausfiltImages(:,:,i)); colormap gray;
 %     pause;
 end
 
 sdImage = exp( real(sqrt( sum(gausfiltImages,3)./(sum_map-1))) );
-
+%%
 sdImage(isinf(sdImage))=1;
 sdImage(isnan(sdImage))=1;
 

@@ -129,7 +129,7 @@ sdImagemin = min(sdImage(meaningfulregion));
 sdImageminsub = sdImage-sdImagemin;
 sdImagestretched = 255*sdImageminsub./max(sdImageminsub(:));
 
-imagesc( sdImagestretched ); colormap gray; axis image; title('SD Image');
+% imagesc( sdImagestretched ); colormap gray; axis image; title('SD Image');
 
 
 threshold = mean(sdImage(:))  + std(sdImage(:));
