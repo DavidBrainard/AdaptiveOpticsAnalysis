@@ -8,8 +8,8 @@
 clear;
 close all;
 
-saveplots = false;
-logmode = false;
+saveplots = true;
+logmode = true;
 
 
 profile_dir = uigetdir(pwd);
@@ -120,11 +120,11 @@ end
 
 diffvalid = single_cone_response-single_cone_control_response;
 
-lessthanvalid = diffvalid<abs(min(diffvalid))*0.8 & valid;
+% lessthanvalid = diffvalid < abs(min(diffvalid))*0.8 & valid;
 
 % lessthanvalid= (single_cone_response<single_cone_control_response) & valid;
 
-% lessthanvalid = (single_cone_response<1) & (densitometry_fit_amplitude<0.1) & valid & valid_densitometry;
+% lessthanvalid = (single_cone_response<0.3) & valid & valid_densitometry;
 % valid = valid & valid_densitometry;
 
 for i=1:length(single_cone_mat_files)
@@ -172,16 +172,18 @@ for i=1:length(single_cone_mat_files)
 end
 
 %% Display results vs densitometry
+% load('/local_data/Dropbox/General_Postdoc_Work/Dynamic_Densitometry/11049/Dynamic_Densitometry_combined_4_sec_545b25nm_3uW_20_single_cone_signals.mat')
 
-lessthanvalid = (densitometry_fit_amplitude<=0) & valid & valid_densitometry;
+lessthanvalid = (densitometry_fit_amplitude<=0.125) & valid & valid_densitometry;
 
 for i=1:length(single_cone_mat_files)
-    figure; hold on;    
-    plot(densitometry_fit_amplitude(valid,i),single_cone_response(valid,i),'.');
-    plot(densitometry_fit_amplitude(lessthanvalid(:,i),i),single_cone_response(lessthanvalid(:,i),i),'r.');
+    figure; hold on;
+    
+    plot(single_cone_control_response(valid,i),single_cone_response(valid,i),'.');
+    plot(single_cone_control_response(lessthanvalid,i),single_cone_response(lessthanvalid,i),'r.');
     plot([-10 10],[-10 10],'k');
          
-    thelessthan{i} = find(lessthanvalid(:,i)==1);
+    thelessthan{i} = find(lessthanvalid==1);
     if logmode
         axis square;axis([-0.5 1.5 -0.5 1.5]); 
         xlabel('Log Control Response (mean control subtracted)')
@@ -196,9 +198,40 @@ for i=1:length(single_cone_mat_files)
         saveas(gcf, [single_cone_mat_files{i}(1:end-4) '_VS_plot.png']);
     end
     
-    generate_spatial_map(single_cone_response(:,i), allcoords, lessthanvalid(:,i), single_cone_mat_files(i), '_VS', saveplots);
+    generate_spatial_map(single_cone_response(:,i), allcoords, lessthanvalid, single_cone_mat_files(i), '_VS', saveplots);
 end
 
+%% 
+
+lessthanvalid = (single_cone_response<0.3) & (densitometry_fit_amplitude<=0.125) & valid & valid_densitometry;
+% lessthanvalid = (single_cone_response<0.3) & valid;
+figure; clf;
+[V,C] = voronoin(allcoords,{'QJ'});
+colors = ['rgbym'];
+for j=1:length(single_cone_mat_files)
+    
+    for i=1:size(allcoords,1)
+        
+        vertices = V(C{i},:);
+
+        if ~isnan(single_cone_response(i,j)) && all(vertices(:,1)<max(allcoords(:,1))) && all(vertices(:,2)<max(allcoords(:,1))) ... % [xmin xmax ymin ymax] 
+                                && all(vertices(:,1)>0) && all(vertices(:,2)>0)
+
+            if all(lessthanvalid(i,:))
+                patch(V(C{i},1),V(C{i},2),ones(size(V(C{i},1))),'FaceColor', 'w');
+            elseif lessthanvalid(i,j)
+                patch(V(C{i},1),V(C{i},2),ones(size(V(C{i},1))),'FaceColor', colors(j));
+            end
+        end
+    end
+end
+axis image;
+axis([0 max(allcoords(:,1)) 0 max(allcoords(:,2)) ])    
+ set(gca,'Color','k');     
+
+% if saveplots
+%     saveas(gcf, [single_cone_mat_files{i}(1:end-4) '_agreement_plot.png']);
+% end
 
 %% Prestimulus behavior vs normalized response range
 figure; hold on;

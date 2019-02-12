@@ -6,14 +6,15 @@ clear;
 close all;
 
 
-NUMTRIALS=4;
+NUMTRIALS=7;
 CRITICAL_TIME = 0:69;
-START_IND=4;
+START_IND=5;
 
-CELL_OF_INTEREST = [1:2000];
+CELL_OF_INTEREST = [];
 
 if isempty(CELL_OF_INTEREST)
     close all force;
+    
 end
 
 if ~exist('stimRootDir','var')
@@ -69,12 +70,12 @@ for j=1:length(profileSDataNames)
     stim_time_indexes{j} = cell_times;
     stim_cell_prestim_mean{j} = cell_prestim_mean;
     
-    thesecoords = union(stim_coords, ref_coords,'rows');
-    
-    % These all must be the same length! (Same coordinate set)
-    if size(ref_coords,1) ~= size(thesecoords,1)
-        error('Coordinate lists different between mat files in this directory. Unable to perform analysis.')
-    end
+%     thesecoords = union(stim_coords, ref_coords,'rows');
+%     
+%     % These all must be the same length! (Same coordinate set)
+%     if size(ref_coords,1) ~= size(stim_coords,1)
+%         error('Coordinate lists different between mat files in this directory. Unable to perform analysis.')
+%     end
     
     for k=1:length(cell_times)
         max_index = max([max_index max(cell_times{k})]);
@@ -106,10 +107,10 @@ i=1;
 % Create the fit we're going to use. This is what is outlined in Ram's
 % paper.
 ft = fittype( 'c-a*exp(-x/b)', 'independent', 'x', 'dependent', 'y' );
-opts = fitoptions( 'Method', 'NonlinearLeastSquares' );
+opts = fitoptions( 'Method', 'NonlinearLeastSquares');
 opts.Display = 'Off';
-opts.Lower = [0 0 0];
-opts.Upper = [2 Inf 2];
+opts.Lower = [-0.5 0 0];
+opts.Upper = [2 10 2];
 
 
 START_TIME = START_IND/hz;
@@ -144,22 +145,24 @@ for i=1:numstimcoords
         vect_times = all_times(~isnan(all_times));
         vect_times = vect_times-START_TIME;
 
-        opts.StartPoint = [.1 1 mean(vect_ref)];
+        opts.StartPoint = [0 1 mean(vect_ref)];
         [fitresult, gof] = fit( vect_times, vect_ref, ft, opts );
 
         densitometry_vect_times{i} = vect_times;
         densitometry_vect_ref{i} = vect_ref;
         criticalfit(i,:) = fitresult(CRITICAL_TIME/hz);
-        densitometry_fit_amplitude(i) = (max(criticalfit(i,end))-min(criticalfit(i,1)));
+        densitometry_fit_amplitude(i) = abs(max(criticalfit(i,end))-min(criticalfit(i,1)));
         densitometry_b_amplitude(i) = fitresult.b;
 
-        if any(i==CELL_OF_INTEREST) %&& (densitometry_fit_amplitude(i) <=0.2 && densitometry_fit_amplitude(i) >=.1)
+        
+        if any(i==CELL_OF_INTEREST) && (densitometry_fit_amplitude(i) <=0.125)
+            %%
             figure(1); clf; hold on;
             
             datapresent={};
             for j=1:length(profileSDataNames)                
                 if any(~isnan(all_times_ref(j,:)))
-                    plot(all_times(j,:)-START_TIME, all_times_ref(j,:)./normval,'.');
+                     plot(all_times(j,:)-START_TIME, all_times_ref(j,:),'.');
                     datapresent = [datapresent; {num2str(j)}];
                 end
             end
@@ -172,8 +175,10 @@ for i=1:numstimcoords
             hold off;
             drawnow;
             fitresult
+            %%
             pause;
         end
+        
     end
 
 end
@@ -191,11 +196,11 @@ xlabel('Fitted amplitude'); ylabel('Number of cones');
 drawnow;
 saveas(gcf,'amp_hisotogram_dens.fig')
 
-figure;
-histogram2(densitometry_fit_amplitude,densitometry_b_amplitude,30);
-xlabel('Fitted Amplitude'); ylabel('Fit b value');%, 'XBinEdges',0:0.02:0.6, 'YBinEdges',0:1:30);
-drawnow;
-saveas(gcf,'b_vs_amp_hisotogram_dens.fig')
+% figure;
+% histogram2(densitometry_fit_amplitude,densitometry_b_amplitude,30);
+% xlabel('Fitted Amplitude'); ylabel('Fit b value');%, 'XBinEdges',0:0.02:0.6, 'YBinEdges',0:1:30);
+% drawnow;
+% saveas(gcf,'b_vs_amp_hisotogram_dens.fig')
 
 counts = histcounts(densitometry_fit_amplitude,-0.1:0.02:1);
 

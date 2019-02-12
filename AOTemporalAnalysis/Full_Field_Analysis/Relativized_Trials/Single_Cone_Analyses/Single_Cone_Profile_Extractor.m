@@ -33,11 +33,11 @@
 clear;
 
 
-CUTOFF = 15;
-NUMTRIALS= 30;
+CUTOFF = 13;
+NUMTRIALS= 25;
 CRITICAL_REGION = 72:90; % 72:90;
 
-CELL_OF_INTEREST = [];
+CELL_OF_INTEREST = [1:3000];
 
 if isempty(CELL_OF_INTEREST)
     close all force;
@@ -159,137 +159,9 @@ end
 allcoords = stim_coords;
 
 
-%% Aggregation of all trials
+% Aggregation of all trials
+%% Control trial aggregation
 
-percentparula = parula(101);
-
-numstimcoords = size(stim_coords,1);
-
-stim_cell_var = nan(numstimcoords, max_index);
-stim_cell_median = nan(numstimcoords, max_index);
-stim_resp_range = nan(numstimcoords, 1);
-stim_trial_count = zeros(numstimcoords,1);
-stim_posnegratio = nan(numstimcoords,max_index);
-stim_prestim_means = nan(numstimcoords,length(profileSDataNames));
-
-i=1;
-
-fitops = fitoptions('Method','SmoothingSpline','SmoothingParam',0.999,'Normalize','on');
-for i=1:numstimcoords
-    waitbar(i/size(stim_coords,1),THEwaitbar,'Processing stimulus signals...');
-
-    
-    numtrials = 0;
-    all_times_ref = nan(length(profileSDataNames), max_index);
-    all_smooth_times_ref = nan(length(profileSDataNames), max_index);
-    if ~isempty(CELL_OF_INTEREST)
-        nonorm_ref = nan(length(profileSDataNames), max_index);
-    end
-    allsignals=[];
-    allnormsignals=[];
-    allstims=[];
-    
-
-
-    for j=1:length(profileSDataNames)
-        
-        if ~isempty(stim_cell_reflectance{j}{i}) && ...
-           sum(stim_time_indexes{j}{i} >= CRITICAL_REGION(1) & stim_time_indexes{j}{i} <= CRITICAL_REGION(end)) >= CUTOFF && ...
-           stim_cell_prestim_mean{j}(i) <= 240
-
-            stim_prestim_means(i,j) = stim_cell_prestim_mean{j}(i);
-            numtrials = numtrials+1;
-            
-            nonorm_ref(j, stim_time_indexes{j}{i} ) = stim_cell_reflectance_nonorm{j}{i}(~isnan(stim_cell_reflectance_nonorm{j}{i}));
-                
-%                 figure(10); plot(stim_cell_reflectance{j}{i}); title(num2str(stim_prestim_means(i,j)));
-            
-            all_times_ref(j, stim_time_indexes{j}{i} ) = stim_cell_reflectance{j}{i};
-            
-            f = fit(stim_time_indexes{j}{i}',stim_cell_reflectance{j}{i}','SmoothingSpline',fitops);
-            
-            all_smooth_times_ref(j, : ) = f(1:max_index);
-            allsignals = [allsignals [stim_time_indexes{j}{i}+(166*(j-1));
-                                      stim_cell_reflectance_nonorm{j}{i}(~isnan(stim_cell_reflectance_nonorm{j}{i}))]];
-            allnormsignals = [allnormsignals [stim_time_indexes{j}{i}+(166*(j-1));
-                                      stim_cell_reflectance{j}{i}]];
-            allstims = [allstims [(72:108)+(166*(j-1));
-                                      ones(1,37)*10]];
-        end
-        
-
-    end
-    stim_trial_count(i) = numtrials;
-    
-    if ~isempty(allsignals) && stim_trial_count(i)>CUTOFF
-        figure(1); clf; subplot(3,1,1); plot(allsignals(1,:),allsignals(2,:)); hold on;
-        plot(allstims(1,:), allstims(2,:).*0,'*'); 
-        plot(0:1660:9200, zeros(1,6),'g*'); axis([0 9500 0 255]);
-        
-        subplot(3,1,2); plot(allnormsignals(1,:),allnormsignals(2,:)); hold on;
-        plot(allstims(1,:), allstims(2,:),'*'); 
-        plot(0:1660:9200, ones(1,6)*10,'g*'); axis([0 9500 -10 15]);
-        subplot(3,1,3); % plot(all_times_ref'); hold on;
-        plot(abs(diff(all_smooth_times_ref'))); hold on;
-        plot(allstims(1,:), allstims(2,:),'*'); 
-        plot(0:1660:9200, ones(1,6)*10,'g*'); axis([0 166 0 1.5]);
-    end
-    
-    
-    critical_region_ref =all_times_ref(:, CRITICAL_REGION);
-    quantrng = quantile(critical_region_ref(:), [0.05 .95]);
-    stim_resp_range(i) = quantrng(2)-quantrng(1);
-    
-    for j=1:max_index
-        nonan_ref = all_times_ref(~isnan(all_times_ref(:,j)), j);
-        refcount = sum(~isnan(all_times_ref(:,j)));
-        refmedian = median(nonan_ref); 
-        if ~isnan(refmedian)
-            stim_cell_median(i,j) = double(median(nonan_ref));
-            
-            stim_cell_var(i,j) = ( sum((nonan_ref-mean(nonan_ref)).^2)./ (refcount-1) );
-        end
-    end
-    
-    if any(i==CELL_OF_INTEREST) && stim_trial_count(i)>CUTOFF %&& (densitometry_fit_amplitude(i) < 0.1) && valid_densitometry(i)
-        figure(1); clf;
-        subplot(4,1,1); plot( bsxfun(@minus,nonorm_ref, nonorm_ref(:,2))');%axis([CRITICAL_REGION(1) CRITICAL_REGION(end) -150 150]); xlabel('Time index'); ylabel('Raw Response');
-        subplot(4,1,2); plot(all_times_ref');  %axis([CRITICAL_REGION(1) CRITICAL_REGION(end) -10 10]); xlabel('Time index'); ylabel('Standardized Response');
-        subplot(4,1,3); plot(stim_cell_median(i,:)); hold on;
-                        plot(sqrt(stim_cell_var(i,:))); hold off; %axis([CRITICAL_REGION(1) CRITICAL_REGION(end) -2 10]); xlabel('Time index'); ylabel('Response');
-%         subplot(4,1,4); plot(stim_prestim_means(i,:),'*'); xlabel('Trial #'); ylabel('Prestimulus mean (A.U.)'); axis([0 50 0 255]);
-%         title(['Cell #:' num2str(i) ' Dens Amp: ' num2str(densitometry_fit_amplitude(i))]);
-        drawnow;
-%         saveas(gcf, ['Cell_' num2str(i) '_stimulus.png']);
-        
-%         THEstimref = all_times_ref;
-        
-%         figure(5); imagesc(ref_image); colormap gray; axis image;hold on; 
-%         plot(ref_coords(i,1),ref_coords(i,2),'r*'); hold off;
-%         saveas(gcf, ['Cell_' num2str(i) '_location.png']);
-%         drawnow;
-%         critreg=all_times_ref(:,CRITICAL_REGION);
-
-%         if (densitometry_fit_amplitude(i) < 0.1) && valid_densitometry(i)
-           
-%            subplot(4,1,4);
-%            plot(CRITICAL_TIME/hz, criticalfit(i,:));hold on;
-%            plot(densitometry_vect_times{i},densitometry_vect_ref{i},'.')           
-%            axis([0 CRITICAL_TIME(end)/hz 0 1.5]); hold off;
-%            axis([0 3 0 1.5]);
-%            xlabel('Time (s)');
-%            ylabel('Reflectance')
-%            drawnow; %pause;
-%         end
-%         saveas(gcf, ['Cell_' num2str(i) '_stimulus_densitometry.png']);
-        
-%         pause;
-    end
-
-end
-
-
-%%
 numcontrolcoords = size(control_coords,1);
 
 control_cell_var = nan(size(control_coords,1), max_index);
@@ -335,35 +207,139 @@ for i=1:numcontrolcoords
         end
     end
     
-    if any(i==CELL_OF_INTEREST) && control_trial_count(i)>CUTOFF
-        figure(2); clf;
-        subplot(3,1,1); plot(bsxfun(@minus,nonorm_ref, nonorm_ref(:,2))');axis([CRITICAL_REGION(1) CRITICAL_REGION(end) -150 150]);  xlabel('Time index'); ylabel('Raw Response');
-        subplot(3,1,2); plot(all_times_ref'); axis([CRITICAL_REGION(1) CRITICAL_REGION(end) -10 10]); xlabel('Time index'); ylabel('Standardized Response');
-        subplot(3,1,3); plot(control_cell_median(i,:)); hold on;
-                        plot(sqrt(control_cell_var(i,:))); hold off; axis([CRITICAL_REGION(1) CRITICAL_REGION(end) -2 10]); xlabel('Time index'); ylabel('Response');
-        title(['Cell #:' num2str(i)]);   
-        THEcontref = all_times_ref;
-        drawnow;
-        critreg=all_times_ref(:,CRITICAL_REGION);
-        quantile(critreg(:),.95)
-        quantile(critreg(:),.5)
-        quantile(critreg(:),.05)
+%     if any(i==CELL_OF_INTEREST) && control_trial_count(i)>CUTOFF
+%         figure(2); clf;
+%         subplot(3,1,1); plot(bsxfun(@minus,nonorm_ref, nonorm_ref(:,2))');axis([CRITICAL_REGION(1) CRITICAL_REGION(end) -150 150]);  xlabel('Time index'); ylabel('Raw Response');
+%         subplot(3,1,2); plot(all_times_ref'); axis([CRITICAL_REGION(1) CRITICAL_REGION(end) -10 10]); xlabel('Time index'); ylabel('Standardized Response');
+%         subplot(3,1,3); plot(control_cell_median(i,:)); hold on;
+%                         plot(sqrt(control_cell_var(i,:))); hold off; axis([CRITICAL_REGION(1) CRITICAL_REGION(end) -2 10]); xlabel('Time index'); ylabel('Response');
+%         title(['Cell #:' num2str(i)]);   
+%         THEcontref = all_times_ref;
+%         drawnow;
+%         critreg=all_times_ref(:,CRITICAL_REGION);
+%         quantile(critreg(:),.95)
+%         quantile(critreg(:),.5)
+%         quantile(critreg(:),.05)
+%         
+% %         saveas(gcf, ['Cell_' num2str(i) '_control.png']);
+%         pause;
+%     end
+end
+
+%% Stimulus trial aggregation
+percentparula = parula(101);
+
+numstimcoords = size(stim_coords,1);
+
+stim_cell_var = nan(numstimcoords, max_index);
+stim_cell_median = nan(numstimcoords, max_index);
+stim_resp_range = nan(numstimcoords, 1);
+stim_trial_count = zeros(numstimcoords,1);
+stim_posnegratio = nan(numstimcoords,max_index);
+stim_prestim_means = nan(numstimcoords,length(profileSDataNames));
+
+i=1;
+
+fitops = fitoptions('Method','SmoothingSpline','SmoothingParam',0.999,'Normalize','on');
+for i=1:numstimcoords
+    waitbar(i/size(stim_coords,1),THEwaitbar,'Processing stimulus signals...');
+
+    
+    numtrials = 0;
+    all_times_ref = nan(length(profileSDataNames), max_index);
+    all_smooth_times_ref = nan(length(profileSDataNames), max_index);
+    if ~isempty(CELL_OF_INTEREST)
+        nonorm_ref = nan(length(profileSDataNames), max_index);
+    end
+    allsignals=[];
+    allnormsignals=[];
+    allstims=[];
+    
+
+
+    for j=1:length(profileSDataNames)
         
-%         saveas(gcf, ['Cell_' num2str(i) '_control.png']);
+        if ~isempty(stim_cell_reflectance{j}{i}) && ...
+           sum(stim_time_indexes{j}{i} >= CRITICAL_REGION(1) & stim_time_indexes{j}{i} <= CRITICAL_REGION(end)) >= CUTOFF && ...
+           stim_cell_prestim_mean{j}(i) <= 240
+
+            stim_prestim_means(i,j) = stim_cell_prestim_mean{j}(i);
+            numtrials = numtrials+1;
+            
+            nonorm_ref(j, stim_time_indexes{j}{i} ) = stim_cell_reflectance_nonorm{j}{i}(~isnan(stim_cell_reflectance_nonorm{j}{i}));
+                
+%                 figure(10); plot(stim_cell_reflectance{j}{i}); title(num2str(stim_prestim_means(i,j)));
+            
+            all_times_ref(j, stim_time_indexes{j}{i} ) = stim_cell_reflectance{j}{i};
+            
+%             f = fit(stim_time_indexes{j}{i}',stim_cell_reflectance{j}{i}','SmoothingSpline',fitops);            
+%             all_smooth_times_ref(j, : ) = f(1:max_index);
+            allsignals = [allsignals [stim_time_indexes{j}{i}+(166*(j-1));
+                                      stim_cell_reflectance_nonorm{j}{i}(~isnan(stim_cell_reflectance_nonorm{j}{i}))]];
+            allnormsignals = [allnormsignals [stim_time_indexes{j}{i}+(166*(j-1));
+                                      stim_cell_reflectance{j}{i}]];
+            allstims = [allstims [(72:108)+(166*(j-1));
+                                      ones(1,37)*10]];
+        end
+        
+
+    end
+    stim_trial_count(i) = numtrials;
+    
+    critical_region_ref =all_times_ref(:, CRITICAL_REGION);
+    quantrng = quantile(critical_region_ref(:), [0.05 0.95]);
+    stim_resp_range(i) = quantrng(2)-quantrng(1);
+    
+    for j=1:max_index
+        nonan_ref = all_times_ref(~isnan(all_times_ref(:,j)), j);
+        refcount = sum(~isnan(all_times_ref(:,j)));
+        refmedian = median(nonan_ref); 
+        if ~isnan(refmedian)
+            stim_cell_median(i,j) = double(median(nonan_ref));
+            
+            stim_cell_var(i,j) = ( sum((nonan_ref-mean(nonan_ref)).^2)./ (refcount-1) );
+        end
+    end
+    
+    if any(i==CELL_OF_INTEREST) && stim_trial_count(i)>CUTOFF %&& (densitometry_fit_amplitude(i) < 0.1) && valid_densitometry(i)
+        figure(1); clf;
+        subplot(3,1,1); plot( bsxfun(@minus,nonorm_ref, nonorm_ref(:,2))');%axis([CRITICAL_REGION(1) CRITICAL_REGION(end) -150 150]); xlabel('Time index'); ylabel('Raw Response');
+        subplot(3,1,2); plot(all_times_ref');  %axis([CRITICAL_REGION(1) CRITICAL_REGION(end) -10 10]); xlabel('Time index'); ylabel('Standardized Response');
+        subplot(3,1,3); plot(stim_cell_median(i,:)); hold on;
+                        plot(sqrt(stim_cell_var(i,:))-mean(sqrt(control_cell_var),'omitnan')); hold off; %axis([CRITICAL_REGION(1) CRITICAL_REGION(end) -2 10]); xlabel('Time index'); ylabel('Response');
+%         subplot(4,1,4); plot(stim_prestim_means(i,:),'*'); xlabel('Trial #'); ylabel('Prestimulus mean (A.U.)'); axis([0 50 0 255]);
+        title(['Cell #:' num2str(i) ' Resp Range: ', num2str(stim_resp_range(i))]);
+        drawnow;
+%         saveas(gcf, ['Cell_' num2str(i) '_stimulus.png']);
+        
+%         THEstimref = all_times_ref;
+        
+%         figure(5); imagesc(ref_image); colormap gray; axis image;hold on; 
+%         plot(ref_coords(i,1),ref_coords(i,2),'r*'); hold off;
+%         saveas(gcf, ['Cell_' num2str(i) '_location.png']);
+%         drawnow;
+%         critreg=all_times_ref(:,CRITICAL_REGION);
+
+%         if (densitometry_fit_amplitude(i) < 0.1) && valid_densitometry(i)
+           
+%            subplot(4,1,4);
+%            plot(CRITICAL_TIME/hz, criticalfit(i,:));hold on;
+%            plot(densitometry_vect_times{i},densitometry_vect_ref{i},'.')           
+%            axis([0 CRITICAL_TIME(end)/hz 0 1.5]); hold off;
+%            axis([0 3 0 1.5]);
+%            xlabel('Time (s)');
+%            ylabel('Reflectance')
+%            drawnow; %pause;
+%         end
+%         saveas(gcf, ['Cell_' num2str(i) '_stimulus_densitometry.png']);
+        
         pause;
     end
+
 end
 
 
-% for k=1:size(all_times_ref,1)
-% figure(1); clf; plot(THEstimref(k,:)); axis([2 166 -10 10]);
-% pause;
-% end
-
-% figure;
-% histogram(stim_prestim_means, 255); hold on; histogram(cont_prestim_means, 255);
-% numover = sum(stim_prestim_means>200) + sum(cont_prestim_means>200);
-% title(['Pre-stimulus means of all available trials (max 50) from ' num2str(size(control_coords,1)) ' cones. ' num2str(numover) ' trials >200 ']);
+%%
 
 
 valid = (stim_trial_count >= NUMTRIALS) & (control_trial_count >= NUMTRIALS);
@@ -373,23 +349,10 @@ std_dev_sub = sqrt(stim_cell_var)-mean(sqrt(control_cell_var),'omitnan');
 control_std_dev_sub = sqrt(control_cell_var)-mean(sqrt(control_cell_var),'omitnan');
 median_sub = stim_cell_median-mean(control_cell_median,'omitnan');
 control_median_sub = control_cell_median-mean(control_cell_median,'omitnan');
-%%
 
-if ~isempty(CELL_OF_INTEREST )
-%     figure(3);clf;
-%     
-% %     load('control_avgs.mat')
-%     
-%     plot( stim_cell_median(CELL_OF_INTEREST,:)-allcontrolmed );  hold on;
-%     plot(sqrt(stim_cell_var(CELL_OF_INTEREST,:))-allcontrolstd);
-%     axis([2 166 -3 3]);
-%     title(['Cell #:' num2str(CELL_OF_INTEREST)]);  
-%     drawnow;
-%     saveas(gcf, ['Cell_' num2str(CELL_OF_INTEREST) '_subs.svg']);
-end
 
 %% Analyze the signals
-
+fitops = fitoptions('Method','SmoothingSpline','SmoothingParam',0.99,'Normalize','on');
 AmpResp = nan(size(std_dev_sub,1),1);
 MedianResp = nan(size(std_dev_sub,1),1);
 TTPResp = nan(size(std_dev_sub,1),1);
@@ -398,7 +361,7 @@ PrestimVal = nan(size(std_dev_sub,1),1);
 ControlAmpResp = nan(size(std_dev_sub,1),1);
 ControlMedianResp = nan(size(std_dev_sub,1),1);
 ControlPrestimVal = nan(size(std_dev_sub,1),1);
-
+                   
 allinds = 1:length(std_dev_sub);
 for i=1:size(std_dev_sub,1)
 waitbar(i/size(std_dev_sub,1),THEwaitbar,'Analyzing subtracted signals...');
@@ -412,8 +375,10 @@ waitbar(i/size(std_dev_sub,1),THEwaitbar,'Analyzing subtracted signals...');
         [~, lastind] = max(cumsum(nanners)-sum(nanners));
         interpinds = firstind(1):lastind;
         goodinds = allinds(nanners);
-        std_dev_sig = interp1(goodinds, std_dev_sig(nanners), interpinds, 'linear');        
-        filt_stddev_sig = wavelet_denoise( std_dev_sig );
+        std_dev_sig = interp1(goodinds, std_dev_sig(nanners), interpinds, 'linear');
+        f = fit(interpinds', std_dev_sig','SmoothingSpline',fitops);     
+%         filt_stddev_sig = wavelet_denoise( std_dev_sig );
+        filt_stddev_sig = f(interpinds);
 
         median_sig = median_sub(i,2:end);
         nanners = ~isnan(median_sig);
@@ -422,7 +387,9 @@ waitbar(i/size(std_dev_sub,1),THEwaitbar,'Analyzing subtracted signals...');
         interpinds = firstind(1):lastind;
         goodinds = allinds(nanners);
         median_sig = interp1(goodinds, median_sig(nanners), interpinds, 'linear');
-        filt_median_sig = wavelet_denoise( median_sig );
+        f = fit(interpinds', median_sig','SmoothingSpline',fitops);     
+%         filt_median_sig = wavelet_denoise( median_sig );
+        filt_median_sig = f(interpinds);
         critical_filt = filt_stddev_sig( CRITICAL_REGION );
         
         [~, TTPResp(i)] = max( abs(critical_filt) );    
@@ -430,20 +397,22 @@ waitbar(i/size(std_dev_sub,1),THEwaitbar,'Analyzing subtracted signals...');
         MedianResp(i) = max(abs(filt_median_sig(CRITICAL_REGION))-mean(filt_median_sig(1:CRITICAL_REGION(1))) );        
         PrestimVal(i) = mean( stim_prestim_means(i,:),2, 'omitnan');
         
-%         if valid_densitometry(i) && (densitometry_fit_amplitude(i) < 0.075)
-%            figure(1);
+        if any(i==CELL_OF_INTEREST)
+           figure(1);
 %            subplot(2,1,1);
-%            plot( filt_stddev_sig ); hold on; plot(std_dev_sig);
+           plot( filt_stddev_sig ); hold on; plot(std_dev_sig);
+           plot( filt_median_sig ); plot(median_sig);
 %            plot(sqrt(control_cell_var(i,2:end))-1);
 %            plot(sqrt(stim_cell_var(i,2:end))-1);
 %            plot(mean(sqrt(control_cell_var),'omitnan'));
-%            hold off; 
+           title(['A: ' num2str(AmpResp(i)) ', M: ' num2str(MedianResp(i))]);
+           hold off; 
 %            subplot(2,1,2);
 %            plot(CRITICAL_TIME/hz, criticalfit(i,:));hold on;
 %            plot(densitometry_vect_times{i},densitometry_vect_ref{i},'.')           
 %            axis([0 CRITICAL_TIME(end)/hz 0 1.5]); hold off;
 %            drawnow; pause;
-%         end
+        end
         
         % Control only
         std_dev_sig = control_std_dev_sub(i,2:end);

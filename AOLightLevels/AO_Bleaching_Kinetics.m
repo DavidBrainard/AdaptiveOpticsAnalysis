@@ -6,14 +6,15 @@
 
 clear;
 % close all force;
+% tbDeployToolboxes('registered',{'isetbio', 'BrainardLabToolbox','Psychtoolbox-3','SilentSubstitutionToolbox'})
 
 units = 'trolands';
-stim_lambda = 545; % in nm
-stim_irradiance = 0.889; % in uW
+stim_lambda = 555; % in nm
+stim_irradiance = 4; % in uW
 
-num_acquisitions = 13;
+num_acquisitions = 1;
 single_trial_train = [0 1  0;
-                      4 5  20];
+                      2 2.01  10];
 
 trial_train = zeros(2, size(single_trial_train,2).*num_acquisitions);
 for n=1:num_acquisitions
@@ -47,7 +48,7 @@ end
 
 p = 1; % Percentage of unbleached pigment that we start with. Assume dark adapted.
 
-dt = 0.001;
+dt = 0.0001;
 
 dp_dt_deplete = @(p, I) (( (1-p)./N ) - ( (I.*p)./ (N.*I_0) ));
 dp_dt_recover = @(p, I) ( (1-p)./N );
