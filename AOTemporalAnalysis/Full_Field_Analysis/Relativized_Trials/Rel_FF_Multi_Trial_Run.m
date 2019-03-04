@@ -21,7 +21,7 @@ parfor i=1:size(fPaths,1)
     if reprocess || ~exist(fullfile(mov_path,'Profile_Data',[ref_image_fname(1:end - length('AVG.tif') ) 'box_cutoff_regional_norm_prestimminusdiv_sub_90_profiledata.mat'] ), 'file' );
         
         vid_type= 'stimulus';
-        if strcmpi(getparent(mov_path,0,'short'), 'control')
+        if strcmpi(getparent(mov_path,2,'short'), 'control')
             vid_type = 'control';
         end
         

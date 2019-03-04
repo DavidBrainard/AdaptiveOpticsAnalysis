@@ -8,9 +8,10 @@
 clear;
 close all;
 
-saveplots = true;
+saveplots = false;
 logmode = true;
-
+DENSTOMETRY_THRESHOLD = 0.1;
+RESPONSE_THRESHOLD = 0.3;
 
 profile_dir = uigetdir(pwd);
 
@@ -38,14 +39,14 @@ for i=1:length(single_cone_mat_files)
     stimAmp(:,i) = AmpResp;
     stimMedian(:,i) = MedianResp;
     stimTTP(:,i) = TTPResp;
-    stimRespRange(:,i) = stim_resp_range;
-    Prestim(:,i) = median(stim_prestim_means,2,'omitnan');
+%     stimRespRange(:,i) = stim_resp_range;
+%     Prestim(:,i) = median(stim_prestim_means,2,'omitnan');
     
     controlAmp(:,i) = ControlAmpResp;
     controlMedian(:,i) = ControlMedianResp;    
     
-    single_cone_response(:,i) = AmpResp+abs(MedianResp);
-    single_cone_control_response(:,i) = ControlAmpResp+abs(ControlMedianResp);
+    single_cone_response(:,i) = AmpResp;%+abs(MedianResp);
+    single_cone_control_response(:,i) = ControlAmpResp;%;+abs(ControlMedianResp);
     trial_validity(:,i) = valid;
     
     if logmode 
@@ -55,6 +56,8 @@ for i=1:length(single_cone_mat_files)
 end
 
 valid = all(~isnan(single_cone_response),2) & all(trial_validity,2);
+
+
 return;
 
 %% Individual Spatal maps
@@ -112,15 +115,24 @@ end
 for i=1:length(single_cone_mat_files)
     figure; hold on;
     plot(single_cone_control_response(:,i),single_cone_response(:,i),'.');
-    plot([-10 10],[-10 10],'k');
-    axis equal; axis([-0.5 2 -0.5 15]); 
+    if logmode
+        plot([-0.5 1.5],[-0.5 1.5],'k');
+        axis equal;axis([-0.5 1.5 -0.5 1.5]); 
+    else
+        plot([-10 10],[-10 10],'k');
+        axis equal; axis([-0.5 2 -0.5 15]); 
+    end
+    
+    if saveplots
+        saveas(gcf, [single_cone_mat_files{i}(1:end-4) '_VS_plot.png']);
+    end
 end
 
 %% Display Cells under the 1:1 line
 
 diffvalid = single_cone_response-single_cone_control_response;
 
-% lessthanvalid = diffvalid < abs(min(diffvalid))*0.8 & valid;
+lessthanvalid = diffvalid < abs(min(diffvalid))*0.8 & valid;
 
 % lessthanvalid= (single_cone_response<single_cone_control_response) & valid;
 
@@ -145,7 +157,7 @@ for i=1:length(single_cone_mat_files)
     end
     
     if saveplots
-        saveas(gcf, [single_cone_mat_files{i}(1:end-4) '_VS_plot.png']);
+        saveas(gcf, [single_cone_mat_files{i}(1:end-4) '_VS_lessthan_plot.png']);
     end
     
     generate_spatial_map(single_cone_response(:,i), allcoords, lessthanvalid(:,i), single_cone_mat_files(i), '_VS', saveplots);
@@ -174,12 +186,15 @@ end
 %% Display results vs densitometry
 % load('/local_data/Dropbox/General_Postdoc_Work/Dynamic_Densitometry/11049/Dynamic_Densitometry_combined_4_sec_545b25nm_3uW_20_single_cone_signals.mat')
 
-lessthanvalid = (densitometry_fit_amplitude<=0.125) & valid & valid_densitometry;
+lessthanvalid = (densitometry_fit_amplitude<=DENSTOMETRY_THRESHOLD) & valid & valid_densitometry;
+
+% lessthanvalid = (single_cone_response<RESPONSE_THRESHOLD) & (densitometry_fit_amplitude<=DENSTOMETRY_THRESHOLD) & valid & valid_densitometry;
+% lessthanvalid = all(lessthanvalid,2);
 
 for i=1:length(single_cone_mat_files)
     figure; hold on;
     
-    plot(single_cone_control_response(valid,i),single_cone_response(valid,i),'.');
+    plot(single_cone_control_response(valid,i),single_cone_response(valid,i),'k.');
     plot(single_cone_control_response(lessthanvalid,i),single_cone_response(lessthanvalid,i),'r.');
     plot([-10 10],[-10 10],'k');
          
@@ -198,13 +213,15 @@ for i=1:length(single_cone_mat_files)
         saveas(gcf, [single_cone_mat_files{i}(1:end-4) '_VS_plot.png']);
     end
     
-    generate_spatial_map(single_cone_response(:,i), allcoords, lessthanvalid, single_cone_mat_files(i), '_VS', saveplots);
+    generate_spatial_map(single_cone_response(:,i), allcoords, valid & valid_densitometry, single_cone_mat_files(i), '_VS', saveplots, ~lessthanvalid);
+    
 end
 
 %% 
 
-lessthanvalid = (single_cone_response<0.3) & (densitometry_fit_amplitude<=0.125) & valid & valid_densitometry;
-% lessthanvalid = (single_cone_response<0.3) & valid;
+lessthanvalid = (single_cone_response<RESPONSE_THRESHOLD) & (densitometry_fit_amplitude<=DENSTOMETRY_THRESHOLD) & valid & valid_densitometry;
+% lessthanvalid = (single_cone_response<RESPONSE_THRESHOLD) & valid;
+numlowresp = 1;
 figure; clf;
 [V,C] = voronoin(allcoords,{'QJ'});
 colors = ['rgbym'];
@@ -219,6 +236,7 @@ for j=1:length(single_cone_mat_files)
 
             if all(lessthanvalid(i,:))
                 patch(V(C{i},1),V(C{i},2),ones(size(V(C{i},1))),'FaceColor', 'w');
+                numlowresp = numlowresp + 1;
             elseif lessthanvalid(i,j)
                 patch(V(C{i},1),V(C{i},2),ones(size(V(C{i},1))),'FaceColor', colors(j));
             end
@@ -232,6 +250,36 @@ axis([0 max(allcoords(:,1)) 0 max(allcoords(:,2)) ])
 % if saveplots
 %     saveas(gcf, [single_cone_mat_files{i}(1:end-4) '_agreement_plot.png']);
 % end
+
+%% Repeatability of timepoints 1 and 2.
+lessthanvalid = (densitometry_fit_amplitude<=DENSTOMETRY_THRESHOLD) & valid & valid_densitometry;
+
+lownotdens = find((lessthanvalid < (valid & valid_densitometry) ) & ...
+             (single_cone_response(:,1)<0.45 & single_cone_response(:,2)<0.45));
+
+figure; hold on;
+plot(single_cone_response(:,1),single_cone_response(:,2),'k.');
+plot([-10 10],[-10 10],'k');
+axis equal; axis([-0.5 2 -0.5 15]);
+axis([-0.5 2 -0.5 2]);
+xlabel('Timepoint 1'); ylabel('Timepoint 2');
+title('Responses between both time points.')
+plot(single_cone_response(lownotdens,1),single_cone_response(lownotdens,2),'b.');
+plot(single_cone_response(lessthanvalid,1),single_cone_response(lessthanvalid,2),'r.');
+
+if saveplots
+    saveas(gcf, [single_cone_mat_files{1}(1:end-4) '_Repeat_plot_thresh_' num2str(DENSTOMETRY_THRESHOLD) '.png']);
+end
+
+figure; hold on;
+plot(mean(single_cone_response(lownotdens,:),2), densitometry_fit_amplitude(lownotdens),'b*')
+plot(mean(single_cone_response(lessthanvalid,:),2), densitometry_fit_amplitude(lessthanvalid),'r*')
+xlabel('Mean cone response (std dev + median)');
+ylabel('Densitometry fit amplitude');
+
+if saveplots
+    saveas(gcf, [single_cone_mat_files{1}(1:end-4) '_dens_vs_mag_plot_thresh_' num2str(DENSTOMETRY_THRESHOLD) '.png']);
+end
 
 %% Prestimulus behavior vs normalized response range
 figure; hold on;

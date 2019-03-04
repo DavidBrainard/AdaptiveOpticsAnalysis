@@ -41,7 +41,7 @@ profile_method = 'box';
 
 % For release, this version only contains the normalizations used in the
 % paper. However, the code is structured such that you can add more if desired.
-norm_type = 'regional_norm_linear_prestim_stdiz'; 
+norm_type = 'global_norm_linear_prestim_stdiz'; 
 
 % mov_path=pwd;
 if ~exist('mov_path','var') || ~exist('this_image_fname','var')
@@ -63,7 +63,7 @@ stack_fnames = read_folder_contents( mov_path,'avi' );
 for i=1:length(stack_fnames)
     if ~isempty( strfind( stack_fnames{i}, this_image_fname(1:end - length('_AVG.tif') ) ) )
         temporal_stack_fname = stack_fnames{i};
-%         temporal_stack_fname = strrep(stack_fnames{i},'confocal','split_det'); % Analyze AVG or split for Jess's grant!
+%         temporal_stack_fname = strrep(stack_fnames{i},'confocal','avg'); % Analyze AVG or split for Jess's grant!
         
         acceptable_frames_fname = [stack_fnames{i}(1:end-4) '_acceptable_frames.csv'];
         break;

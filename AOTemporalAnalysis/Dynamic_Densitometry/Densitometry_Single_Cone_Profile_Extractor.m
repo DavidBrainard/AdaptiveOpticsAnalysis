@@ -6,7 +6,7 @@ clear;
 close all;
 
 
-NUMTRIALS=7;
+NUMTRIALS=10;
 CRITICAL_TIME = 0:69;
 START_IND=5;
 
@@ -97,6 +97,7 @@ numstimcoords = size(stim_coords,1);
 
 criticalfit = nan(numstimcoords,length(CRITICAL_TIME));
 densitometry_fit_amplitude = nan(numstimcoords,1);
+densitometry_init_val = nan(numstimcoords,1);
 densitometry_b_amplitude  = nan(numstimcoords,1);
 densitometry_trial_count = zeros(numstimcoords,1);
 valid_densitometry = false(numstimcoords,1);
@@ -135,11 +136,7 @@ for i=1:numstimcoords
     valid_densitometry(i) = densitometry_trial_count(i)>=NUMTRIALS;
     
     if valid_densitometry(i)
-%         vect_ref = mean(all_times_ref,'omitnan')';        
-%         vect_times = mean(all_times,'omitnan')';
-%         vect_times(isnan(vect_ref))=[];
-%         vect_ref(isnan(vect_ref))=[];
-%         vect_times = vect_times-START_TIME;
+
 
         vect_ref = all_times_ref(~isnan(all_times));
         vect_times = all_times(~isnan(all_times));
@@ -153,9 +150,11 @@ for i=1:numstimcoords
         criticalfit(i,:) = fitresult(CRITICAL_TIME/hz);
         densitometry_fit_amplitude(i) = abs(max(criticalfit(i,end))-min(criticalfit(i,1)));
         densitometry_b_amplitude(i) = fitresult.b;
+        initvals = all_times_ref(:,1:2);
+        densitometry_init_val(i) = mean(initvals(:),'omitnan');
 
         
-        if any(i==CELL_OF_INTEREST) && (densitometry_fit_amplitude(i) <=0.125)
+        if any(i==CELL_OF_INTEREST) %&& (densitometry_fit_amplitude(i) <=0.125)
             %%
             figure(1); clf; hold on;
             
@@ -175,8 +174,8 @@ for i=1:numstimcoords
             hold off;
             drawnow;
             fitresult
-            %%
-            pause;
+%             saveas(gcf, [outFname '_cell_' num2str(i) '.png']);
+%             pause;
         end
         
     end

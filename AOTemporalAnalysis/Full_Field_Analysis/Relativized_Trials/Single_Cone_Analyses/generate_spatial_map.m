@@ -1,4 +1,4 @@
-function [] = generate_spatial_map(single_cone_response, coords, valid_cells, names, suffix, saveplots, the_thresh)
+function [] = generate_spatial_map(single_cone_response, coords, valid_cells, names, suffix, saveplots, tohighlight)
 %generate_spatial_map(single_cone_response, coords, valid_cells, names)
 %
 % 2018-08-29 Robert F Cooper
@@ -6,8 +6,8 @@ function [] = generate_spatial_map(single_cone_response, coords, valid_cells, na
 % This function outputs a map of the cone responses.
 %
 
-if ~exist('the_thresh','var')
-    the_thresh = -100;
+if ~exist('tohighlight','var')
+    tohighlight = zeros(size(valid_cells));
 end
 
 for j=1:size(single_cone_response,2)
@@ -40,10 +40,13 @@ for j=1:size(single_cone_response,2)
             vertices = V(C{i},:);
 
             if ~isnan(thiscolorind) && all(vertices(:,1)<max(coords(:,1))) && all(vertices(:,2)<max(coords(:,1))) ... % [xmin xmax ymin ymax] 
-                                    && all(vertices(:,1)>0) && all(vertices(:,2)>0) && single_cone_response(i,j)>=the_thresh
+                                    && all(vertices(:,1)>0) && all(vertices(:,2)>0)
+                if tohighlight(i)
     %             plot(coords(i,1), coords(i,2),'.','Color', thismap(thiscolorind,:), 'MarkerSize', 15 );
-                patch(V(C{i},1),V(C{i},2),ones(size(V(C{i},1))),'FaceColor', thismap(thiscolorind,:));
-
+                    patch(V(C{i},1),V(C{i},2),ones(size(V(C{i},1))),'FaceColor', thismap(thiscolorind,:), 'EdgeColor','none');
+                else
+                    patch(V(C{i},1),V(C{i},2),ones(size(V(C{i},1))),'FaceColor', thismap(thiscolorind,:));
+                end
             end
         end
     end
@@ -54,6 +57,7 @@ for j=1:size(single_cone_response,2)
     title(strrep(names{j}(1:end-4),'_','\_'))
     hold off; drawnow;
     if saveplots
+        set(gcf, 'Renderer', 'painters');
         saveas(gcf, [names{j}(1:end-4) suffix '_spatial_map.png']);
     end
 end

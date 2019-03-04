@@ -37,7 +37,7 @@ CUTOFF = 13;
 NUMTRIALS= 25;
 CRITICAL_REGION = 72:90; % 72:90;
 
-CELL_OF_INTEREST = [1:3000];
+CELL_OF_INTEREST = [];
 
 if isempty(CELL_OF_INTEREST)
     close all force;
@@ -301,23 +301,32 @@ for i=1:numstimcoords
         end
     end
     
+    
     if any(i==CELL_OF_INTEREST) && stim_trial_count(i)>CUTOFF %&& (densitometry_fit_amplitude(i) < 0.1) && valid_densitometry(i)
         figure(1); clf;
-        subplot(3,1,1); plot( bsxfun(@minus,nonorm_ref, nonorm_ref(:,2))');%axis([CRITICAL_REGION(1) CRITICAL_REGION(end) -150 150]); xlabel('Time index'); ylabel('Raw Response');
-        subplot(3,1,2); plot(all_times_ref');  %axis([CRITICAL_REGION(1) CRITICAL_REGION(end) -10 10]); xlabel('Time index'); ylabel('Standardized Response');
+        subplot(3,1,1); plot( bsxfun(@minus,nonorm_ref, nonorm_ref(:,2))');%axis([CRITICAL_REGION(1) CRITICAL_REGION(end) -150 150]); xlabel('Time index'); ylabel('Raw Response');        
+        subplot(3,1,2); %hold on;
+%         for m=1:size(all_times_ref,1)
+%             goodinds = find(~isnan(all_times_ref(m,:)));
+%             plot(goodinds-2, all_times_ref(m,goodinds));
+%         end
+%         hold off;
+        plot(all_times_ref');
+        axis([0 160 -20 20]); xlabel('Time index'); ylabel('Standardized Response');
+        
         subplot(3,1,3); plot(stim_cell_median(i,:)); hold on;
                         plot(sqrt(stim_cell_var(i,:))-mean(sqrt(control_cell_var),'omitnan')); hold off; %axis([CRITICAL_REGION(1) CRITICAL_REGION(end) -2 10]); xlabel('Time index'); ylabel('Response');
 %         subplot(4,1,4); plot(stim_prestim_means(i,:),'*'); xlabel('Trial #'); ylabel('Prestimulus mean (A.U.)'); axis([0 50 0 255]);
         title(['Cell #:' num2str(i) ' Resp Range: ', num2str(stim_resp_range(i))]);
         drawnow;
-%         saveas(gcf, ['Cell_' num2str(i) '_stimulus.png']);
+%         saveas(gcf, ['Cell_' num2str(i) '_stimulus_rawdata.svg']);
         
 %         THEstimref = all_times_ref;
         
-%         figure(5); imagesc(ref_image); colormap gray; axis image;hold on; 
-%         plot(ref_coords(i,1),ref_coords(i,2),'r*'); hold off;
+        figure(5); imagesc(ref_image); colormap gray; axis image;hold on; 
+        plot(ref_coords(i,1),ref_coords(i,2),'r*'); hold off;
 %         saveas(gcf, ['Cell_' num2str(i) '_location.png']);
-%         drawnow;
+        drawnow;
 %         critreg=all_times_ref(:,CRITICAL_REGION);
 
 %         if (densitometry_fit_amplitude(i) < 0.1) && valid_densitometry(i)
@@ -333,7 +342,7 @@ for i=1:numstimcoords
 %         end
 %         saveas(gcf, ['Cell_' num2str(i) '_stimulus_densitometry.png']);
         
-        pause;
+%         pause;
     end
 
 end
@@ -361,12 +370,12 @@ PrestimVal = nan(size(std_dev_sub,1),1);
 ControlAmpResp = nan(size(std_dev_sub,1),1);
 ControlMedianResp = nan(size(std_dev_sub,1),1);
 ControlPrestimVal = nan(size(std_dev_sub,1),1);
-                   
+hz=17.85;
 allinds = 1:length(std_dev_sub);
 for i=1:size(std_dev_sub,1)
-waitbar(i/size(std_dev_sub,1),THEwaitbar,'Analyzing subtracted signals...');
+ waitbar(i/size(std_dev_sub,1),THEwaitbar,'Analyzing subtracted signals...');
 
-    if ~all( isnan(std_dev_sub(i,2:end)) ) && (stim_trial_count(i) >= NUMTRIALS) && (control_trial_count(i) >= NUMTRIALS)
+    if ~all( isnan(std_dev_sub(i,2:end)) ) && valid(i)
         
         % Stimulus with control subtracted
         std_dev_sig = std_dev_sub(i,2:end);        
@@ -399,19 +408,22 @@ waitbar(i/size(std_dev_sub,1),THEwaitbar,'Analyzing subtracted signals...');
         
         if any(i==CELL_OF_INTEREST)
            figure(1);
-%            subplot(2,1,1);
-           plot( filt_stddev_sig ); hold on; plot(std_dev_sig);
-           plot( filt_median_sig ); plot(median_sig);
+           subplot(2,1,1);
+           plot( interpinds/hz, filt_stddev_sig ); hold on; plot(interpinds/hz,std_dev_sig);
+           plot( interpinds/hz,filt_median_sig ); plot(interpinds/hz, median_sig);
 %            plot(sqrt(control_cell_var(i,2:end))-1);
 %            plot(sqrt(stim_cell_var(i,2:end))-1);
 %            plot(mean(sqrt(control_cell_var),'omitnan'));
-           title(['A: ' num2str(AmpResp(i)) ', M: ' num2str(MedianResp(i))]);
-           hold off; 
-%            subplot(2,1,2);
-%            plot(CRITICAL_TIME/hz, criticalfit(i,:));hold on;
-%            plot(densitometry_vect_times{i},densitometry_vect_ref{i},'.')           
-%            axis([0 CRITICAL_TIME(end)/hz 0 1.5]); hold off;
-%            drawnow; pause;
+           title(['#: ' num2str(i) ' A: ' num2str(AmpResp(i)) ', M: ' num2str(MedianResp(i)) ', LogResp: ' num2str(log10(AmpResp(i)+MedianResp(i)+1)) ]);
+           axis([0 9 -5 10]); hold off;
+           
+           subplot(2,1,2); 
+           plot((0:69)/hz, criticalfit(i,:));hold on;
+           plot(densitometry_vect_times{i},densitometry_vect_ref{i},'.'); hold off;           
+           title(['FitAmp: ' num2str(densitometry_fit_amplitude(i))]);axis([0 2 0 1.5]);
+           drawnow; 
+           
+           saveas(gcf, ['Cell_' num2str(i) '_stimulus.png']);
         end
         
         % Control only
@@ -421,8 +433,10 @@ waitbar(i/size(std_dev_sub,1),THEwaitbar,'Analyzing subtracted signals...');
         [~, lastind] = max(cumsum(nanners)-sum(nanners));
         interpinds = firstind(1):lastind;
         goodinds = allinds(nanners);
-        std_dev_sig = interp1(goodinds, std_dev_sig(nanners), interpinds, 'linear');        
-        filt_stddev_sig = wavelet_denoise( std_dev_sig );
+        std_dev_sig = interp1(goodinds, std_dev_sig(nanners), interpinds, 'linear');
+        f = fit(interpinds', std_dev_sig','SmoothingSpline',fitops);
+        filt_stddev_sig = f(interpinds);
+%         filt_stddev_sig = wavelet_denoise( std_dev_sig );
         
         median_sig = control_median_sub(i,2:end);        
         nanners = ~isnan(median_sig);        
@@ -430,8 +444,10 @@ waitbar(i/size(std_dev_sub,1),THEwaitbar,'Analyzing subtracted signals...');
         [~, lastind] = max(cumsum(nanners)-sum(nanners));
         interpinds = firstind(1):lastind;
         goodinds = allinds(nanners);        
-        median_sig = interp1(goodinds, median_sig(nanners), interpinds, 'linear');        
-        filt_median_sig = wavelet_denoise( median_sig );
+        median_sig = interp1(goodinds, median_sig(nanners), interpinds, 'linear');
+        f = fit(interpinds', median_sig','SmoothingSpline',fitops);
+        filt_median_sig = f(interpinds);
+%         filt_median_sig = wavelet_denoise( median_sig );
 
         critical_filt = filt_stddev_sig( CRITICAL_REGION );
         
@@ -442,8 +458,9 @@ waitbar(i/size(std_dev_sub,1),THEwaitbar,'Analyzing subtracted signals...');
 
     end
 end
-close(THEwaitbar);
 %%
+close(THEwaitbar);
+
 save([ outFname '.mat'],'AmpResp','MedianResp','TTPResp',...
      'ControlAmpResp','ControlMedianResp','ControlPrestimVal',...
      'valid','allcoords','ref_image','control_cell_median',...

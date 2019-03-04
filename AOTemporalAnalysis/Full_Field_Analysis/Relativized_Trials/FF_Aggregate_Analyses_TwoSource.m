@@ -46,9 +46,9 @@ thatstimmax=0;
 thatcontrolmax=0;
 %% Code for determining variance across all signals at given timepoint
 
-allmax=400;
+allmax = 400;
 num_control_cones = 0;
-num_stim_cones =0;
+num_stim_cones = 0;
 max_cones = 0;
 min_cones = 10000000000000;
 mean_control_reflectance = zeros(500,1);
@@ -88,6 +88,7 @@ for j=1:length(profileCDataNames)
     end
     precontrol = ref_variance_control{j}(ref_control_times{j}<=66)./ref_control_count{j}(ref_control_times{j}<=66);
     figure(8); plot(ref_control_times{j}/16.6, sqrt(ref_variance_control{j}./ref_control_count{j})-sqrt(mean(precontrol)) ); hold on; drawnow;      
+%     pause;
 end
 
 %%
@@ -107,7 +108,7 @@ for j=1:length(profileSDataNames)
     thatstimmax = max( cellfun(@max,stim_cell_times) );    
     
     % Pooled variance of all cells before first stimulus
-    [ ref_variance_stim{j}, ref_stim_times{j}, ref_stim_count{j} ]    = reflectance_pooled_variance( stim_cell_times, norm_stim_cell_reflectance, allmax );
+    [ ref_variance_stim{j}, ref_stim_times{j}, ref_stim_count{j} ] = reflectance_pooled_variance( stim_cell_times, norm_stim_cell_reflectance, allmax );
 
     i=1;
     while i<= length( ref_stim_times{j} )
@@ -133,12 +134,12 @@ for j=1:length(profileSDataNames)
 end
 hold off;axis([0 16 0 6])
 
-if (length(stim_cell_times) + length(control_cell_times)) < min_cones
-    min_cones = (length(stim_cell_times) + length(control_cell_times));
-end
-if (length(stim_cell_times) + length(control_cell_times)) > max_cones
-    max_cones = (length(stim_cell_times) + length(control_cell_times));
-end
+% if (length(stim_cell_times) + length(control_cell_times)) < min_cones
+%     min_cones = (length(stim_cell_times) + length(control_cell_times));
+% end
+% if (length(stim_cell_times) + length(control_cell_times)) > max_cones
+%     max_cones = (length(stim_cell_times) + length(control_cell_times));
+% end
 %%
 pooled_variance_stim = zeros(allmax,1);
 pooled_variance_stim_count = zeros(allmax,1);
@@ -178,7 +179,7 @@ end
 for i=1:length(pooled_variance_control)    
     pooled_variance_control(i) = pooled_variance_control(i)/pooled_variance_control_count(i);
 end
-
+%% Output
 % For structure: /stuff/id/intensity/time/data
 [remain kid] = getparent(stimRootDir);
 
@@ -226,8 +227,10 @@ hold off;
 saveas(gcf, fullfile(pwd, [outFname '.png']), 'png' );
 % saveas(gcf, fullfile(pwd, [outFname '.svg']), 'svg' );
 
-% save( fullfile(pwd,['pooled_var_aggregate_' num2str(length(profileDataNames)) '_signals.mat' ] ), 'pooled_std_stim', 'timeBase' );
+save( fullfile(pwd,['pooled_var_aggregate_' num2str(length(profileSDataNames)) '_signals.mat' ] ),...
+        'pooled_std_stim','pooled_variance_control', 'timeBase','profileSDataNames', 'stimRootDir','allmax');
 
+disp('Done.');
 % dlmwrite(fullfile(pwd, [date '_all_plots.csv']), [ [str2double(id(4:end)), str2double(stim_intensity(1:3)), stimlen] ;[ timeBase sqrt(pooled_variance_stim) sqrt(pooled_variance_control) ] ]',...
 %          '-append', 'delimiter', ',', 'roffset',1);
 
