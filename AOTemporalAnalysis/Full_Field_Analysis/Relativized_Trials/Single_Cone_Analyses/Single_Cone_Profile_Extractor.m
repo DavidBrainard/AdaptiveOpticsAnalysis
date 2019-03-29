@@ -36,8 +36,12 @@ clear;
 CUTOFF = 13;
 NUMTRIALS= 25;
 CRITICAL_REGION = 72:90; % 72:90;
+window_size = 5;
+half_window = floor(window_size/2);
 
-CELL_OF_INTEREST = [];
+pipeline_type = 'moving_rms';
+
+CELL_OF_INTEREST = [1:2000];
 
 if isempty(CELL_OF_INTEREST)
     close all force;
@@ -196,25 +200,41 @@ for i=1:numcontrolcoords
     end
     control_trial_count(i) = numtrials;
     
+    if strcmp(pipeline_type,'stddev')
+        % Standard form
+        for j=1:max_index
+            nonan_ref = all_times_ref(~isnan(all_times_ref(:,j)), j);
 
-    for j=1:max_index
-        nonan_ref = all_times_ref(~isnan(all_times_ref(:,j)), j);
-        refcount = sum(~isnan(all_times_ref(:,j)));
-        refmedian = median(nonan_ref);
-        if ~isnan(refmedian)
-            control_cell_median(i,j) = refmedian;
-            control_cell_var(i,j) = ( sum((nonan_ref-mean(nonan_ref)).^2)./ (refcount-1) );
+            refcount = sum(~isnan(all_times_ref(:,j)));
+            refmedian = median(nonan_ref);
+            if ~isnan(refmedian)
+                control_cell_median(i,j) = refmedian;
+                control_cell_var(i,j) = ( sum((nonan_ref-mean(nonan_ref)).^2)./ (refcount-1) );
+            end
+        end
+    elseif strcmp(pipeline_type,'moving_rms')
+        % Moving-RMS form
+        padded_all_times_ref = padarray(all_times_ref, [0 half_window], 'symmetric','both');
+        for j=1:size(padded_all_times_ref,2)-window_size
+            window =  padded_all_times_ref(:, j:j+window_size-1);
+            refcount = sum(~isnan(all_times_ref(:,j)));
+            
+            refmedian = median(window(:),'omitnan');
+            if ~isnan(refmedian)
+                control_cell_median(i,j) = refmedian;
+                control_cell_var(i,j) = rms(window(~isnan(window)));
+            end
         end
     end
     
+    
 %     if any(i==CELL_OF_INTEREST) && control_trial_count(i)>CUTOFF
 %         figure(2); clf;
-%         subplot(3,1,1); plot(bsxfun(@minus,nonorm_ref, nonorm_ref(:,2))');axis([CRITICAL_REGION(1) CRITICAL_REGION(end) -150 150]);  xlabel('Time index'); ylabel('Raw Response');
-%         subplot(3,1,2); plot(all_times_ref'); axis([CRITICAL_REGION(1) CRITICAL_REGION(end) -10 10]); xlabel('Time index'); ylabel('Standardized Response');
+%         subplot(3,1,1); plot(bsxfun(@minus,nonorm_ref, nonorm_ref(:,2))');%axis([CRITICAL_REGION(1) CRITICAL_REGION(end) -150 150]);  xlabel('Time index'); ylabel('Raw Response');
+%         subplot(3,1,2); plot(all_times_ref'); %axis([CRITICAL_REGION(1) CRITICAL_REGION(end) -10 10]); xlabel('Time index'); ylabel('Standardized Response');
 %         subplot(3,1,3); plot(control_cell_median(i,:)); hold on;
-%                         plot(sqrt(control_cell_var(i,:))); hold off; axis([CRITICAL_REGION(1) CRITICAL_REGION(end) -2 10]); xlabel('Time index'); ylabel('Response');
+%                         plot((control_cell_var(i,:))); hold off; %axis([CRITICAL_REGION(1) CRITICAL_REGION(end) -2 10]); xlabel('Time index'); ylabel('Response');
 %         title(['Cell #:' num2str(i)]);   
-%         THEcontref = all_times_ref;
 %         drawnow;
 %         critreg=all_times_ref(:,CRITICAL_REGION);
 %         quantile(critreg(:),.95)
@@ -256,7 +276,6 @@ for i=1:numstimcoords
     allstims=[];
     
 
-
     for j=1:length(profileSDataNames)
         
         if ~isempty(stim_cell_reflectance{j}{i}) && ...
@@ -290,17 +309,38 @@ for i=1:numstimcoords
     quantrng = quantile(critical_region_ref(:), [0.05 0.95]);
     stim_resp_range(i) = quantrng(2)-quantrng(1);
     
-    for j=1:max_index
-        nonan_ref = all_times_ref(~isnan(all_times_ref(:,j)), j);
-        refcount = sum(~isnan(all_times_ref(:,j)));
-        refmedian = median(nonan_ref); 
-        if ~isnan(refmedian)
-            stim_cell_median(i,j) = double(median(nonan_ref));
+    if strcmp(pipeline_type,'stddev')
+        % Standard form
+        for j=1:max_index
+            nonan_ref = all_times_ref(~isnan(all_times_ref(:,j)), j);
+            refcount = sum(~isnan(all_times_ref(:,j)));
+            refmedian = median(nonan_ref); 
+            if ~isnan(refmedian)
+                stim_cell_median(i,j) = double(median(nonan_ref));
+
+                stim_cell_var(i,j) = ( sum((nonan_ref-mean(nonan_ref)).^2)./ (refcount-1) );
+            end
+        end
+    elseif strcmp(pipeline_type,'moving_rms')
+        % Moving-RMS form
+        padded_all_times_ref = padarray(all_times_ref, [1 half_window], 'symmetric','both');
+        for j=1:size(padded_all_times_ref,2)-window_size
+            window =  padded_all_times_ref(:, j:j+window_size-1);
+            refcount = sum(~isnan(all_times_ref(:,j)));
             
-            stim_cell_var(i,j) = ( sum((nonan_ref-mean(nonan_ref)).^2)./ (refcount-1) );
+            %TEMP
+            nonan_ref = all_times_ref(~isnan(all_times_ref(:,j)), j);
+            
+            refmedian = median(window(:),'omitnan');
+            if ~isnan(refmedian)
+                stim_cell_median(i,j) = refmedian;
+                stim_cell_var(i,j) = rms(window(~isnan(window)));
+                
+                %TEMP
+                stim_cell_stddev = sqrt( sum((nonan_ref-mean(nonan_ref)).^2)./ (refcount-1) );
+            end
         end
     end
-    
     
     if any(i==CELL_OF_INTEREST) && stim_trial_count(i)>CUTOFF %&& (densitometry_fit_amplitude(i) < 0.1) && valid_densitometry(i)
         figure(1); clf;
@@ -315,7 +355,8 @@ for i=1:numstimcoords
         axis([0 160 -20 20]); xlabel('Time index'); ylabel('Standardized Response');
         
         subplot(3,1,3); plot(stim_cell_median(i,:)); hold on;
-                        plot(sqrt(stim_cell_var(i,:))-mean(sqrt(control_cell_var),'omitnan')); hold off; %axis([CRITICAL_REGION(1) CRITICAL_REGION(end) -2 10]); xlabel('Time index'); ylabel('Response');
+                        plot(stim_cell_var(i,:));
+                        plot(stim_cell_stddev); hold off; %axis([CRITICAL_REGION(1) CRITICAL_REGION(end) -2 10]); xlabel('Time index'); ylabel('Response');
 %         subplot(4,1,4); plot(stim_prestim_means(i,:),'*'); xlabel('Trial #'); ylabel('Prestimulus mean (A.U.)'); axis([0 50 0 255]);
         title(['Cell #:' num2str(i) ' Resp Range: ', num2str(stim_resp_range(i))]);
         drawnow;
@@ -323,11 +364,11 @@ for i=1:numstimcoords
         
 %         THEstimref = all_times_ref;
         
-        figure(5); imagesc(ref_image); colormap gray; axis image;hold on; 
-        plot(ref_coords(i,1),ref_coords(i,2),'r*'); hold off;
+%         figure(5); imagesc(ref_image); colormap gray; axis image;hold on; 
+%         plot(ref_coords(i,1),ref_coords(i,2),'r*'); hold off;
 %         saveas(gcf, ['Cell_' num2str(i) '_location.png']);
-        drawnow;
-%         critreg=all_times_ref(:,CRITICAL_REGION);
+%         drawnow;
+
 
 %         if (densitometry_fit_amplitude(i) < 0.1) && valid_densitometry(i)
            
