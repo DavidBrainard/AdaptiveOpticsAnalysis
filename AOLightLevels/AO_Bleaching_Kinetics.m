@@ -5,16 +5,16 @@
 % experiments.
 
 clear;
-% close all force;
+close all force;
 % tbDeployToolboxes('registered',{'isetbio', 'BrainardLabToolbox','Psychtoolbox-3','SilentSubstitutionToolbox'})
 
 units = 'trolands';
-stim_lambda = 555; % in nm
-stim_irradiance = 4; % in uW
+stim_lambda = 545; % in nm
+stim_irradiance = 1.8; % in uW
 
-num_acquisitions = 1;
+num_acquisitions = 13;
 single_trial_train = [0 1  0;
-                      2 2.01  10];
+                      4 5  18];
 
 trial_train = zeros(2, size(single_trial_train,2).*num_acquisitions);
 for n=1:num_acquisitions
@@ -51,7 +51,7 @@ p = 1; % Percentage of unbleached pigment that we start with. Assume dark adapte
 dt = 0.0001;
 
 dp_dt_deplete = @(p, I) (( (1-p)./N ) - ( (I.*p)./ (N.*I_0) ));
-dp_dt_recover = @(p, I) ( (1-p)./N );
+dp_dt_recover = @(p, I)  ( (1-p)./N );
 
 
 time=0:dt:trial_train(2,end);
@@ -72,13 +72,17 @@ for t=1:length(time)
     p = bleach_curve(t); % Update our bleach percentage.
 end
 
-[pks,locs]=findpeaks(1-bleach_curve);
+[highpks,locs]=findpeaks(bleach_curve(time>(max(time)/2)));
+[lowpks,locs]=findpeaks(1-bleach_curve(time>(max(time)/2)));
 
-mean_percent_bleach = mean(pks);
+mean_percent_bleach = mean(lowpks);
+mean_differential = mean(highpks)-mean(1-lowpks);
+
 
 figure; 
-plot(time, bleach_curve); hold on;
-plot([time(1) time(end)],[1-mean_percent_bleach 1-mean_percent_bleach], 'k');
-xlabel('Time (s)'); ylabel('Bleach percentage');
-title(['A mean bleach of ' num2str(round(mean_percent_bleach*100)) '% over time with a ' num2str(log10(I)) 'log Td stimulus.']);
-axis([0 time(end) -0.05 1.05])
+plot(time, bleach_curve*100); hold on;
+plot([time(1) time(end)],[mean(highpks) mean(highpks)]*100, 'k');
+plot([time(1) time(end)],[1-mean(lowpks) 1-mean(lowpks)]*100, 'k');
+xlabel('Time (s)'); ylabel('Percent Pigment Remaining');
+title(['Mean bleach differential: ' num2str(round(mean_differential*100)) '% over time with a ' num2str(log10(I)) 'log Td stimulus.']);
+axis([0 time(end) -5 105])

@@ -8,7 +8,7 @@
 clear;
 close all;
 
-saveplots = false;
+saveplots = true;
 logmode = true;
 DENSTOMETRY_THRESHOLD = 0.1;
 RESPONSE_THRESHOLD = 0.3;
@@ -117,7 +117,7 @@ for i=1:length(single_cone_mat_files)
     plot(single_cone_control_response(:,i),single_cone_response(:,i),'.');
     if logmode
         plot([-0.5 1.5],[-0.5 1.5],'k');
-        axis equal;axis([-0.5 1.5 -0.5 1.5]); 
+        axis equal;axis([-0.5 .5 -0.5 .5]); 
     else
         plot([-10 10],[-10 10],'k');
         axis equal; axis([-0.5 2 -0.5 15]); 
@@ -264,7 +264,7 @@ axis equal; axis([-0.5 2 -0.5 15]);
 axis([-0.5 2 -0.5 2]);
 xlabel('Timepoint 1'); ylabel('Timepoint 2');
 title('Responses between both time points.')
-plot(single_cone_response(lownotdens,1),single_cone_response(lownotdens,2),'b.');
+% plot(single_cone_response(lownotdens,1),single_cone_response(lownotdens,2),'b.');
 plot(single_cone_response(lessthanvalid,1),single_cone_response(lessthanvalid,2),'r.');
 
 if saveplots
@@ -272,7 +272,7 @@ if saveplots
 end
 
 figure; hold on;
-plot(mean(single_cone_response(lownotdens,:),2), densitometry_fit_amplitude(lownotdens),'b*')
+% plot(mean(single_cone_response(lownotdens,:),2), densitometry_fit_amplitude(lownotdens),'b*')
 plot(mean(single_cone_response(lessthanvalid,:),2), densitometry_fit_amplitude(lessthanvalid),'r*')
 xlabel('Mean cone response (std dev + median)');
 ylabel('Densitometry fit amplitude');
