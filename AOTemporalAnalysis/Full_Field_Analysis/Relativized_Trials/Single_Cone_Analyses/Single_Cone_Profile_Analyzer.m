@@ -8,7 +8,7 @@
 clear;
 close all;
 
-saveplots = true;
+saveplots = false;
 logmode = true;
 DENSTOMETRY_THRESHOLD = 0.1;
 RESPONSE_THRESHOLD = 0.3;
@@ -76,6 +76,24 @@ ylabel('Absolute Mean reponse');
 if saveplots
     saveas(gcf, ['comparative_responses.png']); 
 end
+
+%% Bland-Altman plot
+
+response_compare = [single_cone_response(:,1) single_cone_control_response(:,1)]
+meanresp = mean(response_compare,2);
+diffresp = diff(response_compare,[],2);
+
+diffbias = mean(diffresp(:),'omitnan');
+stddiff = 1.96*std(diffresp(:),'omitnan');
+LOA = [diffbias-stddiff diffbias-stddiff;
+       diffbias+stddiff diffbias+stddiff];
+  
+figure; plot(meanresp,diffresp,'.'); hold on;
+currentsize = axis;
+plot(currentsize(1:2), LOA(1,:),'r-.')
+plot(currentsize(1:2), [diffbias diffbias],'b')
+plot(currentsize(1:2), LOA(2,:),'r-.'); hold off;
+
 
 
 %% Boxplot of the amplitudes from each intensity.

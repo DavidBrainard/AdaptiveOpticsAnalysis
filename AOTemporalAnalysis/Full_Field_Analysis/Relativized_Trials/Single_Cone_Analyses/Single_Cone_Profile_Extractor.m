@@ -402,7 +402,7 @@ control_median_sub = control_cell_median-mean(control_cell_median,'omitnan');
 
 
 %% Analyze the signals
-fitops = fitoptions('Method','SmoothingSpline','SmoothingParam',0.99,'Normalize','on');
+
 AmpResp = nan(size(std_dev_sub,1),1);
 MedianResp = nan(size(std_dev_sub,1),1);
 TTPResp = nan(size(std_dev_sub,1),1);
@@ -427,9 +427,6 @@ for i=1:size(std_dev_sub,1)
         goodinds = allinds(nanners);
         std_dev_sig = interp1(goodinds, std_dev_sig(nanners), interpinds, 'linear');
         filt_stddev_sig = std_dev_sig;
-%         f = fit(interpinds', std_dev_sig','SmoothingSpline',fitops);     
-%         filt_stddev_sig = wavelet_denoise( std_dev_sig );
-%         filt_stddev_sig = f(interpinds);
 
         median_sig = median_sub(i,2:end);
         nanners = ~isnan(median_sig);
@@ -439,13 +436,11 @@ for i=1:size(std_dev_sub,1)
         goodinds = allinds(nanners);
         median_sig = interp1(goodinds, median_sig(nanners), interpinds, 'linear');
         filt_median_sig = median_sig;
-%         f = fit(interpinds', median_sig','SmoothingSpline',fitops);     
-%         filt_median_sig = wavelet_denoise( median_sig );
-%         filt_median_sig = f(interpinds);
+
         critical_filt = filt_stddev_sig( CRITICAL_REGION );
         
         [~, TTPResp(i)] = max( abs(critical_filt) );    
-        AmpResp(i) = quantile(critical_filt,0.95);% critical_filt(TTPResp(i))-mean(filt_stddev_sig(1:CRITICAL_REGION(1)));        
+        AmpResp(i) = quantile(critical_filt,0.95);
         MedianResp(i) = max(abs(filt_median_sig(CRITICAL_REGION))-mean(filt_median_sig(1:CRITICAL_REGION(1))) );        
         PrestimVal(i) = mean( stim_prestim_means(i,:),2, 'omitnan');
         
@@ -478,9 +473,7 @@ for i=1:size(std_dev_sub,1)
         goodinds = allinds(nanners);
         std_dev_sig = interp1(goodinds, std_dev_sig(nanners), interpinds, 'linear');
         filt_stddev_sig = std_dev_sig;
-%         f = fit(interpinds', std_dev_sig','SmoothingSpline',fitops);
-%         filt_stddev_sig = f(interpinds);
-%         filt_stddev_sig = wavelet_denoise( std_dev_sig );
+
         
         median_sig = control_median_sub(i,2:end);        
         nanners = ~isnan(median_sig);        
@@ -490,13 +483,11 @@ for i=1:size(std_dev_sub,1)
         goodinds = allinds(nanners);        
         median_sig = interp1(goodinds, median_sig(nanners), interpinds, 'linear');
         filt_median_sig = median_sig;
-%         f = fit(interpinds', median_sig','SmoothingSpline',fitops);
-%         filt_median_sig = f(interpinds);
-%         filt_median_sig = wavelet_denoise( median_sig );
+
 
         critical_filt = filt_stddev_sig( CRITICAL_REGION );
         
-        ControlAmpResp(i) = quantile(critical_filt,0.95); %critical_filt(TTPResp(i))-mean(filt_stddev_sig(1:CRITICAL_REGION(1)));
+        ControlAmpResp(i) = quantile(critical_filt,0.95);
         ControlMedianResp(i) = max(abs(filt_median_sig(CRITICAL_REGION))-mean(filt_median_sig(1:CRITICAL_REGION(1))) );        
         ControlPrestimVal(i) = mean( cont_prestim_means(i,:),2, 'omitnan');
 %         histogram(filt_stddev_sig(CRITICAL_REGION),20)
