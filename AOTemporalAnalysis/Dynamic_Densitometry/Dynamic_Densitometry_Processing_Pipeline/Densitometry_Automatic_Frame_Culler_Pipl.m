@@ -194,7 +194,7 @@ for k=1:length(video_fname)
 
     acc_frame_list = sort(acc_frame_list);
 
-    if length(acc_frame_list) < length(confocal_vid)
+    if length(acc_frame_list) < length(confocal_vid)        
        error(['Acceptable frames and confocal video list lengths do not match! (' num2str(length(acc_frame_list)) ' vs ' num2str(length(confocal_vid)) ')']);
     elseif length(acc_frame_list) > length(confocal_vid)
         acc_frame_list = acc_frame_list(1:length(confocal_vid));
@@ -338,7 +338,9 @@ for k=1:length(video_fname)
     crop_mask = zeros(size(confocal_vid{1}));
     sum_map = zeros(size(confocal_vid{1}));
 
-    for n=1:length(confocal_vid)
+    numearlyframes = sum(acc_frame_list<20); % Only use early frames to make the sum map.
+    disp(num2str(numearlyframes));
+    for n=1:numearlyframes
         frm_nonzeros = imclose((confocal_vid{n}>0), ones(5));
 
         sum_map = sum_map+frm_nonzeros;

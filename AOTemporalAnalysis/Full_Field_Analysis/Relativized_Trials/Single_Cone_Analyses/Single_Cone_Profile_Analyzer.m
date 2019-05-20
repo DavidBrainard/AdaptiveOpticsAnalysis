@@ -237,8 +237,8 @@ end
 
 %% 
 
-lessthanvalid = (single_cone_response<RESPONSE_THRESHOLD) & (densitometry_fit_amplitude<=DENSTOMETRY_THRESHOLD) & valid & valid_densitometry;
-% lessthanvalid = (single_cone_response<RESPONSE_THRESHOLD) & valid;
+% lessthanvalid = (single_cone_response<RESPONSE_THRESHOLD) & (densitometry_fit_amplitude<=DENSTOMETRY_THRESHOLD) & valid & valid_densitometry;
+ lessthanvalid = (densitometry_fit_amplitude<=DENSTOMETRY_THRESHOLD) & valid_densitometry;
 numlowresp = 1;
 figure; clf;
 [V,C] = voronoin(allcoords,{'QJ'});
@@ -249,8 +249,8 @@ for j=1:length(single_cone_mat_files)
         
         vertices = V(C{i},:);
 
-        if ~isnan(single_cone_response(i,j)) && all(vertices(:,1)<max(allcoords(:,1))) && all(vertices(:,2)<max(allcoords(:,1))) ... % [xmin xmax ymin ymax] 
-                                && all(vertices(:,1)>0) && all(vertices(:,2)>0)
+        if all(vertices(:,1)<max(allcoords(:,1))) && all(vertices(:,2)<max(allcoords(:,1))) ... % [xmin xmax ymin ymax] 
+                                && all(vertices(:,1)>0) && all(vertices(:,2)>0) %&& ~isnan(single_cone_response(i,j))
 
             if all(lessthanvalid(i,:))
                 patch(V(C{i},1),V(C{i},2),ones(size(V(C{i},1))),'FaceColor', 'w');

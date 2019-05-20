@@ -6,7 +6,7 @@ clear;
 close all;
 
 
-NUMTRIALS=10;
+NUMTRIALS=8;
 CRITICAL_TIME = 0:69;
 START_IND=5;
 
@@ -111,7 +111,7 @@ ft = fittype( 'c-a*exp(-x/b)', 'independent', 'x', 'dependent', 'y' );
 opts = fitoptions( 'Method', 'NonlinearLeastSquares');
 opts.Display = 'Off';
 opts.Lower = [-0.5 0 0];
-opts.Upper = [2 10 2];
+opts.Upper = [2 1 2];
 
 
 START_TIME = START_IND/hz;
@@ -138,8 +138,8 @@ for i=1:numstimcoords
     if valid_densitometry(i)
 
 
-        vect_ref = all_times_ref(~isnan(all_times));
-        vect_times = all_times(~isnan(all_times));
+        vect_ref = all_times_ref(~isnan(all_times) & all_times<3);
+        vect_times = all_times(~isnan(all_times)& all_times<3);
         vect_times = vect_times-START_TIME;
 
         opts.StartPoint = [0 1 mean(vect_ref)];
@@ -148,13 +148,13 @@ for i=1:numstimcoords
         densitometry_vect_times{i} = vect_times;
         densitometry_vect_ref{i} = vect_ref;
         criticalfit(i,:) = fitresult(CRITICAL_TIME/hz);
-        densitometry_fit_amplitude(i) = abs(max(criticalfit(i,end))-min(criticalfit(i,1)));
+        densitometry_fit_amplitude(i) = ((criticalfit(i,end))-(criticalfit(i,1)));
         densitometry_b_amplitude(i) = fitresult.b;
         initvals = all_times_ref(:,1:2);
         densitometry_init_val(i) = mean(initvals(:),'omitnan');
 
         
-        if any(i==CELL_OF_INTEREST) %&& (densitometry_fit_amplitude(i) <=0.125)
+        if any(i==CELL_OF_INTEREST) || (densitometry_fit_amplitude(i) <=0.1)
             %%
             figure(1); clf; hold on;
             
@@ -175,7 +175,7 @@ for i=1:numstimcoords
             drawnow;
             fitresult
 %             saveas(gcf, [outFname '_cell_' num2str(i) '.png']);
-%             pause;
+            pause;
         end
         
     end
@@ -203,6 +203,26 @@ saveas(gcf,'amp_hisotogram_dens.fig')
 
 counts = histcounts(densitometry_fit_amplitude,-0.1:0.02:1);
 
+%%
+figure; clf;
+lessthanvalid = (densitometry_fit_amplitude<=0) & valid_densitometry;
+[V,C] = voronoin(allcoords,{'QJ'});
+numlowresp=0;
+for i=1:size(allcoords,1)
+        
+    vertices = V(C{i},:);
+
+    if all(vertices(:,1)<max(allcoords(:,1))) && all(vertices(:,2)<max(allcoords(:,1))) ... % [xmin xmax ymin ymax] 
+                            && all(vertices(:,1)>0) && all(vertices(:,2)>0) 
+
+        if lessthanvalid(i)
+            patch(V(C{i},1),V(C{i},2),ones(size(V(C{i},1))),'FaceColor', 'b');
+            numlowresp = numlowresp + 1;
+        elseif valid_densitometry(i)
+            patch(V(C{i},1),V(C{i},2),ones(size(V(C{i},1))),'FaceColor', 'r');
+        end
+    end
+end
 
 % For when you want to fit all of the data, not just each trial
 % vect_ref = all_times_ref(~isnan(all_times));

@@ -70,7 +70,7 @@ options['initialdir'] = dmp_folder_path
 
 image_folder_path = tkFileDialog.askdirectory(**options)
 
-stimend = 72
+stimend = 38
 stimbegin = 3
 
 # progo = ttk.Progressbar(root, length=len(os.listdir(dmp_folder_path)))

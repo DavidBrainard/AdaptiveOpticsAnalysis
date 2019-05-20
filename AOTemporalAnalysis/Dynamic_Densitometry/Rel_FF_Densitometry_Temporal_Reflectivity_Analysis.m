@@ -37,14 +37,14 @@ profile_method = 'box';
 
 % For release, this version only contains the normalizations used in the
 % paper. However, the code is structured such that you can add more if desired.
-norm_type = 'no_norm_ramtype'; 
+norm_type = 'no_norm_robtype'; 
 
 
 % mov_path=pwd;
 if ~exist('mov_path','var') || ~exist('this_image_fname','var')
     close all force;
     [this_image_fname, mov_path]  = uigetfile(fullfile(pwd,'*.tif'));
-    stimulus_frames=[4 99];
+    stimulus_frames=[3 74];
     
     rply = input('Stimulus (s) or Control (c)? [s]: ','s');
     if isempty(rply) || strcmpi(rply,'s')
@@ -60,9 +60,9 @@ stack_fnames = read_folder_contents( mov_path,'avi' );
 for i=1:length(stack_fnames)
     if ~isempty( strfind( stack_fnames{i}, this_image_fname(1:end - length('_AVG.tif') ) ) )
         temporal_stack_fname = stack_fnames{i};
-%         temporal_stack_fname = strrep(stack_fnames{i},'confocal','visible'); % Analyze the visible channel!
-        
-        acceptable_frames_fname = [stack_fnames{i}(1:end-4) '_acceptable_frames.csv'];
+        acceptable_frames_fname = strrep(stack_fnames{i},'visible','confocal'); % Analyze the visible channel!
+        acceptable_frames_fname = [acceptable_frames_fname(1:end-4) '_acceptable_frames.csv'];
+%         acceptable_frames_fname = [stack_fnames{i}(1:end-4) '_acceptable_frames.csv'];
         break;
     end
 end

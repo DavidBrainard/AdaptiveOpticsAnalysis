@@ -24,8 +24,13 @@ end
 thebar = waitbar(0,'Filling and clipping videos...');
 for k=1:length(fname)
     waitbar(k/length(fname),thebar,['Filling and clipping video: ' fname{k}])
-    
-    load(fullfile(pathname, [fname{k}(1:end-4) '.mat']));
+        
+
+    if ~exist(fullfile(pathname, [fname{k}(1:end-4) '.mat']),'file')
+        load(fullfile(pathname, strrep([fname{k}(1:end-4) '.mat'], 'split_det', 'confocal')));
+    else
+        load(fullfile(pathname, [fname{k}(1:end-4) '.mat']));
+    end
     vidobj = VideoReader( fullfile(pathname, fname{k}) );
 
     frame_numbers = frame_numbers - min(frame_numbers) + 1;

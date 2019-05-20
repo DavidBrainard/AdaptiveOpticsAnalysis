@@ -33,7 +33,7 @@ end
 
 
 [~,I] = AOLightLevelConversions_Func(1, stim_lambda, stim_irradiance, true); % Stimulus Intensity in Td
-% I = 43568890/.1773
+
 switch (units)
     case 'trolands'
         I_0 = 10^4.3; % in Td %Stimulus intensity that bleaches at the rate of 1/N
