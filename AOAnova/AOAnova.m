@@ -23,7 +23,7 @@
 
 
 %% Clear
-clear;
+clear; close all;
 
 %% Dependent variable, peak reflectance response
 sessionOneReflectance = [4.541
