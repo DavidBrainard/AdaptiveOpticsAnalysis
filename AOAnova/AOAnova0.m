@@ -23,49 +23,41 @@
 
 
 %% Clear
-clear;
+clear; close all;
 
 %% Dependent variable, peak reflectance response
 sessionOneReflectance = [4.541
 2.273
 3.306
 1.959
-2.5429
 4.539
 2.75
 3.234
 2.274
-3.1762
 4.753
 2.843
 2.962
 1.836
-2.6692
 4.721
 2.564
 3.071
-2.277
-2.5187];
+2.277];
 sessionTwoReflectance = [4.341
 3.249
 3.095
 2.484
-3.4368
 4.476
 3.362
 3.271
 2.827
-3.51
 4.228
 3.587
 2.917
 2.893
-3.2519
 4.12
 3.349
 3.144
-2.595
-3.3137];
+2.595];
 
 peakReflectance = [sessionOneReflectance ; sessionTwoReflectance];
     
@@ -82,30 +74,24 @@ subjectOrder = [11102
 11057
 11108
 11112
-11115
 11102
 11057
 11108
 11112
-11115
 11102
 11057
 11108
 11112
-11115
 11102
 11057
 11108
-11112
-11115];
+11112];
 subject = [subjectOrder ; subjectOrder];
 
 stimulusOrder = {'153nW'
 '153nW'
 '153nW'
 '153nW'
-'153nW'
-'306nW'
 '306nW'
 '306nW'
 '306nW'
@@ -114,8 +100,6 @@ stimulusOrder = {'153nW'
 '917nW'
 '917nW'
 '917nW'
-'917nW'
-'2.75uW'
 '2.75uW'
 '2.75uW'
 '2.75uW'
@@ -159,13 +143,11 @@ model = [0 1 0; 0 0 1; 0 1 1];
 theAvgData = [4.6385 4.29125
     2.6075 3.38675
     3.14325 3.10675
-    2.0865 2.69975
-    2.72675 3.3781];
-theStdErr = 2*[0.057244 0.076340
-    0.125681 0.071363
-    0.077886 0.073319
-    0.111972 0.096202
-    0.153407 0.116786];
+    2.0865 2.69975];
+theStdErr = 2*[0.057244359 0.076340656
+    0.125681144 0.07136336
+    0.077886001 0.073319364
+    0.111972095 0.096202369];
 
 figure; clf; hold on; theLim = 5;
 plot(theAvgData(:,1),theAvgData(:,2),'ro','MarkerSize',12,'MarkerFaceColor','r');
