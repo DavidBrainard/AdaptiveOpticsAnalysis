@@ -20,53 +20,52 @@
 %    3.53 uW trials.
 
 % 12/21/20  dhb  Wrote it
-% 07/18/22  rw   Updated data for new analysis.
 
 
 %% Clear
 clear;
 
 %% Dependent variable, peak reflectance response
-sessionOneReflectance = [4.395
-2.501
-3.062
-2.183
-2.8818
-4.412
-2.862
-2.913
-2.508
-3.364
-4.733
-2.907
-2.885
-1.924
-2.530
-4.660
-2.623
-2.983
-2.332
-2.407];
-sessionTwoReflectance = [4.503
-3.358
-2.939
-2.599
-3.367
-4.525
-3.275
-3.059
-2.847
-3.302
-4.291
-3.533
-2.868
-2.838
-3.212
-4.167
-3.377
-2.966
-2.675
-3.332];
+sessionOneReflectance = [4.541
+2.273
+3.306
+1.959
+2.5429
+4.539
+2.75
+3.234
+2.274
+3.1762
+4.753
+2.843
+2.962
+1.836
+2.6692
+4.721
+2.564
+3.071
+2.277
+2.5187];
+sessionTwoReflectance = [4.341
+3.249
+3.095
+2.484
+3.4368
+4.476
+3.362
+3.271
+2.827
+3.51
+4.228
+3.587
+2.917
+2.893
+3.2519
+4.12
+3.349
+3.144
+2.595
+3.3137];
 
 peakReflectance = [sessionOneReflectance ; sessionTwoReflectance];
     
@@ -157,16 +156,16 @@ model = [0 1 0; 0 0 1; 0 1 1];
 [pTwoWay, tabTwoWay] = anovan(peakReflectance',{subject stimulus session}, 'model',model,'varnames', varNames, 'random', random);
 
 %% Plot of data averaged over stimuli
-theAvgData = [4.549592 4.371892
-    2.723052 3.385613
-    2.96045 2.957948
-    2.236925 2.747275
-    2.795575 3.30355];
-theStdErr = 2*[0.086085 0.086191
-    0.096844 0.053773
-    0.039609 0.039425
-    0.123565 0.065832
-    0.214549 0.033115];
+theAvgData = [4.6385 4.29125
+    2.6075 3.38675
+    3.14325 3.10675
+    2.0865 2.69975
+    2.72675 3.3781];
+theStdErr = 2*[0.057244 0.076340
+    0.125681 0.071363
+    0.077886 0.073319
+    0.111972 0.096202
+    0.153407 0.116786];
 
 figure; clf; hold on; theLim = 5;
 plot(theAvgData(:,1),theAvgData(:,2),'ro','MarkerSize',12,'MarkerFaceColor','r');
