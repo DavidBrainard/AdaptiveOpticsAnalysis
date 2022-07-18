@@ -156,6 +156,15 @@ varNames = strvcat('Subject', 'Stimulus', 'Session');
 model = [0 1 0; 0 0 1; 0 1 1];
 [pTwoWay, tabTwoWay] = anovan(peakReflectance',{subject stimulus session}, 'model',model,'varnames', varNames, 'random', random);
 
+% Specify a 3-way model but without the three way interaction
+% 
+% It looks like that in this case, subject variability is treated as measurement noise,
+% and the significance values of the various effects change. At least I think that
+% is why they change.  I am not completely sure that this is the correct interpretation.
+model = [1 0 0 ; 0 1 0; 0 0 1; 0 1 1; 1 1 0; 1 0 1];
+[pTwoWay, tabTwoWay] = anovan(peakReflectance',{subject stimulus session}, 'model',model,'varnames', varNames, 'random', random);
+
+
 %% Plot of data averaged over stimuli
 theAvgData = [4.549592 4.371892
     2.723052 3.385613
