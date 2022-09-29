@@ -137,7 +137,7 @@ session = [sessionOrder ; 2*sessionOrder];
 % clearly which we want when we design the anova.  Searching on
 % 'fixed versus random effect anoval' on the web returns a number
 % of reasonable clear descriptions.
-random = [1 3];
+random = [1];
 
 % Names vfor the variables, to make the anova table more readable
 varNames = strvcat('Subject', 'Stimulus', 'Session');
