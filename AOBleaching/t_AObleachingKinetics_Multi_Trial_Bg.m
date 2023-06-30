@@ -90,10 +90,10 @@
     linearSizeDegs = 1/micronsPerDeg;
 
     % Timing
-    nVideos = 1;
+    nVideos = 2;
     nSets = 1;
-    timePerVideoSec = 6;
-    timePerStimSec = 1; % 50e-3;
+    timePerVideoSec = 30;
+    timePerStimSec = 50e-3;
 
     % Stimulus wavelength info
     stimulusWl = 528; 
