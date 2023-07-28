@@ -71,9 +71,9 @@
     figure; clf;
     set(gcf,'Position',[200 420 1200 1200]);
 
-    % Size in degrees of stimulus (assumed circular)
-    linearSizeDegs = 2;
-    linearSizeDegs = sqrt(pi);
+    % Linear size to produce same area with a square as their 2 deg circular stimulus
+    diameterDegs = 2;
+    linearSizeDegs = sqrt(pi)*diameterDegs/2;
 
     % Timing
     nVideos = 1;
@@ -92,9 +92,10 @@
     bgWl = 785;
     bgCornealPowerUw = 0; 
     stimStartTimeSec = 1;
-    title(sprintf('Stim: %d nm, %0.2g nW/deg2, %0.4f sec, %0.2g nJ/deg2',stimulusWl,stimulusCornealPowerNw/(linearSizeDegs^2),timePerStimSec,stimulusCornealPowerNw*timePerStimSec/(linearSizeDegs^2))); 
+    title(sprintf('Stim: %d nm, %0.4g nW/deg2, %0.4f sec, %0.4g nJ/deg2',stimulusWl,stimulusCornealPowerNw/(linearSizeDegs^2),timePerStimSec,stimulusCornealPowerNw*timePerStimSec/(linearSizeDegs^2))); 
     t_AObleachingKinetics_Multi_Trial_Bg;
     plot([0 totalTimeSec*nSets],1-3/100*[1 1],'b:','LineWidth',2);
+    fprintf('Them %0.1f%%, us %0.1f%%\n\n',3,100*max(fractionBleached));
 
     % 16.7% bleach
     stimulusWl = 637; 
@@ -105,9 +106,10 @@
     bgWl = 785;
     bgCornealPowerUw = 0; 
     stimStartTimeSec = 1;
-    title(sprintf('Stim: %d nm, %0.2g nW/deg2, %0.4f sec, %0.2g nJ/deg2',stimulusWl,stimulusCornealPowerNw/(linearSizeDegs^2),timePerStimSec,stimulusCornealPowerNw*timePerStimSec/(linearSizeDegs^2))); 
+    title(sprintf('Stim: %d nm, %0.4g nW/deg2, %0.4f sec, %0.4g nJ/deg2',stimulusWl,stimulusCornealPowerNw/(linearSizeDegs^2),timePerStimSec,stimulusCornealPowerNw*timePerStimSec/(linearSizeDegs^2))); 
     t_AObleachingKinetics_Multi_Trial_Bg;
     plot([0 totalTimeSec*nSets],1-16.7/100*[1 1],'b:','LineWidth',2);
+    fprintf('Them %0.1f%%, us %0.1f%%\n\n',16.7,100*max(fractionBleached));
 
     % 9.9% bleach
     stimulusWl = 528; 
@@ -118,22 +120,25 @@
     bgWl = 785;
     bgCornealPowerUw = 0; 
     stimStartTimeSec = 1;
-    title(sprintf('Stim: %d nm, %0.2g nW/deg2, %0.4f sec, %0.2g nJ/deg2',stimulusWl,stimulusCornealPowerNw/(linearSizeDegs^2),timePerStimSec,stimulusCornealPowerNw*timePerStimSec/(linearSizeDegs^2))); 
+    title(sprintf('Stim: %d nm, %0.4g nW/deg2, %0.4f sec, %0.4g nJ/deg2',stimulusWl,stimulusCornealPowerNw/(linearSizeDegs^2),timePerStimSec,stimulusCornealPowerNw*timePerStimSec/(linearSizeDegs^2))); 
     t_AObleachingKinetics_Multi_Trial_Bg;
     plot([0 totalTimeSec*nSets],1-9.9/100*[1 1],'b:','LineWidth',2);
+    fprintf('Them %0.1f%%, us %0.1f%%\n\n',9.9,100*max(fractionBleached));
 
     % 1.1% bleach
     stimulusWl = 450; 
-    stimulusFWHM = 3; 
+    stimulusFWHM = 20; 
     subplot(2,2,4); hold on
     timePerStimSec = 5e-3;
     stimulusCornealPowerNw = 1e3*0.5/timePerStimSec;
     bgWl = 785;
     bgCornealPowerUw = 0; 
     stimStartTimeSec = 1;
-    title(sprintf('Stim: %d nm, %0.2g nW/deg2, %0.4f sec, %0.2g nJ/deg2',stimulusWl,stimulusCornealPowerNw/(linearSizeDegs^2),timePerStimSec,stimulusCornealPowerNw*timePerStimSec/(linearSizeDegs^2))); 
+    title(sprintf('Stim: %d nm, %0.4g nW/deg2, %0.4f sec, %0.4g nJ/deg2',stimulusWl,stimulusCornealPowerNw/(linearSizeDegs^2),timePerStimSec,stimulusCornealPowerNw*timePerStimSec/(linearSizeDegs^2))); 
     t_AObleachingKinetics_Multi_Trial_Bg;
     plot([0 totalTimeSec*nSets],1-1.1/100*[1 1],'b:','LineWidth',2);
+    fprintf('Them %0.1f%%, us %0.1f%%\n\n',1.1,100*max(fractionBleached));
+
 %}
 
 % Pandiyan et al., 2020
@@ -415,7 +420,7 @@ for jj = 1:nSets
     if jj == 1
         initialFractionBleached = 0;
         fractionBleached = ComputePhotopigmentBleaching(trolands,'cones','trolands','Boynton',initialFractionBleached,'msec');
-        fractionUnbleached = 1 - fractionBleached;%Original
+        fractionUnbleached = 1 - fractionBleached;
         Recovery = fractionBleached(1,totalTimeMsec);
         plot(timeSec,fractionUnbleached,plotColor,'LineWidth',2)
         fractionBleachedSets = zeros(nSets, length(fractionBleached));
@@ -424,8 +429,8 @@ for jj = 1:nSets
         fractionUnbleachedSets(jj,:) =  fractionUnbleached;
     else
         initialFractionBleached = Recovery;
-        fractionBleached = ComputePhotopigmentBleaching(trolands,'cones','trolands','Boynton',initialFractionBleached,'msec');
-        fractionUnbleached = 1 - fractionBleached;%Original
+        fractionBleached = ComputePhotopigmentBleaching(trolands,'cones','trolands','Boynton',initialFractionBleached,'msec'); 
+        fractionUnbleached = 1 - fractionBleached;
         Recovery = fractionBleached(1,totalTimeMsec);
         plot(timeSec+(totalTimeSec*(jj-1)),fractionUnbleached,plotColor,'LineWidth',2)
         fractionBleachedSets(jj,:) =  fractionBleached;
