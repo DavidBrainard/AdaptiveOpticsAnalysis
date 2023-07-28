@@ -64,8 +64,80 @@
     t_AObleachingKinetics_Multi_Trial_Bg;
 %}
 
+% Zhang et al., 2019
 %{
+    % Initialize
+    close all; clear;
+    figure; clf;
+    set(gcf,'Position',[200 420 1200 1200]);
+
+    % Size in degrees of stimulus (assumed circular)
+    linearSizeDegs = 2;
+    linearSizeDegs = sqrt(pi);
+
+    % Timing
+    nVideos = 1;
+    nSets = 1;
+    timePerVideoSec = 30;
+
+    % Stimulus wavelength info
+    whichStimCondition = 'stimulus';
+
+    % 3% bleach
+    stimulusWl = 637; 
+    stimulusFWHM = 3; 
+    subplot(2,2,1); hold on
+    timePerStimSec = 5e-3;
+    stimulusCornealPowerNw = 1e3*0.53/timePerStimSec;
+    bgWl = 785;
+    bgCornealPowerUw = 0; 
+    stimStartTimeSec = 1;
+    title(sprintf('Stim: %d nm, %0.2g nW/deg2, %0.4f sec, %0.2g nJ/deg2',stimulusWl,stimulusCornealPowerNw/(linearSizeDegs^2),timePerStimSec,stimulusCornealPowerNw*timePerStimSec/(linearSizeDegs^2))); 
+    t_AObleachingKinetics_Multi_Trial_Bg;
+    plot([0 totalTimeSec*nSets],1-3/100*[1 1],'b:','LineWidth',2);
+
+    % 16.7% bleach
+    stimulusWl = 637; 
+    stimulusFWHM = 3; 
+    subplot(2,2,2); hold on
+    timePerStimSec = 10e-3;
+    stimulusCornealPowerNw = 1e3*3.2/timePerStimSec;
+    bgWl = 785;
+    bgCornealPowerUw = 0; 
+    stimStartTimeSec = 1;
+    title(sprintf('Stim: %d nm, %0.2g nW/deg2, %0.4f sec, %0.2g nJ/deg2',stimulusWl,stimulusCornealPowerNw/(linearSizeDegs^2),timePerStimSec,stimulusCornealPowerNw*timePerStimSec/(linearSizeDegs^2))); 
+    t_AObleachingKinetics_Multi_Trial_Bg;
+    plot([0 totalTimeSec*nSets],1-16.7/100*[1 1],'b:','LineWidth',2);
+
+    % 9.9% bleach
+    stimulusWl = 528; 
+    stimulusFWHM = 3; 
+    subplot(2,2,3); hold on
+    timePerStimSec = 5e-3;
+    stimulusCornealPowerNw = 1e3*0.5/timePerStimSec;
+    bgWl = 785;
+    bgCornealPowerUw = 0; 
+    stimStartTimeSec = 1;
+    title(sprintf('Stim: %d nm, %0.2g nW/deg2, %0.4f sec, %0.2g nJ/deg2',stimulusWl,stimulusCornealPowerNw/(linearSizeDegs^2),timePerStimSec,stimulusCornealPowerNw*timePerStimSec/(linearSizeDegs^2))); 
+    t_AObleachingKinetics_Multi_Trial_Bg;
+    plot([0 totalTimeSec*nSets],1-9.9/100*[1 1],'b:','LineWidth',2);
+
+    % 1.1% bleach
+    stimulusWl = 450; 
+    stimulusFWHM = 3; 
+    subplot(2,2,4); hold on
+    timePerStimSec = 5e-3;
+    stimulusCornealPowerNw = 1e3*0.5/timePerStimSec;
+    bgWl = 785;
+    bgCornealPowerUw = 0; 
+    stimStartTimeSec = 1;
+    title(sprintf('Stim: %d nm, %0.2g nW/deg2, %0.4f sec, %0.2g nJ/deg2',stimulusWl,stimulusCornealPowerNw/(linearSizeDegs^2),timePerStimSec,stimulusCornealPowerNw*timePerStimSec/(linearSizeDegs^2))); 
+    t_AObleachingKinetics_Multi_Trial_Bg;
+    plot([0 totalTimeSec*nSets],1-1.1/100*[1 1],'b:','LineWidth',2);
+%}
+
 % Pandiyan et al., 2020
+%{
 % 
 % Their stimulus energy and bleaching fractions.  We assume this is light
 % entering the eye.  
@@ -237,7 +309,7 @@ end
 %
 % Wavelength support
 deltaWl = 1;
-wls = (500:deltaWl:900)';
+wls = (400:deltaWl:900)';
 nWls = length(wls);
 
 % Stimulus spd on wavelength support
