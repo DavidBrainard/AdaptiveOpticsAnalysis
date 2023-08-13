@@ -330,7 +330,7 @@ for w = 1:length(stimulusWavelengthsNm)
             if (temp6 < temp2)
                 temp2 = temp6;
             end
-            if (temp7 < temp3);
+            if (temp7 < temp3)
                 temp3 = temp7;
             end
             if (temp8 < temp4)
