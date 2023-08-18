@@ -312,8 +312,8 @@
     fieldLocationDegs = 10;
 
     % Timing
-    nVideos = 1;
-    nSets = 1;
+    nVideos = 10;
+    nSets = 5;
     timePerVideoSec = 30;
 
     % Stimulus wavelength info
@@ -322,12 +322,12 @@
 
     % Test condition. This is about a 3 bleach for luminance
     stimulusWl = 480; 
-    stimulusCornealPowerNw = 109;
+    stimulusCornealPowerNw = 100;
+    stimulusFWHM = 30; 
+    timePerStimSec = 1;
     % stimulusWl = 460; 
     % stimulusCornealPowerNw = 8.3;
-    timePerStimSec = 2;
 
-    stimulusFWHM = 30; 
     bgWl = 785;
     bgCornealPowerUw = 90; 
     stimStartTimeSec = 1;
@@ -629,7 +629,7 @@ for jj = 1:nSets
                 fractionBleachedCones(rr,:) = ComputePhotopigmentBleaching(isomerizationsSecTime(rr,:),'cones','isomerizations','Boynton',initialFractionBleachedCones(rr),'msec');
             end
             fractionUnbleachedCones = 1 - fractionBleachedCones;
-            recoveryCones = fractionBleachedCones(1,totalTimeMsec);
+            recoveryCones = fractionBleachedCones(:,totalTimeMsec);
             figure(isomerizationFigure); hold on
             plot(timeSec,fractionUnbleachedCones(1,:),'r','LineWidth',2)
             plot(timeSec,fractionUnbleachedCones(2,:),'g','LineWidth',2)
@@ -656,10 +656,10 @@ for jj = 1:nSets
         initialFractionBleachedCones = recoveryCones;
 
         for rr = 1:3
-            fractionBleachedCones(rr) = ComputePhotopigmentBleaching(isomerizationsSecTime(rr),'cones','isomerizations','Boynton',initialFractionBleachedCones(rr),'msec');
+            fractionBleachedCones(rr,:) = ComputePhotopigmentBleaching(isomerizationsSecTime(rr,:),'cones','isomerizations','Boynton',initialFractionBleachedCones(rr),'msec');
         end
         fractionUnbleachedCones = 1 - fractionBleachedCones;
-        recoveryCones = fractionBleachedCones(1,totalTimeMsec);
+        recoveryCones = fractionBleachedCones(:,totalTimeMsec);
         figure(isomerizationFigure); hold on
         plot(timeSec+(totalTimeSec*(jj-1)),fractionUnbleachedCones(1,:),'r','LineWidth',2)
         plot(timeSec+(totalTimeSec*(jj-1)),fractionUnbleachedCones(2,:),'g','LineWidth',2)
