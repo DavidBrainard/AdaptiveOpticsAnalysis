@@ -29,22 +29,31 @@
     % Stimulus energy from lowest power condition in our repeatability
     % paper.
     stimulusWl = 545; 
-    stimulusCornealPowerNw = 153;
+    stimulusFWHM = 10; 
+    stimulusCornealPowerNw = 370;
     bgWl = 785;
     bgCornealPowerUw = 90; 
     stimStartTimeSec = 1;
     timePerStimSec = 1;
-    title(sprintf('Stim: %d nm, %0.1f nW, %0.4f sec, %0.1f nJ',stimulusWl,stimulusCornealPowerNw,timePerStimSec,stimulusCornealPowerNw*timePerStimSec)); 
+    linearSizeDegs = 1;
+
+    % Timing
+    nVideos = 1;
+    nSets = 1;
+    timePerVideoSec = 200;
+
+    whichStimCondition = 'stimulus';
+    t_AObleachingKinetics_Multi_Trial_Bg;
 
     % Run for all three stimulus conditions
     whichStimCondition = 'both';
     t_AObleachingKinetics_Multi_Trial_Bg;
 
-    whichStimCondition = 'stimulus';
-    t_AObleachingKinetics_Multi_Trial_Bg;
-
     whichStimCondition = 'background';
     t_AObleachingKinetics_Multi_Trial_Bg;
+
+    title(sprintf('Stim: %d nm, %0.1f nW, %0.4f sec, %0.1f nJ',stimulusWl,stimulusCornealPowerNw,timePerStimSec,stimulusCornealPowerNw*timePerStimSec)); 
+
 
     % Same stimulus energy with different time course
     figure(trolandFigure);
@@ -653,22 +662,24 @@ for jj = 1:nSets
         fractionUnbleachedSets(jj,:) =  fractionUnbleached;
 
         % Isomerization calc
-        initialFractionBleachedCones = recoveryCones;
+        if (computeConeBleaching)
+            initialFractionBleachedCones = recoveryCones;
 
-        for rr = 1:3
-            fractionBleachedCones(rr,:) = ComputePhotopigmentBleaching(isomerizationsSecTime(rr,:),'cones','isomerizations','Boynton',initialFractionBleachedCones(rr),'msec');
+            for rr = 1:3
+                fractionBleachedCones(rr,:) = ComputePhotopigmentBleaching(isomerizationsSecTime(rr,:),'cones','isomerizations','Boynton',initialFractionBleachedCones(rr),'msec');
+            end
+            fractionUnbleachedCones = 1 - fractionBleachedCones;
+            recoveryCones = fractionBleachedCones(:,totalTimeMsec);
+            figure(isomerizationFigure); hold on
+            plot(timeSec+(totalTimeSec*(jj-1)),fractionUnbleachedCones(1,:),'r','LineWidth',2)
+            plot(timeSec+(totalTimeSec*(jj-1)),fractionUnbleachedCones(2,:),'g','LineWidth',2)
+            plot(timeSec+(totalTimeSec*(jj-1)),fractionUnbleachedCones(3,:),'b','LineWidth',2)
+
+            fractionBleachedSetsCones = zeros(nSets,3,length(fractionBleached));
+            fractionUnbleachedSetsCones = zeros(nSets,3,length(fractionUnbleached));
+            fractionBleachedSetsCones(jj,:,:) =  fractionBleachedCones;
+            fractionUnbleachedSetsCones(jj,:,:) =  fractionUnbleachedCones;
         end
-        fractionUnbleachedCones = 1 - fractionBleachedCones;
-        recoveryCones = fractionBleachedCones(:,totalTimeMsec);
-        figure(isomerizationFigure); hold on
-        plot(timeSec+(totalTimeSec*(jj-1)),fractionUnbleachedCones(1,:),'r','LineWidth',2)
-        plot(timeSec+(totalTimeSec*(jj-1)),fractionUnbleachedCones(2,:),'g','LineWidth',2)
-        plot(timeSec+(totalTimeSec*(jj-1)),fractionUnbleachedCones(3,:),'b','LineWidth',2)
-
-        fractionBleachedSetsCones = zeros(nSets,3,length(fractionBleached));
-        fractionUnbleachedSetsCones = zeros(nSets,3,length(fractionUnbleached));
-        fractionBleachedSetsCones(jj,:,:) =  fractionBleachedCones;
-        fractionUnbleachedSetsCones(jj,:,:) =  fractionUnbleachedCones;
     end
 end
 
@@ -679,12 +690,14 @@ ylim([0 1]);
 xlabel('Time (sec)');
 ylabel('Fraction L/M Cone Pigment Unbleached (from trolands)');
 
-figure(isomerizationFigure);
-xlim([0 totalTimeSec*nSets])
-ylim([0 1]);
-xlabel('Time (sec)');
-ylabel('Fraction L, M, and S Cone Pigment Unbleached');
-legend({'L', 'M', 'S'},'Location','SouthEast');
+if (computeConeBleaching)
+    figure(isomerizationFigure);
+    xlim([0 totalTimeSec*nSets])
+    ylim([0 1]);
+    xlabel('Time (sec)');
+    ylabel('Fraction L, M, and S Cone Pigment Unbleached');
+    legend({'L', 'M', 'S'},'Location','SouthEast');
+end
 
 
 
