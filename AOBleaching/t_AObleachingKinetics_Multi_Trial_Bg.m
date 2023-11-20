@@ -19,6 +19,25 @@
 % a quick and dirty way to superimpose the three
 % conditions on a single figure.  Matched up to
 % typical conditions in the Penn PCAM AOSLO.
+%
+% This section used for RO1 calcs in November 2023.
+% Just change power by hand and look at bleach curve
+% to pick of max or recovery time:
+%
+% 40 bleaches 4%
+% 50 bleaches 4.4%
+% 90 bleaches 7.9%
+% 150 bleaches 12.8%
+% 190 bleaches 15.9%
+% 210 bleaches 17.4%
+% 240 bleaches 20%
+% 370 bleaches 28%
+% 430 bleaches 32%
+% 445 bleaches 33%
+%
+% 45 sec recovery 28% to 20%
+%
+% These calcs neglect steady state imaging light background.
 %{
     % Initialize
     close all; clear;
