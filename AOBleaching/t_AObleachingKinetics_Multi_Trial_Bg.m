@@ -57,9 +57,10 @@
     linearSizeDegs = 1;
 
     % Timing
-    nVideos = 1;
-    nSets = 1;
-    timePerVideoSec = 200;
+    nVideos = 4;
+    nSets = 4;
+    timePerVideoSec = 20;
+    darkAdaptationTimeSecs = 120;
 
     whichStimCondition = 'stimulus';
     t_AObleachingKinetics_Multi_Trial_Bg;
@@ -72,7 +73,6 @@
     t_AObleachingKinetics_Multi_Trial_Bg;
 
     title(sprintf('Stim: %d nm, %0.1f nW, %0.4f sec, %0.1f nJ',stimulusWl,stimulusCornealPowerNw,timePerStimSec,stimulusCornealPowerNw*timePerStimSec)); 
-
 
     % Same stimulus energy with different time course
     figure(trolandFigure);
@@ -596,7 +596,7 @@ end
 %% Compute a temporal stimulus timecourse
 %
 % Compute some temporal paramaters
-totalTimeSec = timePerVideoSec*nVideos+(nVideos-1)*darkAdaptationTimeSecs;
+totalTimeSec = timePerVideoSec*nVideos+darkAdaptationTimeSecs;
 totalTimeMsec = 1000*totalTimeSec;
 timeMsec = (1:totalTimeMsec) - 1;
 timeSec = timeMsec/1000;
